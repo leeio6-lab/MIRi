@@ -1,0 +1,40 @@
+import { Platform } from 'react-native';
+
+export const PRODUCT_IDS = {
+  SAJU_DETAIL: Platform.select({
+    ios: 'com.miri.saju.detail',
+    android: 'saju_detail',
+    default: 'saju_detail',
+  })!,
+  FACE_ANALYSIS: Platform.select({
+    ios: 'com.miri.face.analysis',
+    android: 'face_analysis',
+    default: 'face_analysis',
+  })!,
+  COMPATIBILITY: Platform.select({
+    ios: 'com.miri.compatibility',
+    android: 'compatibility',
+    default: 'compatibility',
+  })!,
+} as const;
+
+export const CONSUMABLE_IDS = [
+  PRODUCT_IDS.SAJU_DETAIL,
+  PRODUCT_IDS.FACE_ANALYSIS,
+  PRODUCT_IDS.COMPATIBILITY,
+];
+
+export const PRODUCT_PRICES: Record<string, { ko: string; ja: string; en: string }> = {
+  [PRODUCT_IDS.SAJU_DETAIL]: { ko: '₩200', ja: '¥30', en: '$0.49' },
+  [PRODUCT_IDS.FACE_ANALYSIS]: { ko: '₩200', ja: '¥30', en: '$0.49' },
+  [PRODUCT_IDS.COMPATIBILITY]: { ko: '₩200', ja: '¥30', en: '$0.49' },
+};
+
+export function getProductId(type: 'saju' | 'face' | 'compatibility'): string {
+  const map = {
+    saju: PRODUCT_IDS.SAJU_DETAIL,
+    face: PRODUCT_IDS.FACE_ANALYSIS,
+    compatibility: PRODUCT_IDS.COMPATIBILITY,
+  };
+  return map[type];
+}

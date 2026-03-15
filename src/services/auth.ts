@@ -1,0 +1,226 @@
+import { Platform } from 'react-native';
+import { supabase } from './supabase';
+
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/user.birthday.read',
+].join(' ');
+
+// ─── Google Sign-In ───
+export async function signInWithGoogle(): Promise<{ success: boolean; error?: string; providerToken?: string }> {
+  try {
+    if (Platform.OS === 'web') {
+      const redirectTo = window.location.origin;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, scopes: GOOGLE_SCOPES },
+      });
+      if (error) throw error;
+      return { success: true };
+    }
+
+    // 네이티브 (iOS/Android): 인앱 브라우저
+    const { makeRedirectUri } = await import('expo-auth-session');
+    const WebBrowser = await import('expo-web-browser');
+
+    const redirectTo = makeRedirectUri();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true, scopes: GOOGLE_SCOPES },
+    });
+
+    if (error) throw error;
+    if (!data.url) throw new Error('No OAuth URL returned');
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+    if (result.type !== 'success') {
+      return { success: false, error: 'Login cancelled' };
+    }
+
+    // PKCE flow: extract code
+    const url = new URL(result.url);
+    const code = url.searchParams.get('code');
+
+    if (code) {
+      console.log('[Auth] PKCE code found, exchanging...');
+      const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+      const pt = sessionData.session?.provider_token;
+      const userName = sessionData.session?.user?.user_metadata?.full_name ?? sessionData.session?.user?.user_metadata?.name;
+      console.log('[Auth] Exchange success — provider_token:', !!pt, '— user name:', userName);
+      return { success: true, providerToken: pt ?? undefined };
+    }
+
+    // Implicit flow fallback
+    const hashParams = new URLSearchParams(url.hash.substring(1));
+    const access_token = hashParams.get('access_token');
+    const refresh_token = hashParams.get('refresh_token');
+
+    if (access_token && refresh_token) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+      if (sessionError) throw sessionError;
+      return { success: true };
+    }
+
+    return { success: false, error: 'No authentication data received' };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Google login failed';
+    if (__DEV__) console.warn('[Auth] Google:', message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── Apple Sign-In ───
+export async function signInWithApple(): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (Platform.OS !== 'ios') {
+      return { success: false, error: 'Apple Sign-In is only available on iOS' };
+    }
+
+    const AppleAuthentication = await import('expo-apple-authentication');
+
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+
+    if (!credential.identityToken) {
+      throw new Error('Apple Sign-In failed: no identityToken');
+    }
+
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: credential.identityToken,
+    });
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Apple login failed';
+    if (__DEV__) console.warn('[Auth] Apple:', message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── Guest (Anonymous) Sign-In ───
+export async function signInAsGuest(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Guest login failed';
+    if (__DEV__) console.warn('[Auth] Guest:', message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── Fetch Google Profile (name + birthday) ───
+export interface GoogleProfile {
+  name?: string;
+  email?: string;
+  birthYear?: number;
+  birthMonth?: number;
+  birthDay?: number;
+}
+
+export async function fetchGoogleProfile(providerTokenOverride?: string): Promise<GoogleProfile> {
+  const profile: GoogleProfile = {};
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('[Auth] fetchGoogleProfile — session exists:', !!session);
+    console.log('[Auth] session.provider_token exists:', !!session?.provider_token);
+    console.log('[Auth] providerTokenOverride exists:', !!providerTokenOverride);
+
+    if (!session) {
+      console.warn('[Auth] No session found after login');
+      return profile;
+    }
+
+    const meta = session.user?.user_metadata;
+    console.log('[Auth] user_metadata keys:', meta ? Object.keys(meta) : 'none');
+
+    // 이름: user_metadata에서 가져오기
+    profile.name = meta?.full_name ?? meta?.name ?? undefined;
+
+    // 이메일
+    profile.email = session.user?.email ?? undefined;
+
+    // Google People API: 이름(한국어) + 생년월일
+    const providerToken = providerTokenOverride ?? session.provider_token;
+    if (providerToken) {
+      console.log('[Auth] Calling People API with token...');
+      try {
+        const res = await fetch(
+          'https://people.googleapis.com/v1/people/me?personFields=names,birthdays',
+          { headers: { Authorization: `Bearer ${providerToken}` } }
+        );
+        console.log('[Auth] People API response status:', res.status);
+        if (res.ok) {
+          const data = await res.json();
+
+          // 이름: 한국어 이름 우선, 없으면 기본 이름
+          if (data.names?.length) {
+            const koName = data.names.find((n: any) =>
+              n.metadata?.source?.type === 'PROFILE' &&
+              /[\uAC00-\uD7AF]/.test(n.displayName)
+            );
+            const primaryName = data.names.find((n: any) => n.metadata?.primary) ?? data.names[0];
+            const bestName = koName ?? primaryName;
+            if (bestName?.displayName) {
+              profile.name = bestName.displayName;
+              console.log('[Auth] Name from People API:', profile.name);
+            }
+          }
+
+          // 생년월일
+          console.log('[Auth] People API birthdays count:', data.birthdays?.length ?? 0);
+          const birthday = data.birthdays?.find(
+            (b: any) => b.metadata?.source?.type === 'ACCOUNT'
+          ) ?? data.birthdays?.[0];
+
+          if (birthday?.date) {
+            if (birthday.date.year) profile.birthYear = birthday.date.year;
+            if (birthday.date.month) profile.birthMonth = birthday.date.month;
+            if (birthday.date.day) profile.birthDay = birthday.date.day;
+            console.log('[Auth] Birthday extracted:', birthday.date);
+          } else {
+            console.warn('[Auth] No birthday.date in response');
+          }
+        } else {
+          const body = await res.text();
+          console.warn('[Auth] People API error:', res.status, body.substring(0, 200));
+        }
+      } catch (e) {
+        console.warn('[Auth] People API fetch failed:', e);
+      }
+    } else {
+      console.warn('[Auth] No provider_token available — birthday/name fetch skipped.');
+    }
+  } catch (e) {
+    console.warn('[Auth] fetchGoogleProfile error:', e);
+  }
+
+  console.log('[Auth] Final profile:', JSON.stringify(profile));
+  return profile;
+}
+
+// ─── Sign Out ───
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut();
+}
+
+// ─── Auth State Listener ───
+export function onAuthStateChange(callback: (session: any) => void) {
+  return supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session);
+  });
+}
