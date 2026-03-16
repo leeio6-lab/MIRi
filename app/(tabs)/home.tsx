@@ -26,7 +26,6 @@ import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { LoadingInk } from '../../src/components/ui/LoadingInk';
-import { FourPillarsView } from '../../src/components/saju/FourPillars';
 import { ElementChart } from '../../src/components/saju/ElementChart';
 import { PaywallModal } from '../../src/components/ui/PaywallModal';
 import { DateInputRow } from '../../src/components/ui/DateInputRow';
@@ -41,6 +40,7 @@ import { HOURLY_INSIGHTS } from '../../src/constants/hourlyInsights';
 import { DAILY_INSIGHTS } from '../../src/constants/dailyInsights';
 import { TEN_GOD_TIPS, getTodayBranchIdx, getTodayZodiacMatch, getFortuneGrade } from '../../src/constants/dailyCuriosity';
 import { ElementQuiz } from '../../src/components/home/ElementQuiz';
+import { ElementTarot } from '../../src/components/home/ElementTarot';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 // Element descriptions are now in i18n files under home.elementDesc.*
@@ -636,7 +636,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-
+      {/* ── 오행 타로 ── */}
+      {pillars && (
+        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+          <ElementTarot dayStemIdx={pillars.day.stemIdx} />
+        </Animated.View>
+      )}
 
       {/* ── 이번 주 운세 (Weekly Line Chart) ── */}
       {weeklyData && (
@@ -646,53 +651,6 @@ export default function HomeScreen() {
               <Text style={styles.weeklyTitle}>{t('home.weeklyTitle')}</Text>
             </View>
             <WeeklyLineChart weeklyData={weeklyData} t={t} />
-          </GlassCard>
-        </Animated.View>
-      )}
-
-      {/* ── 사주팔자 ── */}
-      {pillars && (
-        <Animated.View entering={FadeInDown.delay(550).duration(500)}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => router.push('/saju/detail')}
-          >
-            <GlassCard gold style={styles.sajuCard}>
-              <Text style={styles.sajuTitle}>{t('home.myFourPillars')}</Text>
-              <FourPillarsView pillars={pillars} noTitle />
-              <Text style={styles.sajuHint}>
-                {pillars.dayMaster} {t(`elements.${pillars.dayMasterElement}`)} · {pillars.dayMasterYinYang === '양' ? '양(陽)' : '음(陰)'}의 기운
-              </Text>
-            </GlassCard>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-
-      {/* ── 오행 밸런스 (스크롤 시 로드) ── */}
-      {pillars && showElement && (
-        <Animated.View entering={FadeInDown.duration(500)}>
-          <GlassCard style={styles.sajuCard}>
-            <ElementChart balance={pillars.elementBalance} noCard />
-            {(() => {
-              const bal = pillars.elementBalance;
-              const sorted = Object.entries(bal).sort(([,a],[,b]) => (b as number) - (a as number));
-              const highest = sorted[0];
-              const lowest = sorted[sorted.length - 1];
-              const highKey = `${highest[0]}_high`;
-              const lowKey = `${lowest[0]}_low`;
-              return (
-                <View style={styles.elementInsight}>
-                  <Text style={styles.elementInsightText}>
-                    {t(`home.elementDesc.${highKey}`)}
-                  </Text>
-                  {(lowest[1] as number) <= 12.5 && (
-                    <Text style={[styles.elementInsightText, styles.elementInsightSub]}>
-                      {t(`home.elementDesc.${lowKey}`)}
-                    </Text>
-                  )}
-                </View>
-              );
-            })()}
           </GlassCard>
         </Animated.View>
       )}
@@ -1625,6 +1583,7 @@ const styles = StyleSheet.create({
 
   /* ── Weekly Chart ── */
   weeklyCard: {
+    marginTop: 12,
     marginBottom: 16,
     padding: 20,
   },

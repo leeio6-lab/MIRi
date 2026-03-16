@@ -4,45 +4,51 @@ import Svg, { Path, Line, Circle } from 'react-native-svg';
 interface Props { width?: number; height?: number; color?: string }
 
 export function EarthIllust({ width = 140, height = 140, color = '#8B6E4E' }: Props) {
-  const cx = width / 2;
+  const cx = width / 2, cy = height / 2;
+  const baseY = cy + 18;
 
-  const sunCx = cx + 45;
-  const sunCy = 28;
-  const sunR = 8;
-  const sunRays = Array.from({ length: 4 }, (_, i) => {
-    const a = (i * 90 + 45) * Math.PI / 180;
+  const sunCx = cx + 28, sunCy = cy - 28, sunR = 6;
+  const sunRays = Array.from({ length: 6 }, (_, i) => {
+    const a = (i * 60) * Math.PI / 180;
     return {
-      x1: sunCx + (sunR + 3) * Math.cos(a),
-      y1: sunCy + (sunR + 3) * Math.sin(a),
-      x2: sunCx + (sunR + 8) * Math.cos(a),
-      y2: sunCy + (sunR + 8) * Math.sin(a),
+      x1: sunCx + (sunR + 2) * Math.cos(a), y1: sunCy + (sunR + 2) * Math.sin(a),
+      x2: sunCx + (sunR + 6) * Math.cos(a), y2: sunCy + (sunR + 6) * Math.sin(a),
     };
   });
 
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      {/* Big mountain (back) */}
-      <Path d={`M${cx - 50} 100 L${cx - 5} 35 L${cx + 45} 100 Z`}
-        stroke={color} strokeWidth={1.2} fill="none" strokeLinejoin="round" />
+      {/* Big mountain */}
+      <Path d={`M${cx - 32} ${baseY} L${cx} ${baseY - 38} L${cx + 34} ${baseY} Z`}
+        stroke={color} strokeWidth={1.2} fill={`${color}0A`} strokeLinejoin="round" />
+      <Circle cx={cx} cy={baseY - 38} r={1.5} fill={color} opacity={0.5} />
 
-      {/* Small mountain (front) */}
-      <Path d={`M${cx + 5} 100 L${cx + 35} 58 L${cx + 60} 100 Z`}
-        stroke={color} strokeWidth={1} fill="none" opacity={0.7} strokeLinejoin="round" />
+      {/* Small mountain */}
+      <Path d={`M${cx + 8} ${baseY} L${cx + 26} ${baseY - 24} L${cx + 40} ${baseY} Z`}
+        stroke={color} strokeWidth={1} fill={`${color}08`} strokeLinejoin="round" opacity={0.8} />
 
-      {/* Horizon */}
-      <Path d="M10 100 Q70 106 130 100" stroke={color} strokeWidth={0.8} fill="none" opacity={0.3} />
+      {/* Ridge */}
+      <Path d={`M${cx} ${baseY - 38} Q${cx + 13} ${baseY - 30} ${cx + 26} ${baseY - 24}`}
+        stroke={color} strokeWidth={0.6} fill="none" opacity={0.3} />
 
-      {/* Cloud */}
-      <Circle cx={cx - 28} cy={48} r={6} stroke={color} strokeWidth={0.8} fill="none" opacity={0.4} />
-      <Circle cx={cx - 20} cy={44} r={8} stroke={color} strokeWidth={0.8} fill="none" opacity={0.4} />
-      <Circle cx={cx - 11} cy={48} r={6} stroke={color} strokeWidth={0.8} fill="none" opacity={0.4} />
+      {/* Ground */}
+      <Path d={`M${cx - 40} ${baseY} Q${cx} ${baseY + 3} ${cx + 44} ${baseY}`}
+        stroke={color} strokeWidth={0.8} fill="none" opacity={0.4} />
+
+      {/* Field pattern */}
+      {[0, 1].map(r => <Line key={`fh${r}`} x1={cx - 28} y1={baseY + 6 + r * 4} x2={cx - 14} y2={baseY + 6 + r * 4} stroke={color} strokeWidth={0.4} opacity={0.1} />)}
+      {[0, 1, 2].map(c => <Line key={`fv${c}`} x1={cx - 26 + c * 6} y1={baseY + 4} x2={cx - 26 + c * 6} y2={baseY + 12} stroke={color} strokeWidth={0.4} opacity={0.08} />)}
 
       {/* Sun */}
-      <Circle cx={sunCx} cy={sunCy} r={sunR} stroke={color} strokeWidth={1} fill="none" opacity={0.6} />
+      <Circle cx={sunCx} cy={sunCy} r={sunR} stroke={color} strokeWidth={0.8} fill={`${color}0A`} opacity={0.6} />
       {sunRays.map((r, i) => (
-        <Line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
-          stroke={color} strokeWidth={0.8} opacity={0.4} strokeLinecap="round" />
+        <Line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={color} strokeWidth={0.6} opacity={0.3} strokeLinecap="round" />
       ))}
+
+      {/* Cloud */}
+      <Circle cx={cx - 20} cy={cy - 18} r={4.5} stroke={color} strokeWidth={0.6} fill={`${color}08`} opacity={0.4} />
+      <Circle cx={cx - 13} cy={cy - 21} r={6} stroke={color} strokeWidth={0.6} fill={`${color}08`} opacity={0.4} />
+      <Circle cx={cx - 6} cy={cy - 18} r={4.5} stroke={color} strokeWidth={0.6} fill={`${color}08`} opacity={0.4} />
     </Svg>
   );
 }

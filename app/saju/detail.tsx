@@ -16,6 +16,7 @@ import { HelpButton } from '../../src/components/ui/HelpButton';
 import { TermTip, TermBadge } from '../../src/components/ui/TermTip';
 import { BackButton } from '../../src/components/ui/BackButton';
 import { ElementRadar } from '../../src/components/saju/ElementRadar';
+import { ElementChart } from '../../src/components/saju/ElementChart';
 import { useAuthStore } from '../../src/stores/authStore';
 import {
   calculateFullSaju,
@@ -310,7 +311,7 @@ function MyGuideSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard gold style={s.cardSpacing}>
-      <SectionHeader title="나에게 맞는 것들" subtitle="용신 기반 실생활 가이드" helpKey="yongShin" />
+      <SectionHeader title="나에게 맞는 것들" subtitle="일상에서 바로 써먹는 기운 보완법" helpKey="yongShin" />
       <View style={s.guideGrid}>
         {items.map((item, i) => (
           <View key={i} style={[s.guideItem, i === items.length - 1 && s.guideItemLast]}>
@@ -330,7 +331,7 @@ function TodaySajuSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard gold style={s.cardSpacing}>
-      <SectionHeader title="오늘의 기운" subtitle={todaySaju.date} helpKey="tenGods" />
+      <SectionHeader title="오늘의 기운" subtitle={`${todaySaju.date} — 오늘 나에게 흐르는 에너지`} helpKey="tenGods" />
       <View style={s.todayRow}>
         <View style={s.todayPillar}>
           <Text style={[s.todayHanja, { color }]}>{todaySaju.dayStemHanja}</Text>
@@ -372,7 +373,7 @@ function FourPillarsCardSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="나의 사주팔자" helpKey="fourPillars" />
+      <SectionHeader title="나의 사주팔자" subtitle="네 기둥이 나를 이루고 있어요" helpKey="fourPillars" />
 
       {/* 범례 */}
       <View style={s.pillarHelpRow}>
@@ -557,7 +558,7 @@ function ElementBalanceSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="나의 오행 균형" helpKey="fiveElements" />
+      <SectionHeader title="나의 오행 균형" subtitle="다섯 가지 기운의 밸런스" helpKey="fiveElements" />
 
       {/* Radar chart */}
       <ElementRadar balance={balance} />
@@ -669,7 +670,7 @@ function YongShinSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="나에게 필요한 기운" helpKey="yongShin" />
+      <SectionHeader title="나에게 필요한 기운" subtitle="부족한 기운을 채우면 운이 열려요" helpKey="yongShin" />
 
       <View style={s.yongShinRow}>
         <View style={s.yongShinItem}>
@@ -728,7 +729,7 @@ function DaeunTimelineSection({ analysis, birthYear }: { analysis: FullSajuAnaly
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="인생의 큰 흐름" subtitle={daeun.direction === '순행' ? '순행 — 앞으로 나아가는 흐름' : '역행 — 안으로 채워가는 흐름'} helpKey="daeun" />
+      <SectionHeader title="인생의 큰 흐름 (대운)" subtitle={daeun.direction === '순행' ? '순행 — 10년마다 새 기운이 열려요' : '역행 — 10년마다 내면이 깊어져요'} helpKey="daeun" />
       <Text style={s.daeunStartInfo}>대운수: {daeun.daeunNumber}세부터 시작</Text>
 
       <ScrollView
@@ -793,7 +794,7 @@ function ThisYearFlowSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title={`${currentYear}년, 나의 한 해`} helpKey="yearlyFortune" />
+      <SectionHeader title={`${currentYear}년, 나의 한 해`} subtitle="올해 어떤 기운이 흐르고 있을까" helpKey="yearlyFortune" />
 
       {/* Current year highlight */}
       {currentYearData && (
@@ -919,57 +920,78 @@ export default function SajuDetailScreen() {
         </View>
       </View>
 
-      {/* ★ 한 줄 요약 — 바로 노출 */}
+      {/* ★ 한 줄 요약 */}
       <Animated.View entering={FadeInUp.duration(500)}>
         <PersonalNarrativeSection analysis={analysis} />
       </Animated.View>
 
-      {/* 1. Today's Saju */}
-      <LazySection delay={0}>
-        <TodaySajuSection analysis={analysis} />
-      </LazySection>
+      {/* ── 오행 밸런스 요약 ── */}
+      <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+        <GlassCard style={s.quickElementCard}>
+          <ElementChart balance={analysis.fourPillars.elementBalance} noCard />
+        </GlassCard>
+      </Animated.View>
 
-      {/* 2. Four Pillars — Card Stack */}
-      <LazySection delay={50}>
+      {/* ── 사주팔자 한눈에 ── */}
+      <LazySection delay={0}>
         <FourPillarsCardSection analysis={analysis} />
       </LazySection>
 
-      {/* ★ 기둥 간 관계 — 킥 포인트 2 */}
+      {/* ── 기둥 간 관계 ── */}
       <LazySection delay={50}>
         <PillarInteractionSection analysis={analysis} />
       </LazySection>
 
-      {/* 3. Energy Summary */}
+      {/* ── 오행 균형 ── */}
       <LazySection delay={50}>
-        <EnergySummarySection analysis={analysis} />
-      </LazySection>
-
-      {/* 4. Element Balance */}
-      <LazySection delay={100}>
         <ElementBalanceSection analysis={analysis} />
       </LazySection>
 
-      {/* 5. Strength Analysis */}
-      <LazySection delay={100}>
+      {/* ── 신강/신약 ── */}
+      <LazySection delay={50}>
         <StrengthSection analysis={analysis} />
       </LazySection>
 
-      {/* 6. Yong Shin */}
+      {/* ── 나에게 필요한 기운 ── */}
       <LazySection delay={100}>
         <YongShinSection analysis={analysis} />
       </LazySection>
 
-      {/* ★ 나에게 맞는 것들 — 킥 포인트 3 */}
-      <LazySection delay={150}>
+      {/* ── 나에게 맞는 것들 ── */}
+      <LazySection delay={100}>
         <MyGuideSection analysis={analysis} />
       </LazySection>
 
-      {/* 7. Daeun */}
+      {/* ★ 사주풀이 CTA */}
+      <LazySection delay={100}>
+        <GlassCard gold style={s.ctaCard}>
+          <Text style={s.ctaEmoji}>{'✦'}</Text>
+          <Text style={s.ctaTitle}>여기까지는 만세력 기본 정보예요</Text>
+          <Text style={s.ctaSub}>
+            나만의 사주를 AI가 깊이 읽어드려요{'\n'}
+            성격, 적성, 연애운, 재물운까지 상세 풀이
+          </Text>
+          <TouchableOpacity
+            style={s.ctaButton}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(tabs)/saju' as any)}
+          >
+            <Text style={s.ctaButtonText}>내 사주 상세 풀이 받기</Text>
+          </TouchableOpacity>
+        </GlassCard>
+      </LazySection>
+
+      {/* ── 오늘의 기운 ── */}
+      <LazySection delay={100}>
+        <TodaySajuSection analysis={analysis} />
+      </LazySection>
+
+      {/* ── 인생의 큰 흐름 ── */}
       <LazySection delay={150}>
         <DaeunTimelineSection analysis={analysis} birthYear={user.birthYear} />
       </LazySection>
 
-      {/* 8. This Year's Flow */}
+      {/* ── 올해 흐름 ── */}
       <LazySection delay={150}>
         <ThisYearFlowSection analysis={analysis} />
       </LazySection>
@@ -997,6 +1019,10 @@ const s = StyleSheet.create({
     padding: theme.spacing.screenPadding,
     paddingTop: 56,
     paddingBottom: 120,
+  },
+  quickElementCard: {
+    marginBottom: 14,
+    padding: 16,
   },
   cardSpacing: {
     marginBottom: theme.spacing.sectionGap,
@@ -1812,6 +1838,55 @@ const s = StyleSheet.create({
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
+  },
+
+  // ─── CTA ───
+  ctaCard: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    marginBottom: theme.spacing.sectionGap,
+  },
+  ctaEmoji: {
+    fontSize: 24,
+    color: theme.colors.gold.primary,
+    marginBottom: 10,
+  },
+  ctaTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  ctaSub: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  ctaButton: {
+    backgroundColor: theme.colors.gold.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: theme.radius.full,
+    ...Platform.select({
+      web: { boxShadow: `0px 4px 12px ${theme.colors.gold.primary}40` },
+      default: {
+        shadowColor: theme.colors.gold.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 6,
+      },
+    }),
+  } as any,
+  ctaButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
 
   // ─── Disclaimer ───
