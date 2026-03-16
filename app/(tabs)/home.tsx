@@ -40,8 +40,182 @@ import { CITIES, type City } from '../../src/constants/cities';
 import { HOURLY_INSIGHTS } from '../../src/constants/hourlyInsights';
 import { DAILY_INSIGHTS } from '../../src/constants/dailyInsights';
 import { TEN_GOD_TIPS, getTodayBranchIdx, getTodayZodiacMatch, getFortuneGrade } from '../../src/constants/dailyCuriosity';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 // Element descriptions are now in i18n files under home.elementDesc.*
+
+// ─── Weekly Line Chart Component ───
+const GRAPH_H = 120;
+const GRAPH_PAD_TOP = 22;
+const GRAPH_PAD_BOT = 8;
+const DOT_R = 5;
+const DOT_R_TODAY = 7;
+
+function WeeklyLineChart({ weeklyData, t }: { weeklyData: { days: any[]; today: number; bestDay: any }; t: any }) {
+  const [chartWidth, setChartWidth] = useState(0);
+  const days = weeklyData.days;
+  const scores = days.map((d: any) => d.score);
+  const minScore = Math.min(...scores) - 5;
+  const maxScore = Math.max(...scores) + 5;
+  const range = maxScore - minScore || 1;
+
+  const getX = (i: number) => {
+    if (chartWidth === 0) return 0;
+    const colW = chartWidth / 7;
+    return colW / 2 + colW * i;
+  };
+  const getY = (score: number) => {
+    return GRAPH_PAD_TOP + (1 - (score - minScore) / range) * (GRAPH_H - GRAPH_PAD_TOP - GRAPH_PAD_BOT);
+  };
+
+  // Build smooth path
+  const points = days.map((d: any, i: number) => ({ x: getX(i), y: getY(d.score) }));
+  let linePath = '';
+  let areaPath = '';
+  if (chartWidth > 0 && points.length > 0) {
+    linePath = `M${points[0].x},${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const cx = (points[i - 1].x + points[i].x) / 2;
+      linePath += ` C${cx},${points[i - 1].y} ${cx},${points[i].y} ${points[i].x},${points[i].y}`;
+    }
+    areaPath = linePath + ` L${points[points.length - 1].x},${GRAPH_H} L${points[0].x},${GRAPH_H} Z`;
+  }
+
+  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+  return (
+    <View onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}>
+      {chartWidth > 0 && (
+        <Svg width={chartWidth} height={GRAPH_H} style={{ marginBottom: 6 }}>
+          <Defs>
+            <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={theme.colors.gold.primary} stopOpacity="0.15" />
+              <Stop offset="1" stopColor={theme.colors.gold.primary} stopOpacity="0.01" />
+            </LinearGradient>
+          </Defs>
+          {/* area fill */}
+          {areaPath ? <Path d={areaPath} fill="url(#areaGrad)" /> : null}
+          {/* line */}
+          {linePath ? <Path d={linePath} fill="none" stroke={theme.colors.gold.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /> : null}
+          {/* dots */}
+          {points.map((p, i) => {
+            const isToday = days[i].dayOfWeek === weeklyData.today;
+            const isBest = days[i].date === weeklyData.bestDay.date;
+            const r = isToday ? DOT_R_TODAY : DOT_R;
+            return (
+              <React.Fragment key={i}>
+                {isToday && (
+                  <Circle cx={p.x} cy={p.y} r={r + 4} fill={theme.colors.gold.primary + '15'} />
+                )}
+                <Circle
+                  cx={p.x} cy={p.y} r={r}
+                  fill={isToday ? theme.colors.gold.primary : isBest ? theme.colors.gold.light : '#D4D4D4'}
+                  stroke="#FFFFFF" strokeWidth={2}
+                />
+              </React.Fragment>
+            );
+          })}
+        </Svg>
+      )}
+      {/* 십성 + 간지 행 */}
+      <View style={wkStyles.infoRow}>
+        {days.map((d: any, i: number) => {
+          const isToday = d.dayOfWeek === weeklyData.today;
+          const isBest = d.date === weeklyData.bestDay.date;
+          return (
+            <View key={`info-${i}`} style={wkStyles.infoCell}>
+              <Text style={[wkStyles.tenGod, isToday && wkStyles.tenGodToday]}>{d.tenStar}</Text>
+              <Text style={[wkStyles.pillar, isToday && wkStyles.pillarToday]}>{d.dayPillar}</Text>
+              {isBest && <Text style={wkStyles.bestTag}>BEST</Text>}
+            </View>
+          );
+        })}
+      </View>
+      {/* 요일 행 */}
+      <View style={wkStyles.dayRow}>
+        {days.map((d: any, i: number) => {
+          const isToday = d.dayOfWeek === weeklyData.today;
+          return (
+            <View key={`day-${i}`} style={wkStyles.dayCell}>
+              <Text style={[wkStyles.dayText, isToday && wkStyles.dayTextToday]}>
+                {t(`days.${dayKeys[d.dayOfWeek]}`)}
+              </Text>
+              {isToday && <View style={wkStyles.todayDot} />}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const wkStyles = StyleSheet.create({
+  infoRow: {
+    flexDirection: 'row',
+  },
+  infoCell: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 1,
+    paddingVertical: 4,
+  },
+  tenGod: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.text.secondary,
+  },
+  tenGodToday: {
+    color: theme.colors.gold.primary,
+    fontWeight: '700',
+  },
+  pillar: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: theme.colors.text.tertiary,
+  },
+  pillarToday: {
+    color: theme.colors.gold.dark,
+    fontWeight: '500',
+  },
+  bestTag: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    backgroundColor: theme.colors.gold.primary + '12',
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    overflow: 'hidden',
+    marginTop: 1,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.glass.border,
+  },
+  dayCell: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  dayText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.text.tertiary,
+  },
+  dayTextToday: {
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+  },
+  todayDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.gold.primary,
+  },
+});
 
 function PulseHint() {
   const { t } = useTranslation();
@@ -441,6 +615,15 @@ export default function HomeScreen() {
                 <Text style={styles.identityDesc}>{t('home.dayMasterDesc')}</Text>
               </View>
             </View>
+            <TouchableOpacity
+              style={styles.manseryeokBtn}
+              onPress={() => router.push('/saju/detail')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.manseryeokBtnIcon}>命</Text>
+              <Text style={styles.manseryeokBtnText}>{t('home.manseryeok')}</Text>
+              <Text style={styles.manseryeokBtnArrow}>›</Text>
+            </TouchableOpacity>
           </GlassCard>
         </Animated.View>
       )}
@@ -448,55 +631,8 @@ export default function HomeScreen() {
       {/* ── 오늘의 기운 ── */}
       <Animated.View entering={FadeInDown.delay(300).duration(500)}>
         <GlassCard style={styles.fortuneCard}>
-          <View style={styles.fortuneHeader}>
-            <Text style={styles.fortuneLabel}>{t('home.todayEnergy')}</Text>
-            <TouchableOpacity
-              style={styles.manseryeokChip}
-              onPress={() => router.push('/saju/detail')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.manseryeokText}>{t('home.manseryeok')}</Text>
-              <Text style={styles.manseryeokArrow}>›</Text>
-            </TouchableOpacity>
-          </View>
-          {dailyFortune?.overallScore != null && (() => {
-            const grade = getFortuneGrade(dailyFortune.overallScore);
-            return (
-              <View style={styles.scoreHero}>
-                <Text style={styles.scoreNumber}>{dailyFortune.overallScore}</Text>
-                <View style={styles.scoreRight}>
-                  <View style={[styles.gradeBadge, { backgroundColor: grade.color + '18', borderColor: grade.color + '40' }]}>
-                    <Text style={[styles.gradeText, { color: grade.color }]}>{grade.label}</Text>
-                  </View>
-                  <Text style={styles.scoreMax}>/ 100</Text>
-                </View>
-              </View>
-            );
-          })()}
+          <Text style={styles.fortuneLabel}>{t('home.todayEnergy')}</Text>
           <Text style={styles.fortuneText}>{todaySummary}</Text>
-          {/* Yesterday comparison */}
-          {(scoreChange !== 0 || yesterdayScore > 0) && (
-            <View style={styles.scoreChangeRow}>
-              {scoreChange > 0 && (
-                <>
-                  <Text style={[styles.scoreChangeText, { color: '#4A9E6E' }]}>{'\u25B2'}{scoreChange}</Text>
-                  <Text style={[styles.scoreChangeLabel, { color: '#4A9E6E' }]}>{t('home.fortuneUp')}</Text>
-                </>
-              )}
-              {scoreChange < 0 && (
-                <>
-                  <Text style={[styles.scoreChangeText, { color: '#E85D4A' }]}>{'\u25BC'}{Math.abs(scoreChange)}</Text>
-                  <Text style={[styles.scoreChangeLabel, { color: '#E85D4A' }]}>{t('home.fortuneDown')}</Text>
-                </>
-              )}
-              {scoreChange === 0 && yesterdayScore > 0 && (
-                <>
-                  <Text style={[styles.scoreChangeText, { color: theme.colors.text.tertiary }]}>{'\u2192'}</Text>
-                  <Text style={[styles.scoreChangeLabel, { color: theme.colors.text.tertiary }]}>{t('home.fortuneSame')}</Text>
-                </>
-              )}
-            </View>
-          )}
           {dailyFortune?.luckyItem && (
             <View style={styles.luckyRow}>
               <Text style={styles.luckyLabel}>{t('home.luckyItemLabel')}</Text>
@@ -506,58 +642,6 @@ export default function HomeScreen() {
         </GlassCard>
       </Animated.View>
 
-
-      {/* ── 오늘의 한 수 (Do/Don't) ── */}
-      {todayTip && (
-        <Animated.View entering={FadeInDown.delay(350).duration(500)}>
-          <GlassCard style={styles.tipCard}>
-            <View style={styles.tipHeader}>
-              <Text style={styles.tipTitle}>오늘의 한 수</Text>
-              <Text style={styles.tipMood}>{todayTip.mood[i18n.language as 'ko' | 'en' | 'ja'] ?? todayTip.mood.ko}</Text>
-            </View>
-            <View style={styles.tipRow}>
-              <View style={[styles.tipBox, styles.tipDoBox]}>
-                <Text style={styles.tipDoLabel}>DO</Text>
-                <Text style={styles.tipDoText}>{todayTip.do[i18n.language as 'ko' | 'en' | 'ja'] ?? todayTip.do.ko}</Text>
-              </View>
-              <View style={[styles.tipBox, styles.tipDontBox]}>
-                <Text style={styles.tipDontLabel}>DON'T</Text>
-                <Text style={styles.tipDontText}>{todayTip.dont[i18n.language as 'ko' | 'en' | 'ja'] ?? todayTip.dont.ko}</Text>
-              </View>
-            </View>
-          </GlassCard>
-        </Animated.View>
-      )}
-
-      {/* ── 오늘의 궁합 띠 ── */}
-      {zodiacMatch && (
-        <Animated.View entering={FadeInDown.delay(380).duration(500)}>
-          <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/(tabs)/compatibility' as any)}>
-            <GlassCard style={styles.zodiacCard}>
-              <Text style={styles.zodiacTitle}>오늘의 궁합 띠</Text>
-              <View style={styles.zodiacRow}>
-                {zodiacMatch.lucky.map((z, i) => (
-                  <View key={i} style={styles.zodiacItem}>
-                    <Text style={styles.zodiacEmoji}>{z.emoji}</Text>
-                    <Text style={styles.zodiacName}>{i18n.language === 'en' ? z.nameEn : i18n.language === 'ja' ? z.nameJa : z.name}</Text>
-                    <Text style={styles.zodiacGoodLabel}>GOOD</Text>
-                  </View>
-                ))}
-                {zodiacMatch.caution && (
-                  <>
-                    <View style={styles.zodiacDivider} />
-                    <View style={styles.zodiacItem}>
-                      <Text style={styles.zodiacEmoji}>{zodiacMatch.caution.emoji}</Text>
-                      <Text style={styles.zodiacName}>{i18n.language === 'en' ? zodiacMatch.caution.nameEn : i18n.language === 'ja' ? zodiacMatch.caution.nameJa : zodiacMatch.caution.name}</Text>
-                      <Text style={styles.zodiacCautionLabel}>주의</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-            </GlassCard>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
 
       {/* ── 지금 이 시간 (Now This Hour) ── */}
       {hourlyData && (
@@ -587,62 +671,14 @@ export default function HomeScreen() {
         </Animated.View>
       )}
 
-      {/* ── 오늘의 한 줄 (Daily Insight) ── */}
-      {dailyInsightData?.insight && (
-        <Animated.View entering={FadeInDown.delay(450).duration(500)}>
-          <GlassCard style={styles.dailyInsightCard}>
-            <View style={styles.dailyInsightRow}>
-              <Text style={styles.dailyInsightIcon}>{dailyInsightData.icon}</Text>
-              <View style={styles.dailyInsightTextWrap}>
-                <Text style={styles.dailyInsightTitle}>{t('home.dailyInsightTitle')}</Text>
-                <Text style={styles.dailyInsightMessage}>
-                  {dailyInsightData.insight[i18n.language as 'ko' | 'en' | 'ja'] ?? dailyInsightData.insight.ko}
-                </Text>
-              </View>
-            </View>
-          </GlassCard>
-        </Animated.View>
-      )}
-
-      {/* ── 이번 주 운세 (Weekly Chart) ── */}
+      {/* ── 이번 주 운세 (Weekly Line Chart) ── */}
       {weeklyData && (
         <Animated.View entering={FadeInDown.delay(500).duration(500)}>
           <GlassCard style={styles.weeklyCard}>
-            <Text style={styles.weeklyTitle}>{t('home.weeklyTitle')}</Text>
-            <View style={styles.weeklyBars}>
-              {weeklyData.days.map((d, idx) => {
-                const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-                const dayKey = dayKeys[d.dayOfWeek];
-                const isToday = d.dayOfWeek === weeklyData.today;
-                const isBest = d.date === weeklyData.bestDay.date;
-                const barWidth = `${Math.max(d.score, 20)}%`;
-                return (
-                  <View key={d.date} style={styles.weeklyBarRow}>
-                    <Text style={[styles.weeklyDayLabel, isToday && styles.weeklyDayLabelToday]}>
-                      {t(`days.${dayKey}`)}
-                    </Text>
-                    <View style={styles.weeklyBarTrack}>
-                      <View
-                        style={[
-                          styles.weeklyBarFill,
-                          { width: barWidth as any },
-                          isToday && styles.weeklyBarFillToday,
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.weeklyBarScore}>{d.score}</Text>
-                    {isToday && <Text style={styles.weeklyTodayTag}>{t('home.todayLabel')}</Text>}
-                    {isBest && <Text style={styles.weeklyBestStar}>{'\u2B50'}</Text>}
-                  </View>
-                );
-              })}
+            <View style={styles.weeklyHeader}>
+              <Text style={styles.weeklyTitle}>{t('home.weeklyTitle')}</Text>
             </View>
-            <Text style={styles.weeklyBestText}>
-              {t('home.weeklyBest')}: {(() => {
-                const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-                return t(`days.${dayKeys[weeklyData.bestDay.dayOfWeek]}`);
-              })()}
-            </Text>
+            <WeeklyLineChart weeklyData={weeklyData} t={t} />
           </GlassCard>
         </Animated.View>
       )}
@@ -657,6 +693,9 @@ export default function HomeScreen() {
             <GlassCard gold style={styles.sajuCard}>
               <Text style={styles.sajuTitle}>{t('home.myFourPillars')}</Text>
               <FourPillarsView pillars={pillars} noTitle />
+              <Text style={styles.sajuHint}>
+                {pillars.dayMaster} {t(`elements.${pillars.dayMasterElement}`)} · {pillars.dayMasterYinYang === '양' ? '양(陽)' : '음(陰)'}의 기운
+              </Text>
             </GlassCard>
           </TouchableOpacity>
         </Animated.View>
@@ -667,6 +706,26 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.duration(500)}>
           <GlassCard style={styles.sajuCard}>
             <ElementChart balance={pillars.elementBalance} noCard />
+            {(() => {
+              const bal = pillars.elementBalance;
+              const sorted = Object.entries(bal).sort(([,a],[,b]) => (b as number) - (a as number));
+              const highest = sorted[0];
+              const lowest = sorted[sorted.length - 1];
+              const highKey = `${highest[0]}_high`;
+              const lowKey = `${lowest[0]}_low`;
+              return (
+                <View style={styles.elementInsight}>
+                  <Text style={styles.elementInsightText}>
+                    {t(`home.elementDesc.${highKey}`)}
+                  </Text>
+                  {(lowest[1] as number) <= 12.5 && (
+                    <Text style={[styles.elementInsightText, styles.elementInsightSub]}>
+                      {t(`home.elementDesc.${lowKey}`)}
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
           </GlassCard>
         </Animated.View>
       )}
@@ -965,10 +1024,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   appName: {
-    fontSize: 38,
+    fontSize: 52,
     fontWeight: '200',
     color: theme.colors.text.primary,
-    letterSpacing: 12,
+    letterSpacing: 16,
   },
   appSub: {
     fontSize: 14,
@@ -1526,79 +1585,76 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
 
+  /* ── 만세력 버튼 (일간 카드 하단) ── */
+  manseryeokBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.gold.primary + '15',
+    gap: 6,
+  },
+  manseryeokBtnIcon: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.gold.dark,
+    opacity: 0.5,
+  },
+  manseryeokBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.gold.dark,
+    opacity: 0.7,
+  },
+  manseryeokBtnArrow: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.gold.dark,
+    opacity: 0.5,
+  },
+
   /* ── Weekly Chart ── */
   weeklyCard: {
     marginBottom: 16,
-    padding: 16,
+    padding: 20,
   },
-  weeklyTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.text.tertiary,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+  weeklyHeader: {
     marginBottom: 12,
   },
-  weeklyBars: {
-    gap: 6,
+  weeklyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
   },
-  weeklyBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  weeklyDayLabel: {
-    width: 24,
+
+  /* ── 사주 해석 힌트 ── */
+  sajuHint: {
     fontSize: 12,
     fontWeight: '500',
+    color: theme.colors.goldCard.textTertiary,
+    textAlign: 'center',
+    marginTop: 10,
+    opacity: 0.8,
+  },
+
+  /* ── 오행 해석 ── */
+  elementInsight: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.glass.border,
+    gap: 8,
+  },
+  elementInsightText: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+  },
+  elementInsightSub: {
     color: theme.colors.text.tertiary,
-    textAlign: 'center',
-  },
-  weeklyDayLabelToday: {
-    fontWeight: '700',
-    color: theme.colors.gold.primary,
-  },
-  weeklyBarTrack: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  weeklyBarFill: {
-    height: 8,
-    backgroundColor: theme.colors.text.tertiary,
-    borderRadius: 4,
-  },
-  weeklyBarFillToday: {
-    backgroundColor: theme.colors.gold.primary,
-  },
-  weeklyBarScore: {
-    width: 24,
-    fontSize: 11,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
-    textAlign: 'right',
-  },
-  weeklyTodayTag: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: theme.colors.gold.primary,
-    backgroundColor: theme.colors.gold.primary + '15',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    overflow: 'hidden',
-  },
-  weeklyBestStar: {
-    fontSize: 12,
-  },
-  weeklyBestText: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 12,
   },
 
   /* ── 연속 출석 모달 ── */
