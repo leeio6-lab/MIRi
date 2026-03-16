@@ -109,6 +109,8 @@
     "welcome": "ミリへようこそ",
     "loginGoogle": "Googleで続ける",
     "loginApple": "Appleで続ける",
+    "loginKakao": "カカオで続ける",
+    "loginLine": "LINEで続ける",
     "loginGuest": "ゲストで始める",
     "guestInfo": "ログインなしでご利用いただけます。後でログインするとデータが保持されます。",
     "onboarding1Title": "運命を先に見る",

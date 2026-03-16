@@ -85,7 +85,7 @@ function InkDrop({ delay, x, y, size, maxScale, color }: {
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { signInWithGoogle, signInWithApple, signInAsGuest, isLoading } = useAuthStore();
+  const { signInWithGoogle, signInWithApple, signInWithKakao, signInWithLine, signInAsGuest, isLoading } = useAuthStore();
 
   const contentOpacity = useSharedValue(0);
 
@@ -133,6 +133,24 @@ export default function LoginScreen() {
     }
   };
 
+  const handleKakaoLogin = async () => {
+    const result = await signInWithKakao();
+    if (result.success) {
+      router.replace('/(auth)/birth-input');
+    } else if (result.error && result.error !== 'Login cancelled') {
+      Alert.alert(t('common.loginFailed'), result.error);
+    }
+  };
+
+  const handleLineLogin = async () => {
+    const result = await signInWithLine();
+    if (result.success) {
+      router.replace('/(auth)/birth-input');
+    } else if (result.error && result.error !== 'Login cancelled') {
+      Alert.alert(t('common.loginFailed'), result.error);
+    }
+  };
+
   const handleGuestLogin = async () => {
     const result = await signInAsGuest();
     if (result.success) {
@@ -164,24 +182,25 @@ export default function LoginScreen() {
 
         <View style={styles.buttons}>
           {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={styles.appleBtn}
-              onPress={handleAppleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.appleBtnText}>{t('auth.loginApple')}</Text>
+            <TouchableOpacity style={styles.loginBtn} onPress={handleAppleLogin} disabled={isLoading} activeOpacity={0.8}>
+              <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#000', fontSize: 17 }]}>{'\uF8FF'}</Text></View>
+              <Text style={styles.loginLabel}>{t('auth.loginApple')}</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={styles.googleBtn}
-            onPress={handleGoogleLogin}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.googleBtnText}>G</Text>
-            <Text style={styles.googleBtnLabel}>{t('auth.loginGoogle')}</Text>
+          <TouchableOpacity style={styles.loginBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
+            <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#4285F4' }]}>G</Text></View>
+            <Text style={styles.loginLabel}>{t('auth.loginGoogle')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.loginBtn} onPress={handleKakaoLogin} disabled={isLoading} activeOpacity={0.8}>
+            <View style={[styles.iconCircle, { backgroundColor: '#FEE500' }]}><Text style={[styles.iconText, { color: '#3C1E1E', fontSize: 15 }]}>K</Text></View>
+            <Text style={styles.loginLabel}>{t('auth.loginKakao')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.loginBtn} onPress={handleLineLogin} disabled={isLoading} activeOpacity={0.8}>
+            <View style={[styles.iconCircle, { backgroundColor: '#06C755' }]}><Text style={[styles.iconText, { color: '#fff', fontSize: 14 }]}>L</Text></View>
+            <Text style={styles.loginLabel}>{t('auth.loginLine')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -246,44 +265,38 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   buttons: {
-    gap: theme.spacing.md,
+    gap: 10,
   },
-  appleBtn: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: theme.radius.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  appleBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  googleBtn: {
+  loginBtn: {
     backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.md,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
-    minHeight: 52,
+    gap: 10,
+    minHeight: 50,
     borderWidth: 1,
-    borderColor: theme.colors.glass.border,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
-  googleBtnText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4285F4',
+  iconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  googleBtnLabel: {
-    color: '#3C3C3C',
+  iconText: {
     fontSize: 15,
+    fontWeight: '700',
+  },
+  loginLabel: {
+    color: '#3C3C3C',
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   guestBtn: {
     alignItems: 'center',

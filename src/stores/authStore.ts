@@ -18,6 +18,8 @@ interface AuthState {
 
   signInWithGoogle: () => Promise<{ success: boolean; error?: string; providerToken?: string }>;
   signInWithApple: () => Promise<{ success: boolean; error?: string }>;
+  signInWithKakao: () => Promise<{ success: boolean; error?: string }>;
+  signInWithLine: () => Promise<{ success: boolean; error?: string }>;
   signInAsGuest: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
@@ -46,6 +48,20 @@ export const useAuthStore = create<AuthState>()(
       signInWithApple: async () => {
         set({ isLoading: true });
         const result = await AuthService.signInWithApple();
+        set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
+        return result;
+      },
+
+      signInWithKakao: async () => {
+        set({ isLoading: true });
+        const result = await AuthService.signInWithKakao();
+        set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
+        return result;
+      },
+
+      signInWithLine: async () => {
+        set({ isLoading: true });
+        const result = await AuthService.signInWithLine();
         set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
         return result;
       },

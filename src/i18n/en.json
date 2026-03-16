@@ -109,6 +109,8 @@
     "welcome": "Welcome to MIRI",
     "loginGoogle": "Continue with Google",
     "loginApple": "Continue with Apple",
+    "loginKakao": "Continue with Kakao",
+    "loginLine": "Continue with LINE",
     "loginGuest": "Continue as Guest",
     "guestInfo": "You can use the app without signing in. Sign in later to keep your data.",
     "onboarding1Title": "Know Your Fate",

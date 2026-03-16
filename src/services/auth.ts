@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
 const GOOGLE_SCOPES = [
@@ -71,6 +72,117 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Google login failed';
     if (__DEV__) console.warn('[Auth] Google:', message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── Kakao Sign-In ───
+export async function signInWithKakao(): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (Platform.OS === 'web') {
+      const redirectTo = window.location.origin;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: { redirectTo },
+      });
+      if (error) throw error;
+      return { success: true };
+    }
+
+    const { makeRedirectUri } = await import('expo-auth-session');
+    const WebBrowser = await import('expo-web-browser');
+
+    const redirectTo = makeRedirectUri();
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+
+    if (error) throw error;
+    if (!data.url) throw new Error('No OAuth URL returned');
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== 'success') return { success: false, error: 'Login cancelled' };
+
+    const url = new URL(result.url);
+    const code = url.searchParams.get('code');
+
+    if (code) {
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+      return { success: true };
+    }
+
+    const hashParams = new URLSearchParams(url.hash.substring(1));
+    const access_token = hashParams.get('access_token');
+    const refresh_token = hashParams.get('refresh_token');
+
+    if (access_token && refresh_token) {
+      const { error: sessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (sessionError) throw sessionError;
+      return { success: true };
+    }
+
+    return { success: false, error: 'No authentication data received' };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Kakao login failed';
+    if (__DEV__) console.warn('[Auth] Kakao:', message);
+    return { success: false, error: message };
+  }
+}
+
+// ─── LINE Sign-In (manual OAuth — Supabase 미지원) ───
+// LINE Login → auth code → Edge Function(auth-line)에서 토큰 교환 + Supabase 세션 생성
+export async function signInWithLine(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const LINE_CLIENT_ID = Constants.expoConfig?.extra?.lineChannelId ?? process.env.EXPO_PUBLIC_LINE_CHANNEL_ID ?? '';
+    if (!LINE_CLIENT_ID) throw new Error('LINE Channel ID not configured');
+
+    const state = Math.random().toString(36).substring(2, 10);
+    const nonce = Math.random().toString(36).substring(2, 10);
+
+    if (Platform.OS === 'web') {
+      const redirectUri = window.location.origin + '/auth/callback';
+      const authUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid%20email&nonce=${nonce}`;
+      // Edge Function이 콜백을 처리하여 Supabase 세션을 생성
+      window.location.href = authUrl;
+      return { success: true };
+    }
+
+    // 네이티브: 인앱 브라우저
+    const { makeRedirectUri } = await import('expo-auth-session');
+    const WebBrowser = await import('expo-web-browser');
+
+    const redirectUri = makeRedirectUri();
+    const authUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid%20email&nonce=${nonce}`;
+
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+    if (result.type !== 'success') return { success: false, error: 'Login cancelled' };
+
+    const url = new URL(result.url);
+    const code = url.searchParams.get('code');
+
+    if (!code) return { success: false, error: 'No authorization code received' };
+
+    // Edge Function에서 코드 → LINE 토큰 교환 → Supabase 세션 생성
+    const { data, error } = await supabase.functions.invoke('auth-line', {
+      body: { code, redirectUri },
+    });
+    if (error) throw error;
+
+    if (data?.access_token && data?.refresh_token) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) throw sessionError;
+      return { success: true };
+    }
+
+    return { success: false, error: 'No session data from server' };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'LINE login failed';
+    if (__DEV__) console.warn('[Auth] LINE:', message);
     return { success: false, error: message };
   }
 }
