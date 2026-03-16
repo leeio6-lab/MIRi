@@ -41,7 +41,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? '#FFFFFF' : theme.colors.gold.primary}
+          color={theme.colors.gold.primary}
         />
       ) : (
         <>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     ...theme.typo.button,
   },
   textPrimary: {
-    color: '#FFFFFF',
+    color: theme.colors.gold.primary,
   },
   textSecondary: {
     color: '#1C1C1E',

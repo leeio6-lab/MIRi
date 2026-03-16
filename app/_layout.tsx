@@ -23,6 +23,7 @@ import '../src/i18n';
 import { theme } from '../src/constants/theme';
 import { supabase } from '../src/services/supabase';
 import { useAuthStore } from '../src/stores/authStore';
+import { useFortuneStore } from '../src/stores/fortuneStore';
 import { ErrorBoundary } from '../src/components/ui/ErrorBoundary';
 
 function OfflineBanner() {
@@ -76,10 +77,15 @@ const offlineStyles = StyleSheet.create({
 
 export default function RootLayout() {
   const setAuthenticated = useAuthStore((s) => s.setAuthenticated);
+  const loadHistory = useFortuneStore((s) => s.loadHistory);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthenticated(!!session);
+      // 로그인 시 유저의 분석 기록을 Supabase에서 자동 로드
+      if (session) {
+        loadHistory().catch(() => {});
+      }
     });
     return () => subscription.unsubscribe();
   }, []);

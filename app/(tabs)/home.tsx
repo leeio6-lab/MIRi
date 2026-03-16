@@ -40,6 +40,7 @@ import { CITIES, type City } from '../../src/constants/cities';
 import { HOURLY_INSIGHTS } from '../../src/constants/hourlyInsights';
 import { DAILY_INSIGHTS } from '../../src/constants/dailyInsights';
 import { TEN_GOD_TIPS, getTodayBranchIdx, getTodayZodiacMatch, getFortuneGrade } from '../../src/constants/dailyCuriosity';
+import { ElementQuiz } from '../../src/components/home/ElementQuiz';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 // Element descriptions are now in i18n files under home.elementDesc.*
@@ -615,61 +616,27 @@ export default function HomeScreen() {
                 <Text style={styles.identityDesc}>{t('home.dayMasterDesc')}</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.manseryeokBtn}
-              onPress={() => router.push('/saju/detail')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.manseryeokBtnIcon}>命</Text>
-              <Text style={styles.manseryeokBtnText}>{t('home.manseryeok')}</Text>
-              <Text style={styles.manseryeokBtnArrow}>›</Text>
-            </TouchableOpacity>
           </GlassCard>
         </Animated.View>
       )}
 
-      {/* ── 오늘의 기운 ── */}
-      <Animated.View entering={FadeInDown.delay(300).duration(500)}>
-        <GlassCard style={styles.fortuneCard}>
-          <Text style={styles.fortuneLabel}>{t('home.todayEnergy')}</Text>
-          <Text style={styles.fortuneText}>{todaySummary}</Text>
-          {dailyFortune?.luckyItem && (
-            <View style={styles.luckyRow}>
-              <Text style={styles.luckyLabel}>{t('home.luckyItemLabel')}</Text>
-              <Text style={styles.luckyValue}>{dailyFortune.luckyItem}</Text>
-            </View>
-          )}
-        </GlassCard>
+      {/* ── 만세력 ── */}
+      <Animated.View entering={FadeInDown.delay(180).duration(500)}>
+        <TouchableOpacity
+          style={styles.manseryeokCard}
+          onPress={() => router.push('/saju/detail')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.manseryeokCardIcon}>命</Text>
+          <View style={styles.manseryeokCardBody}>
+            <Text style={styles.manseryeokCardTitle}>{t('home.manseryeok')}</Text>
+            <Text style={styles.manseryeokCardSub}>사주 원국 · 대운 · 세운 확인</Text>
+          </View>
+          <Text style={styles.manseryeokCardArrow}>›</Text>
+        </TouchableOpacity>
       </Animated.View>
 
 
-      {/* ── 지금 이 시간 (Now This Hour) ── */}
-      {hourlyData && (
-        <Animated.View entering={FadeInDown.delay(400).duration(500)}>
-          <GlassCard style={styles.nowCard}>
-            <View style={styles.nowBadgeRow}>
-              <View style={styles.nowBadge}>
-                <Text style={styles.nowBadgeText}>{t('home.nowBadge')}</Text>
-              </View>
-              <Text style={styles.nowSijin}>{t(`hours.${hourlyData.hourKey}`)}</Text>
-            </View>
-            <View style={styles.nowTenGodRow}>
-              <Text style={styles.nowTenGod}>{hourlyData.tenGod}</Text>
-            </View>
-            {hourlyData.insight && (
-              <Text style={styles.nowMessage}>
-                {hourlyData.insight[i18n.language as 'ko' | 'en' | 'ja'] ?? hourlyData.insight.ko}
-              </Text>
-            )}
-            {hourlyData.nextInsight && (
-              <View style={styles.nowNextRow}>
-                <Text style={styles.nowNextLabel}>{t('home.nextHourPreview')}</Text>
-                <Text style={styles.nowNextHour}>{t(`hours.${hourlyData.nextHourKey}`)}</Text>
-              </View>
-            )}
-          </GlassCard>
-        </Animated.View>
-      )}
 
       {/* ── 이번 주 운세 (Weekly Line Chart) ── */}
       {weeklyData && (
@@ -1585,7 +1552,48 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
 
-  /* ── 만세력 버튼 (일간 카드 하단) ── */
+  /* ── 만세력 카드 (별도) ── */
+  manseryeokCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 14,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    ...Platform.select({
+      web: { boxShadow: '0 2px 10px rgba(0,0,0,0.06)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 },
+    }),
+  } as any,
+  manseryeokCardIcon: {
+    fontSize: 22,
+    color: theme.colors.gold.primary,
+    fontWeight: '300',
+  },
+  manseryeokCardBody: {
+    flex: 1,
+  },
+  manseryeokCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  manseryeokCardSub: {
+    fontSize: 11,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
+  },
+  manseryeokCardArrow: {
+    fontSize: 20,
+    color: theme.colors.text.tertiary,
+    fontWeight: '200',
+  },
+
+  /* ── 만세력 버튼 (레거시) ── */
   manseryeokBtn: {
     flexDirection: 'row',
     alignItems: 'center',

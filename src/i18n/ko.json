@@ -269,7 +269,8 @@
     "portraitBadge": "관상화",
     "personalitySection": "성격 분석",
     "fortuneSection": "운세 예측",
-    "radarSection": "오행 운세 레이더",
+    "radarSection": "운명 레이더",
+    "detailSection": "부위별 상세 분석",
     "adviceSection": "관상 조언",
     "bestPoint": "베스트 관상 포인트"
   },
@@ -347,6 +348,7 @@
       "성격·직업·재물·연애·건강운 상세 풀이",
       "대운 흐름과 올해 운세 맞춤 조언"
     ],
+    "facePrice": "₩500 / 1회",
     "perAnalysis": "/ 1회 분석",
     "freeTrial": "무료 체험 ({{count}}회 남음)",
     "restore": "구매 복원"
@@ -495,10 +497,16 @@
     "sajuChar": "命",
     "faceChar": "相",
     "compatChar": "緣",
+    "deleteTitle": "기록 삭제",
     "deleteConfirm": "이 분석 기록을 삭제할까요?",
     "deleted": "삭제되었습니다",
     "noRecords": "아직 분석 기록이 없습니다",
-    "noRecordsSub": "사주나 관상 분석을 받으면 여기에 저장됩니다"
+    "noRecordsSub": "사주나 관상 분석을 받으면 여기에 저장됩니다",
+    "noRecordsFiltered": "{{type}} 분석 기록이 없습니다",
+    "today": "오늘",
+    "yesterday": "어제",
+    "daysAgo": "{{days}}일 전",
+    "tapToView": "상세 보기"
   },
   "yearly": {
     "analyzeButton": "연간 운세 분석하기",

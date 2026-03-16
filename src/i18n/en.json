@@ -488,10 +488,16 @@
     "sajuChar": "命",
     "faceChar": "相",
     "compatChar": "緣",
+    "deleteTitle": "Delete Record",
     "deleteConfirm": "Delete this analysis record?",
     "deleted": "Deleted",
     "noRecords": "No analysis records yet",
-    "noRecordsSub": "Your analysis results will be saved here"
+    "noRecordsSub": "Your analysis results will be saved here",
+    "noRecordsFiltered": "No {{type}} records yet",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{days}}d ago",
+    "tapToView": "View details"
   },
   "yearly": {
     "analyzeButton": "Analyze Yearly Fortune",

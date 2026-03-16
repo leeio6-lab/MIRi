@@ -901,7 +901,7 @@ export default function SajuDetailScreen() {
       {/* Back button + title */}
       <View style={s.header}>
         <BackButton />
-        <Text style={s.screenTitle}>나의 사주 풀이</Text>
+        <Text style={s.screenTitle}>나의 만세력</Text>
         <View style={{ width: 40 }} />
       </View>
 

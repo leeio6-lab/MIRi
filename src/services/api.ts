@@ -249,6 +249,8 @@ export interface AnalysisRecord {
   isPaid: boolean;
   result: SajuResult | FaceResult | CompatibilityResult;
   createdAt: string;
+  /** 관상 분석용: 관상화 이미지 base64 */
+  imageBase64?: string | null;
 }
 
 async function saveAnalysis(
@@ -289,15 +291,20 @@ async function saveAnalysis(
   }
 }
 
-async function fetchHistory(type?: string, limit = 30): Promise<AnalysisRecord[]> {
+async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promise<AnalysisRecord[]> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return [];
+
+    // 7일 이내 기록만 조회
+    const since = new Date();
+    since.setDate(since.getDate() - retentionDays);
 
     let query = supabase
       .from('analyses')
       .select('id, type, is_paid, result, created_at')
       .eq('user_id', session.user.id)
+      .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -316,6 +323,26 @@ async function fetchHistory(type?: string, limit = 30): Promise<AnalysisRecord[]
   } catch (e) {
     if (__DEV__) console.warn('[API] fetchHistory error:', e);
     return [];
+  }
+}
+
+async function fetchAnalysisImage(id: string): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return null;
+
+    const { data, error } = await supabase
+      .from('analyses')
+      .select('input_data')
+      .eq('id', id)
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return (data.input_data as any)?.imageBase64 ?? null;
+  } catch (e) {
+    if (__DEV__) console.warn('[API] fetchAnalysisImage error:', e);
+    return null;
   }
 }
 
@@ -372,5 +399,6 @@ export const api = {
 
   saveAnalysis,
   fetchHistory,
+  fetchAnalysisImage,
   deleteAnalysis,
 };

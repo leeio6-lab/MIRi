@@ -487,10 +487,16 @@
     "sajuChar": "命",
     "faceChar": "相",
     "compatChar": "緣",
+    "deleteTitle": "記録を削除",
     "deleteConfirm": "この分析記録を削除しますか？",
     "deleted": "削除されました",
     "noRecords": "分析記録がまだありません",
-    "noRecordsSub": "分析結果はここに保存されます"
+    "noRecordsSub": "分析結果はここに保存されます",
+    "noRecordsFiltered": "{{type}}の記録がまだありません",
+    "today": "今日",
+    "yesterday": "昨日",
+    "daysAgo": "{{days}}日前",
+    "tapToView": "詳細を見る"
   },
   "yearly": {
     "analyzeButton": "年間運勢を分析する",

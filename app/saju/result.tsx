@@ -1,6 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
@@ -15,6 +15,104 @@ import { TermTip, SajuText } from '../../src/components/ui/TermTip';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { calculateFourPillars } from '../../src/utils/saju-calc';
+import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+
+// ── 스크롤 반응 아이콘 애니메이션 ──
+// 각 오행별 다른 모션: 목=흔들림, 화=펄스, 토=바운스, 금=회전, 수=물결
+const STEM_ANIM: Record<string, 'sway' | 'pulse' | 'bounce' | 'spin' | 'wave'> = {
+  '갑': 'sway', '을': 'sway', '병': 'pulse', '정': 'pulse', '무': 'bounce',
+  '기': 'bounce', '경': 'spin', '신': 'spin', '임': 'wave', '계': 'wave',
+};
+
+function AnimatedIcon({ stem, size, scrollY }: { stem: string; size: number; scrollY: SharedValue<number> }) {
+  const anim = STEM_ANIM[stem] ?? 'pulse';
+
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    // scrollY를 기반으로 사인/코사인 파형 생성 — 스크롤할수록 반응
+    const y = scrollY.value;
+    switch (anim) {
+      case 'sway': {
+        // 목: 스크롤 방향에 따라 나무가 휘어짐
+        const angle = Math.sin(y * 0.02) * 12;
+        return { transform: [{ rotate: `${angle}deg` }] };
+      }
+      case 'pulse': {
+        // 화: 스크롤 속도에 따라 불꽃이 커졌다 작아짐
+        const s = 1 + Math.sin(y * 0.03) * 0.12;
+        const o = 0.85 + Math.abs(Math.sin(y * 0.03)) * 0.15;
+        return { transform: [{ scale: s }], opacity: o };
+      }
+      case 'bounce': {
+        // 토: 스크롤에 따라 위아래로 묵직하게
+        const ty = Math.sin(y * 0.015) * 5;
+        return { transform: [{ translateY: ty }] };
+      }
+      case 'spin': {
+        // 금: 스크롤에 따라 좌우 회전 — 빛이 반사되듯
+        const r = Math.sin(y * 0.025) * 15;
+        return { transform: [{ rotate: `${r}deg` }] };
+      }
+      case 'wave': {
+        // 수: 스크롤에 따라 좌우로 출렁 + 기울기
+        const tx = Math.sin(y * 0.02) * 6;
+        const tr = Math.cos(y * 0.02) * 5;
+        return { transform: [{ translateX: tx }, { rotate: `${tr}deg` }] };
+      }
+      default:
+        return {};
+    }
+  });
+
+  return (
+    <Animated.View style={[{ width: size, height: size }, animStyle]}>
+      <DayMasterIcon stem={stem} size={size} />
+    </Animated.View>
+  );
+}
+
+// ── 오행별 하이라이트 색상 ──
+const EL_COLORS: Record<string, string> = {
+  wood: '#3D8B37',  // 초록
+  fire: '#C4503D',  // 빨강
+  earth: '#A68B5B', // 황토
+  metal: '#8C8C8C', // 은색
+  water: '#2C5F8A', // 파랑
+};
+const STEM_EL: Record<string, string> = {
+  '갑': 'wood', '을': 'wood', '병': 'fire', '정': 'fire', '무': 'earth',
+  '기': 'earth', '경': 'metal', '신': 'metal', '임': 'water', '계': 'water',
+};
+
+// ── 일간별 커스텀 SVG 아이콘 (오행 하이라이트) ──
+function DayMasterIcon({ stem, size = 32 }: { stem: string; size?: number }) {
+  const c = theme.colors.gold.primary;
+  const h = EL_COLORS[STEM_EL[stem] ?? 'earth']; // 하이라이트 색
+  const s = size;
+  const icons: Record<string, React.ReactNode> = {
+    // 갑 — 큰 나무: 수관이 초록
+    '갑': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 28V14" stroke={c} strokeWidth={2.2} strokeLinecap="round" /><Path d="M12 28h8" stroke={c} strokeWidth={1.5} strokeLinecap="round" /><Path d="M16 14c-6 0-9-4-9-7.5S11 2 16 2s9 1 9 4.5-3 7.5-9 7.5z" fill={h} fillOpacity={0.25} stroke={c} strokeWidth={1.5} /><Path d="M16 14c-3 0-5-2-5-4s2.5-3.5 5-3.5 5 1.5 5 3.5-2 4-5 4z" fill={h} fillOpacity={0.15} /></Svg>,
+    // 을 — 덩굴 꽃: 꽃봉오리 초록
+    '을': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 28c0-8-6-10-6-16s6-8 6-8" stroke={c} strokeWidth={1.5} strokeLinecap="round" fill="none" /><Path d="M16 28c0-8 6-10 6-16" stroke={c} strokeWidth={1.5} strokeLinecap="round" fill="none" /><SvgCircle cx={16} cy={8} r={4} fill={h} fillOpacity={0.3} stroke={c} strokeWidth={1.5} /><SvgCircle cx={16} cy={8} r={1.5} fill={h} fillOpacity={0.5} /></Svg>,
+    // 병 — 태양: 중심+빛줄기 빨강
+    '병': <Svg width={s} height={s} viewBox="0 0 32 32"><SvgCircle cx={16} cy={16} r={6} fill={h} fillOpacity={0.25} stroke={c} strokeWidth={1.8} /><SvgCircle cx={16} cy={16} r={2.5} fill={h} fillOpacity={0.4} />{[0,45,90,135,180,225,270,315].map(a => { const r1=9,r2=12.5,rad=a*Math.PI/180; return <Path key={a} d={`M${16+r1*Math.cos(rad)} ${16+r1*Math.sin(rad)}L${16+r2*Math.cos(rad)} ${16+r2*Math.sin(rad)}`} stroke={h} strokeWidth={1.5} strokeLinecap="round" strokeOpacity={0.6} />; })}</Svg>,
+    // 정 — 촛불: 불꽃 빨강
+    '정': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M14 28h4v-10h-4z" fill={c} fillOpacity={0.1} stroke={c} strokeWidth={1.3} strokeLinejoin="round" /><Path d="M16 18c-2 0-3.5-2.5-3.5-5C12.5 9 16 4 16 4s3.5 5 3.5 9c0 2.5-1.5 5-3.5 5z" fill={h} fillOpacity={0.3} stroke={h} strokeWidth={1.5} strokeOpacity={0.7} /><Path d="M16 15c-1 0-1.5-1.2-1.5-2.5S16 8 16 8s1.5 3.3 1.5 4.5S17 15 16 15z" fill={h} fillOpacity={0.5} /></Svg>,
+    // 무 — 산: 산체 황토
+    '무': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M2 26L12 8l6 10 4-6 8 14z" fill={h} fillOpacity={0.2} stroke={c} strokeWidth={1.5} strokeLinejoin="round" /><Path d="M8 26l8-12 4 6" stroke={h} strokeWidth={1.2} strokeLinejoin="round" fill="none" opacity={0.4} /></Svg>,
+    // 기 — 이삭: 열매 황토
+    '기': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 28V12" stroke={c} strokeWidth={1.8} strokeLinecap="round" /><Path d="M16 12c-2-3-6-5-6-8" stroke={c} strokeWidth={1.3} strokeLinecap="round" fill="none" /><Path d="M16 12c2-3 6-5 6-8" stroke={c} strokeWidth={1.3} strokeLinecap="round" fill="none" /><Path d="M16 16c-2-2-5-3-5-5.5" stroke={c} strokeWidth={1.3} strokeLinecap="round" fill="none" /><Path d="M16 16c2-2 5-3 5-5.5" stroke={c} strokeWidth={1.3} strokeLinecap="round" fill="none" /><SvgCircle cx={10} cy={4} r={1.8} fill={h} fillOpacity={0.4} /><SvgCircle cx={22} cy={4} r={1.8} fill={h} fillOpacity={0.4} /><SvgCircle cx={11} cy={10.5} r={1.5} fill={h} fillOpacity={0.3} /><SvgCircle cx={21} cy={10.5} r={1.5} fill={h} fillOpacity={0.3} /></Svg>,
+    // 경 — 검: 칼날 은색
+    '경': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 3v18" stroke={h} strokeWidth={2} strokeLinecap="round" strokeOpacity={0.7} /><Path d="M16 3l2 6h-4z" fill={h} fillOpacity={0.25} /><Path d="M10 21h12" stroke={c} strokeWidth={2} strokeLinecap="round" /><Path d="M14 21v5l2 3 2-3v-5" stroke={c} strokeWidth={1.3} fill={c} fillOpacity={0.1} /></Svg>,
+    // 신 — 보석: 면 은색 반짝
+    '신': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 4l10 8-10 16-10-16z" fill={h} fillOpacity={0.15} stroke={c} strokeWidth={1.5} strokeLinejoin="round" /><Path d="M6 12h20" stroke={h} strokeWidth={1.2} strokeOpacity={0.5} /><Path d="M16 4l-4 8 4 16 4-16-4-8" stroke={h} strokeWidth={1} opacity={0.35} /></Svg>,
+    // 임 — 파도: 파도 파랑
+    '임': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M2 14c3-3 5-3 8 0s5 3 8 0 5-3 8 0" stroke={h} strokeWidth={2} strokeLinecap="round" fill="none" /><Path d="M2 20c3-3 5-3 8 0s5 3 8 0 5-3 8 0" stroke={h} strokeWidth={1.5} strokeLinecap="round" fill="none" opacity={0.5} /><Path d="M4 25c3-2 4-2 7 0s4 2 7 0 4-2 7 0" stroke={h} strokeWidth={1} strokeLinecap="round" fill="none" opacity={0.3} /></Svg>,
+    // 계 — 물방울: 방울 파랑
+    '계': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 4C16 4 8 14 8 20a8 8 0 0016 0c0-6-8-16-8-16z" fill={h} fillOpacity={0.2} stroke={c} strokeWidth={1.5} /><Path d="M13 22a4 3 0 006 0" stroke={h} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.5} /><SvgCircle cx={14} cy={19} r={1.2} fill={h} fillOpacity={0.45} /></Svg>,
+  };
+  return <>{icons[stem] ?? <Svg width={s} height={s} viewBox="0 0 32 32"><SvgCircle cx={16} cy={16} r={12} stroke={c} strokeWidth={1.5} fill={c} fillOpacity={0.1} /></Svg>}</>;
+}
 
 const SCREEN_W = Dimensions.get('window').width;
 const isSmall = SCREEN_W < 380;
@@ -46,17 +144,17 @@ function Section({ title, sub, helpKeys, termKey }: { title: string; sub?: strin
 
 
 // ── 일간별 사주 정의 (총평 태그라인) ──
-const DAY_MASTER_IDENTITY: Record<string, { name: string; hanja: string; nature: string; tagline: string }> = {
-  '갑': { name: '갑목일주', hanja: '甲木日柱', nature: '큰 나무', tagline: '꺾이지 않는 대들보의 기운' },
-  '을': { name: '을목일주', hanja: '乙木日柱', nature: '풀과 꽃', tagline: '부드럽지만 끈질긴 생명력' },
-  '병': { name: '병화일주', hanja: '丙火日柱', nature: '태양', tagline: '세상을 비추는 뜨거운 심장' },
-  '정': { name: '정화일주', hanja: '丁火日柱', nature: '촛불', tagline: '은은하지만 꺼지지 않는 불꽃' },
-  '무': { name: '무토일주', hanja: '戊土日柱', nature: '큰 산', tagline: '흔들리지 않는 대지의 중심' },
-  '기': { name: '기토일주', hanja: '己土日柱', nature: '논밭', tagline: '품어서 키우는 어머니의 땅' },
-  '경': { name: '경금일주', hanja: '庚金日柱', nature: '바위와 칼', tagline: '단단하고 날카로운 결단의 기운' },
-  '신': { name: '신금일주', hanja: '辛金日柱', nature: '보석', tagline: '갈고닦을수록 빛나는 원석' },
-  '임': { name: '임수일주', hanja: '壬水日柱', nature: '바다와 강', tagline: '거침없이 흐르는 자유로운 물결' },
-  '계': { name: '계수일주', hanja: '癸水日柱', nature: '이슬과 비', tagline: '조용히 스며드는 지혜의 물방울' },
+const DAY_MASTER_IDENTITY: Record<string, { name: string; icon: string; element: string; nature: string; tagline: string }> = {
+  '갑': { name: '갑목일주', icon: '\uD83C\uDF33', element: '목', nature: '큰 나무', tagline: '꺾이지 않는 대들보의 기운' },
+  '을': { name: '을목일주', icon: '\uD83C\uDF3F', element: '목', nature: '풀과 꽃', tagline: '부드럽지만 끈질긴 생명력' },
+  '병': { name: '병화일주', icon: '\u2600\uFE0F', element: '화', nature: '태양', tagline: '세상을 비추는 뜨거운 심장' },
+  '정': { name: '정화일주', icon: '\uD83D\uDD6F\uFE0F', element: '화', nature: '촛불', tagline: '은은하지만 꺼지지 않는 불꽃' },
+  '무': { name: '무토일주', icon: '\u26F0\uFE0F', element: '토', nature: '큰 산', tagline: '흔들리지 않는 대지의 중심' },
+  '기': { name: '기토일주', icon: '\uD83C\uDF3E', element: '토', nature: '논밭', tagline: '품어서 키우는 어머니의 땅' },
+  '경': { name: '경금일주', icon: '\u2694\uFE0F', element: '금', nature: '바위와 칼', tagline: '단단하고 날카로운 결단의 기운' },
+  '신': { name: '신금일주', icon: '\uD83D\uDC8E', element: '금', nature: '보석', tagline: '갈고닦을수록 빛나는 원석' },
+  '임': { name: '임수일주', icon: '\uD83C\uDF0A', element: '수', nature: '바다와 강', tagline: '거침없이 흐르는 자유로운 물결' },
+  '계': { name: '계수일주', icon: '\uD83D\uDCA7', element: '수', nature: '이슬과 비', tagline: '조용히 스며드는 지혜의 물방울' },
 };
 
 export default function SajuResultScreen() {
@@ -66,6 +164,7 @@ export default function SajuResultScreen() {
   const sectionY = useRef<Record<string, number>>({});
   const overviewY = useRef(0);
   const [showFloatingBtn, setShowFloatingBtn] = useState(false);
+  const scrollY = useSharedValue(0);
   const storeResult = useFortuneStore().sajuResult;
   const r: any = storeResult;
   const { user } = useAuthStore();
@@ -93,20 +192,25 @@ export default function SajuResultScreen() {
       style={$.container}
       contentContainerStyle={$.content}
       showsVerticalScrollIndicator={false}
-      onScroll={(e) => {
+      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const y = e.nativeEvent.contentOffset.y;
+        scrollY.value = y;
         setShowFloatingBtn(r.overview && y > overviewY.current + 300);
       }}
-      scrollEventThrottle={100}
+      scrollEventThrottle={16}
     >
-      <BackButton />
+      <View style={$.navBar}>
+        <BackButton />
+        <View style={$.navBrand}>
+          <Text style={$.navLogo}>MIRi</Text>
+          <Text style={$.navTagline}>사주 풀이</Text>
+        </View>
+        <View style={$.navSpacer} />
+      </View>
 
       {/* ═══ HOOK HEADLINE ═══ */}
       <Animated.View entering={FadeInDown.delay(nd()).springify()}>
         <View style={$.hookHero}>
-          {pillars && (
-            <Text style={$.hookHanja} allowFontScaling={false}>{pillars.dayMaster.charAt(0)}</Text>
-          )}
           {(() => {
             // poeticTitle=정의(큰글씨), hookQuestion=보충(서브). 질문이 title에 오면 swap
             let title = r.overview?.poeticTitle || r.headline || '';
@@ -131,16 +235,15 @@ export default function SajuResultScreen() {
         return (
           <Animated.View entering={FadeInDown.delay(nd()).springify()}>
             <View style={$.identityCard}>
-              <View style={$.identityHanjaWrap}>
-                <Text style={$.identityHanja}>{pillars.dayMaster}</Text>
+              <View style={$.identityIconWrap}>
+                <AnimatedIcon stem={pillars.day.stem} size={40} scrollY={scrollY} />
               </View>
               <View style={$.identityBody}>
                 <View style={$.identityNameRow}>
                   <Text style={$.identityName}>{identity.name}</Text>
-                  <Text style={$.identityHanjaSmall}>{identity.hanja}</Text>
+                  <Text style={$.identityNature}>{identity.nature}의 사주</Text>
                 </View>
-                <Text style={$.identityNature} numberOfLines={1}>{identity.nature}의 사주</Text>
-                <Text style={$.identityTagline} numberOfLines={2}>{identity.tagline}</Text>
+                <Text style={$.identityTagline}>{identity.tagline}</Text>
               </View>
             </View>
           </Animated.View>
@@ -367,14 +470,13 @@ export default function SajuResultScreen() {
       <Text style={$.disc}>{r.disclaimer || t('common.disclaimer')}</Text>
     </ScrollView>
 
-    {/* Floating "요약 보기" button */}
     {showFloatingBtn && (
       <TouchableOpacity
         style={$.floatingBtn}
-        activeOpacity={0.85}
-        onPress={() => scrollRef.current?.scrollTo({ y: overviewY.current - 10, animated: true })}
+        activeOpacity={0.8}
+        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
       >
-        <Text style={$.floatingBtnT}>↑ 요약</Text>
+        <Text style={$.floatingBtnIcon}>{'\u2191'}</Text>
       </TouchableOpacity>
     )}
     </>
@@ -389,7 +491,32 @@ function LuckyRow({ icon, label, val }: { icon: string; label: string; val: stri
 /* ─── Styles ─── */
 const $ = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: isSmall ? 16 : 20, paddingTop: Platform.OS === 'ios' ? 56 : 48, paddingBottom: 80 },
+  content: { padding: isSmall ? 16 : 20, paddingTop: Platform.OS === 'ios' ? 52 : 44, paddingBottom: 80 },
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  navBrand: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navLogo: {
+    fontSize: 15,
+    fontWeight: '200',
+    color: theme.colors.text.primary,
+    letterSpacing: 4,
+  },
+  navTagline: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: theme.colors.text.tertiary,
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+  navSpacer: {
+    width: 34,
+  },
   empty: { flex: 1, backgroundColor: theme.colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: theme.colors.text.secondary, fontSize: 16 },
 
@@ -398,93 +525,71 @@ const $ = StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     backgroundColor: theme.colors.bg.secondary,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(181,149,48,0.20)',
-    gap: 12,
+    borderColor: 'rgba(181,149,48,0.15)',
+    gap: 16,
   },
-  identityHanjaWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(181,149,48,0.08)',
+  identityIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(181,149,48,0.06)',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    borderWidth: 1.5,
-    borderColor: 'rgba(181,149,48,0.20)',
-  },
-  identityHanja: {
-    fontSize: 18,
-    fontWeight: '800' as const,
-    color: theme.colors.gold.primary,
+    borderWidth: 1,
+    borderColor: 'rgba(181,149,48,0.12)',
   },
   identityBody: {
     flex: 1,
   },
   identityNameRow: {
     flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    alignItems: 'baseline' as const,
     gap: 8,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   identityName: {
-    fontSize: 15,
-    fontWeight: '800' as const,
+    fontSize: 17,
+    fontWeight: '700' as const,
     color: theme.colors.text.primary,
     letterSpacing: -0.3,
   },
-  identityHanjaSmall: {
-    fontSize: 11,
-    color: theme.colors.text.tertiary,
-    fontWeight: '500' as const,
-  },
   identityNature: {
     fontSize: 13,
-    fontWeight: '600' as const,
+    fontWeight: '500' as const,
     color: theme.colors.gold.primary,
-    marginBottom: 2,
   },
   identityTagline: {
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.text.secondary,
-    lineHeight: 18,
+    lineHeight: 19,
   },
 
   // Hook hero — 자극적 최상단
   hookHero: {
-    position: 'relative' as const,
-    paddingVertical: 18,
+    paddingTop: 8,
+    paddingBottom: 20,
     paddingHorizontal: 4,
     alignItems: 'center' as const,
     marginBottom: 4,
   },
-  hookHanja: {
-    position: 'absolute',
-    top: -5,
-    right: -8,
-    fontSize: 100,
-    fontWeight: '900',
-    color: 'rgba(181,149,48,0.06)',
-    lineHeight: 110,
-    zIndex: -1,
-  },
   hookText: {
-    fontSize: 19,
+    fontSize: 24,
     fontWeight: '800',
     color: theme.colors.text.primary,
     textAlign: 'center' as const,
-    lineHeight: 28,
+    lineHeight: 34,
     letterSpacing: -0.5,
-    zIndex: 1,
   },
   hookSub: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
     color: theme.colors.gold.primary,
     textAlign: 'center' as const,
-    marginTop: 6,
+    marginTop: 8,
     zIndex: 1,
   },
 
@@ -496,28 +601,28 @@ const $ = StyleSheet.create({
 
   // Card & shared
   card: { marginTop: 16 },
-  body: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 21 },
-  sub: { fontSize: 13, fontWeight: '600', color: theme.colors.gold.primary, marginBottom: 3 },
+  body: { fontSize: 15, color: theme.colors.text.secondary, lineHeight: 23 },
+  sub: { fontSize: 14, fontWeight: '600', color: theme.colors.gold.primary, marginBottom: 3 },
   divider: { height: 1, backgroundColor: theme.colors.glass.border, marginVertical: 10 },
   // Highlight box
   hlBox: { marginTop: 6, backgroundColor: 'rgba(181,149,48,0.07)', borderRadius: 10, padding: 10 },
-  hlLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: 2 },
-  hlText: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 19 },
+  hlLabel: { fontSize: 12, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: 2 },
+  hlText: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 21 },
 
   // Alert box
   alertBox: { marginTop: 6, backgroundColor: 'rgba(196,148,61,0.06)', borderRadius: 8, padding: 8 },
-  alertT: { fontSize: 12, color: theme.colors.warning, lineHeight: 17 },
+  alertT: { fontSize: 13, color: theme.colors.warning, lineHeight: 19 },
 
   // Lists
   listWrap: { marginTop: 6, gap: 3 },
   listRow: { flexDirection: 'row', gap: 6 },
-  bulletG: { fontSize: 13, fontWeight: '700', color: theme.colors.success, width: 14 },
-  bulletO: { fontSize: 13, fontWeight: '700', color: theme.colors.warning, width: 14, textAlign: 'center' },
-  listVal: { flex: 1, fontSize: 13, color: theme.colors.text.secondary, lineHeight: 19 },
+  bulletG: { fontSize: 14, fontWeight: '700', color: theme.colors.success, width: 14 },
+  bulletO: { fontSize: 14, fontWeight: '700', color: theme.colors.warning, width: 14, textAlign: 'center' },
+  listVal: { flex: 1, fontSize: 14, color: theme.colors.text.secondary, lineHeight: 21 },
 
   // Past guess
   pastCard: { marginTop: 8, borderLeftWidth: 2, borderLeftColor: theme.colors.gold.primary, paddingLeft: 10, gap: 4 },
-  pastText: { fontSize: 13, color: theme.colors.gold.primary, lineHeight: 19, fontStyle: 'italic' },
+  pastText: { fontSize: 14, color: theme.colors.gold.primary, lineHeight: 21, fontStyle: 'italic' },
 
   // Quarter grid
   qGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -538,7 +643,7 @@ const $ = StyleSheet.create({
 
   // Final
   finalQuote: { fontSize: 22, fontWeight: '700', color: theme.colors.gold.primary, opacity: 0.3, marginBottom: -6 },
-  finalText: { fontSize: 14, color: theme.colors.text.primary, lineHeight: 23, fontWeight: '500' },
+  finalText: { fontSize: 15, color: theme.colors.text.primary, lineHeight: 24, fontWeight: '500' },
 
   // Actions
   reBtn: { marginTop: 12, borderWidth: 1, borderColor: theme.colors.gold.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
@@ -548,15 +653,17 @@ const $ = StyleSheet.create({
   // Floating button
   floatingBtn: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 32,
     right: 20,
-    backgroundColor: theme.colors.gold.dark,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    backgroundColor: theme.colors.text.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 }),
+      ? { boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6 }),
   } as any,
-  floatingBtnT: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  floatingBtnIcon: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: -1 },
 });

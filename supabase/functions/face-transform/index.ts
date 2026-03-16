@@ -138,6 +138,23 @@ serve(async (req) => {
     const transformedImage = transformResult.status === 'fulfilled' ? transformResult.value : null;
     const transformError = transformResult.status === 'rejected' ? String(transformResult.reason) : null;
 
+    // ─── 생성된 관상화에서 실제 이목구비 좌표 추출 ───
+    if (transformedImage && analysis && Array.isArray(analysis.features)) {
+      try {
+        const coords = await detectFeaturePositions(transformedImage);
+        if (coords) {
+          // 분석 결과의 features에 좌표 덮어쓰기
+          for (const feat of analysis.features as any[]) {
+            if (coords[feat.area]) {
+              feat.position = coords[feat.area];
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[face-transform] Coordinate detection failed (non-critical):', e);
+      }
+    }
+
     return new Response(JSON.stringify({
       analysis,
       analysisError,
@@ -300,26 +317,38 @@ async function transformToOrientalPainting(
   formData.append('model', 'gpt-image-1');
   formData.append('image', file);
   formData.append('prompt',
-    'Transform this photo into an East Asian ink brush portrait (수묵 초상화). ' +
-    '\n\n★★★ IDENTITY — THE #1 RULE ★★★ ' +
-    'You MUST preserve this person\'s EXACT unique features with high fidelity: ' +
-    '- EXACT eye shape (monolid/double lid, size, spacing, angle) ' +
-    '- EXACT nose shape (bridge width, tip shape, nostril size) ' +
-    '- EXACT lip shape (thickness, cupid\'s bow, width) ' +
-    '- EXACT face outline (round/oval/square/heart, jaw angle, chin shape) ' +
-    '- EXACT eyebrow shape (arch, thickness, length) ' +
-    '- Distinctive marks: moles, dimples, asymmetry — keep them ALL. ' +
-    'The ink style is just a FILTER over the real face. Do NOT generalize or idealize the features. ' +
-    'A friend must instantly recognize this person. If the result looks generic, you have FAILED. ' +
-    '\n\n★ STYLE: ' +
-    '- Pure white background. Black ink with subtle gray wash. ' +
-    '- Use DETAILED fine lines for facial features — every contour of the eyes, nose, lips must be precisely drawn to match the photo. ' +
-    '- Hair: bold ink strokes. Face contours: medium precise lines. Skin texture: light wash shading. ' +
-    '- Expression: warm, gentle, slight smile. Bright and flattering overall. ' +
-    '- Head and upper shoulders only, face filling ~65% of frame. ' +
-    '\n\nNO: text, stamps, seals, color, background objects, gloomy mood, generic anime/cartoon face.'
+    'Transform this selfie into a beautiful, flattering ink wash portrait that the person will LOVE and want to show everyone. ' +
+    '\n\n' +
+    '## IDENTITY — THE #1 PRIORITY ' +
+    'This must be RECOGNIZABLE as the EXACT same person. ' +
+    'Copy every unique facial feature pixel-by-pixel from the photo: ' +
+    '- EXACT same eye shape, size, spacing, single/double eyelid ' +
+    '- EXACT same nose shape, width, bridge height, tip ' +
+    '- EXACT same lip fullness, mouth width, lip line ' +
+    '- EXACT same face width-to-height ratio — do NOT widen or round the face ' +
+    '- EXACT same jawline, chin, cheekbones ' +
+    '- EXACT same eyebrow shape, thickness, arch ' +
+    '- EXACT same hairline, parting, hair length and volume ' +
+    'TEST: if 10 friends see this, all 10 MUST instantly say "that\'s definitely you!" ' +
+    '\n\n' +
+    '## FLATTERING ENHANCEMENT ' +
+    '- Skin: smooth, luminous, clear — remove minor blemishes but keep face structure ' +
+    '- Expression: warm, confident, approachable — slightly elevated from the photo ' +
+    '- The person should look like the BEST version of themselves — attractive and charismatic ' +
+    '- Look their age or 2-3 years younger, never older ' +
+    '\n\n' +
+    '## STYLE ' +
+    'Elegant East Asian ink wash (수묵화) portrait: ' +
+    '- Rich black ink for hair, eyebrows, eye outlines — bold and defined ' +
+    '- Soft gray wash for skin shadows and dimension ' +
+    '- Clean white background ' +
+    '- Head and shoulders composition, face ~65% of frame ' +
+    '- The overall feeling should be elegant, artistic, and share-worthy ' +
+    '\n\n' +
+    'NO: color, text, stamps, background objects, changed facial proportions, generic face.'
   );
   formData.append('size', '1024x1024');
+  formData.append('response_format', 'b64_json');
 
   const response = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
@@ -333,5 +362,72 @@ async function transformToOrientalPainting(
   }
 
   const data = await response.json();
-  return data.data?.[0]?.b64_json ?? null;
+  const b64 = data.data?.[0]?.b64_json;
+  if (!b64) {
+    console.error('[face-transform] No b64_json in response, keys:', JSON.stringify(Object.keys(data.data?.[0] ?? {})));
+    throw new Error('Transform returned no image data');
+  }
+  return b64;
+}
+
+// ─── 생성된 관상화에서 이목구비 좌표 추출 — GPT-4o-mini Vision (경량 호출) ───
+async function detectFeaturePositions(
+  portraitBase64: string,
+): Promise<Record<string, { x: number; y: number }> | null> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'This is a portrait drawing. Return the EXACT pixel positions of facial features as ratios (0.0 to 1.0) where 0,0 is top-left and 1,1 is bottom-right.\n\nReturn ONLY this JSON, nothing else:\n{"forehead":{"x":0.5,"y":0.15},"eyes":{"x":0.5,"y":0.35},"nose":{"x":0.5,"y":0.48},"mouth":{"x":0.5,"y":0.58},"jawline":{"x":0.5,"y":0.72},"ears":{"x":0.18,"y":0.36}}\n\nRules:\n- x,y must reflect the ACTUAL position in THIS specific image\n- forehead = center of forehead\n- eyes = midpoint between both eyes\n- nose = tip of nose\n- mouth = center of lips\n- jawline = center of chin\n- ears = left ear (or left side of face if ears not visible)\n- y values MUST be in order: forehead < eyes < nose < mouth < jawline\n- Be precise. Look at where each feature actually is in the image.',
+            },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/png;base64,${portraitBase64}`, detail: 'low' },
+            },
+          ],
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.1,
+      max_tokens: 200,
+    }),
+  });
+
+  if (!response.ok) {
+    console.warn('[face-transform] Coord detection API error:', response.status);
+    return null;
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) return null;
+
+  try {
+    const coords = JSON.parse(content);
+    // 유효성 검증: 모든 좌표가 0~1 범위이고 y 순서가 맞는지
+    const areas = ['forehead', 'eyes', 'nose', 'mouth', 'jawline'];
+    for (const area of areas) {
+      if (!coords[area] || typeof coords[area].x !== 'number' || typeof coords[area].y !== 'number') return null;
+      if (coords[area].x < 0 || coords[area].x > 1 || coords[area].y < 0 || coords[area].y > 1) return null;
+    }
+    // y 순서 검증
+    if (coords.forehead.y >= coords.eyes.y || coords.eyes.y >= coords.nose.y ||
+        coords.nose.y >= coords.mouth.y || coords.mouth.y >= coords.jawline.y) {
+      console.warn('[face-transform] Coords failed y-order check, discarding');
+      return null;
+    }
+    return coords;
+  } catch {
+    return null;
+  }
 }

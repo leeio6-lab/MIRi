@@ -29,7 +29,7 @@ export default function MyPageScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { user, isGuest, logout } = useAuthStore();
-  const { setSajuResult, setFaceResult, setTransformedImage, setDailyFortune, setCompatibilityResult } = useFortuneStore();
+  const { clearAllData } = useFortuneStore();
 
   const pillars = user
     ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar)
@@ -37,11 +37,7 @@ export default function MyPageScreen() {
 
   const performLogout = async () => {
     try {
-      setSajuResult(null);
-      setFaceResult(null);
-      setTransformedImage(null);
-      setDailyFortune(null);
-      setCompatibilityResult(null);
+      clearAllData();
       await logout();
     } catch (e) {
       console.warn('[Logout] error:', e);

@@ -1,7 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 
 interface BackButtonProps {
@@ -10,7 +9,6 @@ interface BackButtonProps {
 
 export function BackButton({ fallback = '/(tabs)/home' }: BackButtonProps) {
   const router = useRouter();
-  const { t } = useTranslation();
 
   const handleBack = () => {
     try {
@@ -25,31 +23,25 @@ export function BackButton({ fallback = '/(tabs)/home' }: BackButtonProps) {
   };
 
   return (
-    <TouchableOpacity onPress={handleBack} style={styles.btn} activeOpacity={0.6}>
-      <Text style={styles.arrow}>{'‹'}</Text>
-      <Text style={styles.label}>{t('common.back')}</Text>
+    <TouchableOpacity onPress={handleBack} style={styles.btn} activeOpacity={0.5} hitSlop={12}>
+      <Text style={styles.arrow}>{'\u2039'}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   btn: {
-    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    width: 34,
+    height: 34,
     alignItems: 'center',
-    gap: 2,
-    paddingVertical: 8,
-    paddingRight: 12,
-    marginBottom: theme.spacing.md,
+    justifyContent: 'center',
   },
   arrow: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '300',
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.primary,
     marginTop: -1,
-  },
-  label: {
-    fontSize: 15,
-    color: theme.colors.text.secondary,
-    fontWeight: '400',
+    marginLeft: -2,
   },
 });

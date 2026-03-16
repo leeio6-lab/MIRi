@@ -253,7 +253,6 @@ export function FaceOverlay({
 
   const centerX = imageSize / 2;
   const centerY = imageSize / 2;
-  const LINE_LEN = imageSize * 0.18;
 
   // 관상화 전용 좌표 — gpt-image-1이 생성하는 초상화의 일관된 구도에 맞춤
   // (얼굴이 프레임 70% 차지, 약간 좌측 3/4 앵글)
@@ -268,15 +267,16 @@ export function FaceOverlay({
 
   const getPoint = useCallback(
     (f: FeatureData) => {
-      if (isTransformed) {
-        // 관상화: 구도가 일정하므로 보정된 고정 좌표 사용
-        return PAINTING_POINTS[f.area] ?? FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
-      }
-      // 원본 셀피: API 좌표 우선, 없으면 fallback
+      // API가 반환한 좌표가 있으면 (관상화/원본 모두) 최우선 사용
       if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number'
           && f.position.x > 0.01 && f.position.x < 0.99 && f.position.y > 0.01 && f.position.y < 0.99) {
         return f.position;
       }
+      if (isTransformed) {
+        // 관상화: API 좌표 없으면 고정 좌표 fallback
+        return PAINTING_POINTS[f.area] ?? FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
+      }
+      // 원본 셀피: fallback
       return FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
     },
     [isTransformed],
@@ -343,7 +343,7 @@ export function FaceOverlay({
       {/* Zoomable content layer */}
       <Animated.View
         style={[
-          { width: imageSize, height: imageSize, position: 'relative', overflow: 'visible' },
+          { width: imageSize, height: imageSize, position: 'relative' },
           zoomStyle,
         ]}
       >
@@ -369,83 +369,24 @@ export function FaceOverlay({
           />
         )}
 
-        {/* Connecting lines + dots + labels */}
+        {/* Dots only — labels are shown in the card list below */}
         {features.map((f, index) => {
           const pt = getPoint(f);
-          const meta = LABEL_META[f.area];
-          if (!pt || !meta) return null;
+          if (!pt) return null;
 
           const px = pt.x * imageSize;
           const py = pt.y * imageSize;
           const isActive = selected === f.area;
 
-          // 라벨 방향 자동 결정: 점이 왼쪽 절반이면 오른쪽으로, 아니면 왼쪽으로
-          // 단, LABEL_META에 명시된 side를 기본값으로 하되, 화면 밖으로 나갈 때 반전
-          const LABEL_W = 100; // 라벨 예상 폭
-          const preferLeft = meta.side === 'left';
-          const spaceLeft = px;
-          const spaceRight = imageSize - px;
-          const isLeft = preferLeft && spaceLeft > LINE_LEN + LABEL_W * 0.3
-            ? true
-            : !preferLeft && spaceRight > LINE_LEN + LABEL_W * 0.3
-            ? false
-            : spaceLeft > spaceRight; // 공간이 넉넉한 쪽으로
-
-          // 라인 길이: 화면 밖 안 나가게 클램핑
-          const maxLineLen = isLeft ? Math.max(spaceLeft - 8, 20) : Math.max(spaceRight - 8, 20);
-          const lineLen = Math.min(LINE_LEN, maxLineLen);
-
           return (
-            <React.Fragment key={f.area}>
-              {/* Ink-brush connecting line */}
-              <View
-                style={[
-                  styles.lineContainer,
-                  {
-                    left: isLeft ? px - lineLen : px,
-                    top: py - 1,
-                    width: lineLen,
-                  },
-                ]}
-              >
-                <View style={[styles.lineMain, isActive && styles.lineMainActive]} />
-                <View style={[styles.lineShadow, isActive && styles.lineShadowActive]} />
-                <View style={[styles.lineTaper, isLeft ? { left: 0 } : { right: 0 }, isActive && styles.lineTaperActive]} />
-              </View>
-
-              {/* Pulsing dot */}
-              <PulsingDot
-                px={px}
-                py={py}
-                isActive={isActive}
-                index={index}
-                onPress={() => handleSelect(isActive ? null : f.area)}
-              />
-
-              {/* Traditional label with score */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.labelBox,
-                  isLeft
-                    ? { right: imageSize - px + lineLen - 4, top: py - 13 }
-                    : { left: px + lineLen - 4, top: py - 13 },
-                  isActive && styles.labelBoxActive,
-                ]}
-                onPress={() => handleSelect(isActive ? null : f.area)}
-              >
-                <View style={styles.labelInner}>
-                  <Text style={[styles.labelText, isActive && styles.labelTextActive]}>
-                    {meta.label}
-                  </Text>
-                  <View style={[styles.scoreBadge, isActive && styles.scoreBadgeActive]}>
-                    <Text style={[styles.labelScore, isActive && styles.labelScoreActive]}>
-                      {f.score}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </React.Fragment>
+            <PulsingDot
+              key={f.area}
+              px={px}
+              py={py}
+              isActive={isActive}
+              index={index}
+              onPress={() => handleSelect(isActive ? null : f.area)}
+            />
           );
         })}
       </Animated.View>
@@ -473,7 +414,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     borderRadius: theme.radius.lg,
-    overflow: 'visible',
+    overflow: 'hidden',
     backgroundColor: '#0E0D0B',
   },
 
@@ -487,48 +428,6 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: 'rgba(210,190,160,0.10)',
     borderRadius: theme.radius.lg,
-  },
-
-  // -- Connecting lines (ink-brush style) --
-  lineContainer: {
-    position: 'absolute',
-    height: 3,
-    zIndex: 4,
-  },
-  lineMain: {
-    position: 'absolute',
-    top: 1,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: 'rgba(200,170,120,0.45)',
-  },
-  lineMainActive: {
-    height: 1.5,
-    backgroundColor: theme.colors.gold.primary,
-    top: 0.75,
-  },
-  lineShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    right: 2,
-    height: 0.5,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-  },
-  lineShadowActive: {
-    backgroundColor: 'rgba(181,149,48,0.3)',
-  },
-  lineTaper: {
-    position: 'absolute',
-    top: 0,
-    width: 6,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(200,170,120,0.25)',
-  },
-  lineTaperActive: {
-    backgroundColor: 'rgba(181,149,48,0.5)',
   },
 
   // -- Dots --
@@ -554,52 +453,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     shadowOpacity: 0.8,
     shadowRadius: 8,
-  },
-
-  // -- Labels --
-  labelBox: {
-    position: 'absolute',
-    zIndex: 5,
-  },
-  labelBoxActive: {
-    zIndex: 15,
-  },
-  labelInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(14,13,11,0.65)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 5,
-    borderWidth: 0.5,
-    borderColor: 'rgba(200,170,120,0.2)',
-  },
-  labelText: {
-    fontSize: 9.5,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-  labelTextActive: {
-    color: '#FFFFFF',
-  },
-  scoreBadge: {
-    backgroundColor: 'rgba(200,170,120,0.15)',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 3,
-  },
-  scoreBadgeActive: {
-    backgroundColor: 'rgba(181,149,48,0.3)',
-  },
-  labelScore: {
-    fontSize: 9,
-    color: 'rgba(200,170,120,0.7)',
-    fontWeight: '700',
-  },
-  labelScoreActive: {
-    color: theme.colors.gold.primary,
   },
 
   // -- Detail panel --

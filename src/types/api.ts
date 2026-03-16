@@ -166,6 +166,7 @@ export interface SajuOverview {
   yearly: string;         // 올해운세 한 줄
   lifePeak: string;       // 인생피크 한 줄
   lifeDirection: string;  // 인생방향 한 줄
+  hotKey?: string;        // AI가 선택한 핵심 항목 키
 }
 
 // --- SajuResult (free + paid union) ---

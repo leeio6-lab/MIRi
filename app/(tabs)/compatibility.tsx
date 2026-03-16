@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
@@ -61,10 +61,14 @@ export default function CompatibilityScreen() {
 
   // 내 정보 수정 — user가 없으면 자동으로 편집모드
   const [editingMy, setEditingMy] = useState(!user);
+  const [myName, setMyName] = useState(user?.name ?? '');
   const [myYear, setMyYear] = useState(user ? String(user.birthYear) : '');
   const [myMonth, setMyMonth] = useState(user ? String(user.birthMonth) : '');
   const [myDay, setMyDay] = useState(user ? String(user.birthDay) : '');
   const [myGender, setMyGender] = useState<'male' | 'female'>(user?.gender ?? 'male');
+  const [myIsLunar, setMyIsLunar] = useState(user?.isLunar ?? false);
+  const [mySelectedHour, setMySelectedHour] = useState<number | null>(user?.birthHour ?? null);
+  const [myUnknownTime, setMyUnknownTime] = useState(user?.birthHour == null);
   const [partnerIsLunar, setPartnerIsLunar] = useState(false);
   const [partnerSelectedHour, setPartnerSelectedHour] = useState<number | null>(null);
   const [partnerUnknownTime, setPartnerUnknownTime] = useState(false);
@@ -72,13 +76,14 @@ export default function CompatibilityScreen() {
   const myEffectiveYear = editingMy ? parseInt(myYear, 10) : user?.birthYear;
   const myEffectiveMonth = editingMy ? parseInt(myMonth, 10) : user?.birthMonth;
   const myEffectiveDay = editingMy ? parseInt(myDay, 10) : user?.birthDay;
-  const myEffectiveHour = user?.birthHour ?? 12;
+  const myEffectiveHour = editingMy ? (myUnknownTime ? 12 : (mySelectedHour ?? 12)) : (user?.birthHour ?? 12);
   const myEffectiveGender = editingMy ? myGender : (user?.gender ?? 'male');
+  const myEffectiveIsLunar = editingMy ? myIsLunar : (user?.isLunar ?? false);
 
   const myPillarsData = React.useMemo(() => {
     const y = myEffectiveYear; const m = myEffectiveMonth; const d = myEffectiveDay;
     if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return null;
-    try { return calculateFourPillars(y, m, d, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar); } catch { return null; }
+    try { return calculateFourPillars(y, m, d, myEffectiveHour, undefined, undefined, undefined, myEffectiveIsLunar); } catch { return null; }
   }, [myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CompatibilityResult | null>(null);
@@ -95,19 +100,19 @@ export default function CompatibilityScreen() {
     partnerMonth.length >= 1 && !isNaN(partnerMonthNum) && partnerMonthNum >= 1 && partnerMonthNum <= 12 &&
     partnerDay.length >= 1 && !isNaN(partnerDayNum) && partnerDayNum >= 1 && partnerDayNum <= 31;
 
-  const myName = user?.name || t('common.me');
+  const myDisplayName = (editingMy ? myName.trim() : user?.name) || t('common.me');
   const ptName = partnerName.trim() || t('common.partner');
 
-  // Heart spin animation
-  const heartRotation = useSharedValue(0);
+  // Heart Y-axis rotation animation
+  const heartRotateY = useSharedValue(0);
   React.useEffect(() => {
-    heartRotation.value = withRepeat(
-      withTiming(360, { duration: 4000, easing: Easing.linear }),
+    heartRotateY.value = withRepeat(
+      withTiming(360, { duration: 2000, easing: Easing.linear }),
       -1, false,
     );
   }, []);
   const heartAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ rotateY: `${heartRotation.value}deg` }],
+    transform: [{ perspective: 400 }, { rotateY: `${heartRotateY.value}deg` }],
   }));
 
   const partnerPillarsData = React.useMemo(() => {
@@ -124,14 +129,14 @@ export default function CompatibilityScreen() {
     setLoading(true);
     setAnalyzeError(null);
     try {
-      const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar);
+      const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, myEffectiveIsLunar);
       const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum, undefined, undefined, undefined, partnerIsLunar);
       console.log('[Compat] Calling API...');
       const apiResult = await api.analyzeCompatibility(
-        { year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay, hour: myEffectiveHour, isLunar: user?.isLunar ?? false, gender: myEffectiveGender },
+        { year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay, hour: myEffectiveHour, isLunar: myEffectiveIsLunar, gender: myEffectiveGender },
         { year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum, hour: partnerHourNum, isLunar: partnerIsLunar, gender: partnerGender },
         user?.locale ?? 'ko', true, formatPillarInfo(myPillars, myEffectiveYear!), formatPillarInfo(partnerPillars, partnerYearNum),
-        myName, ptName,
+        myDisplayName, ptName,
       );
       console.log('[Compat] API success');
       setResult(apiResult);
@@ -162,7 +167,11 @@ export default function CompatibilityScreen() {
       {/* ── INPUT FORM (hide after result) ── */}
       {!result && (
         <>
-          <Text style={st.title}>{t('compatibility.title')}</Text>
+          <View style={st.hero}>
+            <Text style={st.heroChar}>緣</Text>
+            <Text style={st.heroTitle}>{t('compatibility.title')}</Text>
+            <Text style={st.heroSub}>{'두 사람의 사주가 만나\n어떤 인연을 만드는지 알려드려요'}</Text>
+          </View>
 
           {/* My Info */}
           <GlassCard style={st.personCard}>
@@ -174,11 +183,35 @@ export default function CompatibilityScreen() {
             </View>
             {editingMy ? (
               <View>
+                {/* 이름 */}
+                <TextInput
+                  style={st.nameInput}
+                  value={myName}
+                  onChangeText={setMyName}
+                  placeholder={t('compatibility.namePlaceholder')}
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  maxLength={10}
+                />
+
+                {/* 양력/음력 */}
+                <Text style={st.inputLabel}>{t('home.editCalendar')}</Text>
+                <View style={st.calToggleRow}>
+                  <TouchableOpacity style={[st.calToggleBtn, !myIsLunar && st.calToggleActive]} onPress={() => setMyIsLunar(false)}>
+                    <Text style={[st.calToggleText, !myIsLunar && st.calToggleTextActive]}>{t('birth.solar')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[st.calToggleBtn, myIsLunar && st.calToggleActive]} onPress={() => setMyIsLunar(true)}>
+                    <Text style={[st.calToggleText, myIsLunar && st.calToggleTextActive]}>{t('birth.lunar')}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 생년월일 */}
                 <DateInputRow
                   year={myYear} month={myMonth} day={myDay}
                   onChangeYear={setMyYear} onChangeMonth={setMyMonth} onChangeDay={setMyDay}
                   variant="inline"
                 />
+
+                {/* 성별 */}
                 <View style={st.genderRow}>
                   <TouchableOpacity style={[st.genderBtn, myGender === 'male' && st.genderActive]} onPress={() => setMyGender('male')}>
                     <Text style={[st.genderText, myGender === 'male' && st.genderTextActive]}>{t('compatibility.maleGender')}</Text>
@@ -187,6 +220,35 @@ export default function CompatibilityScreen() {
                     <Text style={[st.genderText, myGender === 'female' && st.genderTextActive]}>{t('compatibility.femaleGender')}</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* 생시 */}
+                <View style={st.hourHeader}>
+                  <Text style={st.inputLabel}>{t('home.editBirthHour')}</Text>
+                  <TouchableOpacity style={st.unknownRow} onPress={() => { setMyUnknownTime(!myUnknownTime); if (!myUnknownTime) setMySelectedHour(null); }}>
+                    <View style={[st.checkbox, myUnknownTime && st.checkboxActive]}>
+                      {myUnknownTime && <Text style={st.checkIcon}>{'\u2713'}</Text>}
+                    </View>
+                    <Text style={st.unknownText}>{t('birth.unknownTime')}</Text>
+                  </TouchableOpacity>
+                </View>
+                {!myUnknownTime && (
+                  <View style={st.hoursGrid}>
+                    {HOURS.map((h) => {
+                      const active = mySelectedHour === h.value;
+                      return (
+                        <TouchableOpacity
+                          key={h.value}
+                          style={[st.hourBtn, active && st.hourBtnActive]}
+                          onPress={() => setMySelectedHour(h.value)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[st.hourLabel, active && st.hourLabelActive]}>{t(`birth.${h.labelKey}`)}</Text>
+                          <Text style={[st.hourSub, active && st.hourSubActive]}>{h.sub}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
             ) : (
               <View>
@@ -299,6 +361,12 @@ export default function CompatibilityScreen() {
       {/* ── RESULTS ── */}
       {result && (
         <Animated.View entering={FadeInDown.springify()}>
+          {/* Brand */}
+          <View style={st.brandRow}>
+            <Text style={st.brandLogo}>MIRi</Text>
+            <Text style={st.brandTag}>두 사람의 인연</Text>
+          </View>
+
           {/* Back to input */}
           <TouchableOpacity onPress={() => setResult(null)} style={st.resetBtn}>
             <Text style={st.resetText}>{'< '}{t('compatibility.reAnalyze')}</Text>
@@ -324,7 +392,7 @@ export default function CompatibilityScreen() {
                       <View style={st.coupleCircle}>
                         {myPillarsData && <Text style={st.coupleHanja}>{myPillarsData.dayMaster}</Text>}
                       </View>
-                      <Text style={st.coupleName}>{myName}</Text>
+                      <Text style={st.coupleName}>{myDisplayName}</Text>
                       <Text style={st.coupleZodiac}>{ov?.myZodiac ?? ''}띠</Text>
                     </View>
                     <View style={st.coupleVs}>
@@ -423,7 +491,7 @@ export default function CompatibilityScreen() {
                 <GlassCard style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.elementCompat')}</Text>
                   <ElementMatch
-                    aName={myName} bName={ptName}
+                    aName={myDisplayName} bName={ptName}
                     aDominant={result.elementInteraction.aElements.dominant}
                     aPercent={result.elementInteraction.aElements.percent}
                     bDominant={result.elementInteraction.bElements.dominant}
@@ -446,12 +514,12 @@ export default function CompatibilityScreen() {
                       <Text style={st.detailText}>{(result.dayMasterRelation as CompatDayMaster).analysis}</Text>
                       <View style={st.dmPairRow}>
                         <View style={st.dmPairCol}>
-                          <Text style={st.dmPairLabel} numberOfLines={1}>{myName} → {ptName}</Text>
+                          <Text style={st.dmPairLabel} numberOfLines={1}>{myDisplayName} → {ptName}</Text>
                           <Text style={st.dmPairText}>{(result.dayMasterRelation as CompatDayMaster).aToB}</Text>
                         </View>
                         <View style={st.dmDiv} />
                         <View style={st.dmPairCol}>
-                          <Text style={st.dmPairLabel} numberOfLines={1}>{ptName} → {myName}</Text>
+                          <Text style={st.dmPairLabel} numberOfLines={1}>{ptName} → {myDisplayName}</Text>
                           <Text style={st.dmPairText}>{(result.dayMasterRelation as CompatDayMaster).bToA}</Text>
                         </View>
                       </View>
@@ -570,7 +638,7 @@ export default function CompatibilityScreen() {
                   <Text style={st.detailLabel}>{t('compatibility.secretAdvice')}</Text>
                   <View style={st.secretRow}>
                     <View style={st.secretCol}>
-                      <Text style={st.secretLabel}>{t('compatibility.toPersonFormat', { name: myName })}</Text>
+                      <Text style={st.secretLabel}>{t('compatibility.toPersonFormat', { name: myDisplayName })}</Text>
                       <Text style={st.secretText}>{result.secretMessage.toA}</Text>
                     </View>
                     <View style={st.secretDiv} />
@@ -653,8 +721,28 @@ export default function CompatibilityScreen() {
 
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: theme.spacing.screenPadding, paddingTop: 60, paddingBottom: 120 },
-  title: { ...theme.typo.screenTitle, textAlign: 'center', marginBottom: theme.spacing.sectionGap },
+  content: { padding: theme.spacing.screenPadding, paddingTop: 48, paddingBottom: 120 },
+  brandRow: {
+    alignItems: 'center' as const,
+    marginBottom: 12,
+  },
+  brandLogo: {
+    fontSize: 15,
+    fontWeight: '200' as const,
+    color: theme.colors.text.primary,
+    letterSpacing: 4,
+  },
+  brandTag: {
+    fontSize: 10,
+    fontWeight: '400' as const,
+    color: theme.colors.text.tertiary,
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+  hero: { alignItems: 'center', marginBottom: theme.spacing.xl },
+  heroChar: { fontSize: 64, fontWeight: '200', color: theme.colors.gold.primary, marginBottom: theme.spacing.md },
+  heroTitle: { fontSize: 24, fontWeight: '700', color: theme.colors.text.primary, letterSpacing: 2, marginBottom: theme.spacing.sm },
+  heroSub: { fontSize: 14, color: theme.colors.text.secondary, textAlign: 'center', lineHeight: 22 },
   // Input form
   personCard: { marginBottom: theme.spacing.sm },
   personHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.sm },
@@ -669,7 +757,7 @@ const st = StyleSheet.create({
   myDetailDivider: { width: 1, height: 24, backgroundColor: theme.colors.glass.border },
   coupleConnector: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.lg },
   connLine: { flex: 1, height: 1, backgroundColor: theme.colors.gold.primary + '30' },
-  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8546B' + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E8546B' + '30' },
+  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.gold.primary + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.gold.primary + '30' },
   connHeartText: { fontSize: 16, color: '#E8546B' },
   nameInput: { backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, paddingVertical: 12, paddingHorizontal: 12, color: theme.colors.text.primary, fontSize: 15, borderWidth: 1, borderColor: theme.colors.glass.border, marginBottom: theme.spacing.sm },
   inputLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.primary, marginBottom: 6, marginTop: theme.spacing.sm },
@@ -678,6 +766,11 @@ const st = StyleSheet.create({
   calToggleActive: { backgroundColor: '#1C1C1E' },
   calToggleText: { color: theme.colors.text.tertiary, fontSize: 13, fontWeight: '500' },
   calToggleTextActive: { color: theme.colors.gold.light, fontWeight: '600' },
+  hourScroll: { marginBottom: 6 },
+  hourChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, backgroundColor: theme.colors.bg.secondary, marginRight: 6 },
+  hourChipActive: { backgroundColor: '#1C1C1E' },
+  hourChipText: { fontSize: 12, color: theme.colors.text.tertiary, fontWeight: '500' },
+  hourChipTextActive: { color: theme.colors.gold.light, fontWeight: '600' },
   hourHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: theme.spacing.md, marginBottom: 6 },
   unknownRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: theme.colors.text.tertiary, alignItems: 'center', justifyContent: 'center' },
@@ -692,10 +785,10 @@ const st = StyleSheet.create({
   hourSub: { color: theme.colors.text.tertiary, fontSize: 10, marginTop: 1 },
   hourSubActive: { color: theme.colors.gold.muted },
   genderRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  genderBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.sm, borderWidth: 1, borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.primary },
-  genderActive: { borderColor: theme.colors.gold.primary, backgroundColor: theme.colors.gold.primary + '0A' },
-  genderText: { color: theme.colors.text.tertiary, fontSize: 14, lineHeight: 20, textAlignVertical: 'center' } as any,
-  genderTextActive: { color: theme.colors.gold.primary, fontWeight: '600' },
+  genderBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
+  genderActive: { backgroundColor: '#1C1C1E' },
+  genderText: { color: theme.colors.text.tertiary, fontSize: 13, fontWeight: '500' } as any,
+  genderTextActive: { color: theme.colors.gold.light, fontWeight: '600' },
   analyzeBtn: { marginTop: theme.spacing.xl },
   // Result header
   resetBtn: { marginBottom: theme.spacing.md },

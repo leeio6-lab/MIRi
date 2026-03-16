@@ -1,0 +1,230 @@
+interface TarotVariant {
+  keyword: { ko: string; en: string; ja: string };
+  message: { ko: string; en: string; ja: string };
+  career: { ko: string; en: string; ja: string };
+  wealth: { ko: string; en: string; ja: string };
+  relationship: { ko: string; en: string; ja: string };
+}
+
+export const TAROT_POOL: Record<string, TarotVariant[]> = {
+  fire: [
+    {
+      keyword: { ko: '열정', en: 'Passion', ja: '情熱' },
+      message: { ko: '마음이 이끄는 방향으로 과감하게 나아가세요.', en: 'Move boldly in the direction your heart leads you.', ja: '心が導く方向へ大胆に進んでください。' },
+      career: { ko: '에너지가 높은 시간이에요. 발표나 미팅에서 주도권을 잡으면 좋은 결과가 옵니다. 수동적으로 앉아 있지 마세요.', en: 'Your energy is running high. Take charge in presentations and meetings for great results. Do not sit passively.', ja: 'エネルギーが高い時間です。発表やミーティングで主導権を握れば良い結果が来ます。受け身にならないで。' },
+      wealth: { ko: '충동구매 주의. 장바구니에 넣어두고 내일 다시 보세요. 오늘 쓴 돈은 후회할 확률이 높아요.', en: 'Watch out for impulse buying. Add it to the cart and revisit tomorrow. Money spent today is likely to bring regret.', ja: '衝動買いに注意。カートに入れて明日もう一度見てください。今日使ったお金は後悔する確率が高いです。' },
+      relationship: { ko: '직접 만나는 게 좋은 날. 문자보다 전화, 전화보다 대면이 훨씬 효과적이에요.', en: 'A day best spent meeting in person. Calls beat texts, and face-to-face beats calls by far.', ja: '直接会うのが良い日。メールより電話、電話より対面がずっと効果的です。' },
+    },
+    {
+      keyword: { ko: '도전', en: 'Challenge', ja: '挑戦' },
+      message: { ko: '망설이던 일이 있다면 오늘이 시작할 때예요.', en: 'If there is something you have been hesitating on, today is the time to start.', ja: '迷っていたことがあるなら、今日が始める時です。' },
+      career: { ko: '새로운 프로젝트를 시작하기 좋은 기운이에요. 아이디어를 말로 꺼내면 뜻밖의 지지를 얻을 수 있어요.', en: 'Great energy for starting a new project. Voice your ideas and you may find unexpected support from colleagues.', ja: '新しいプロジェクトを始めるのに良い気運です。アイデアを口に出せば思わぬ支持を得られるかもしれません。' },
+      wealth: { ko: '돈을 벌기 위한 작은 투자는 오늘 시작하면 좋아요. 자기계발 강좌, 업무 도구 구매가 적기입니다.', en: 'Small investments to earn more are well-timed today. A self-improvement course or a work tool purchase is ideal.', ja: 'お金を稼ぐための小さな投資は今日始めるのが良いです。自己啓発講座や業務ツールの購入が好機です。' },
+      relationship: { ko: '용기를 내서 먼저 연락해보세요. 상대도 당신의 연락을 기다리고 있을 수 있어요.', en: 'Muster the courage to reach out first. The other person might be waiting for you to make contact.', ja: '勇気を出して先に連絡してみてください。相手もあなたの連絡を待っているかもしれません。' },
+    },
+    {
+      keyword: { ko: '표현', en: 'Expression', ja: '表現' },
+      message: { ko: '속에 담아두지 마세요. 오늘은 말하는 것이 힘이 되는 날이에요.', en: 'Do not keep it inside. Today, speaking up gives you real strength.', ja: '心に溜めないでください。今日は話すことが力になる日です。' },
+      career: { ko: '회의에서 적극적으로 발언하세요. 숨겨둔 아이디어가 있다면 오늘 꺼내야 타이밍이 맞아요.', en: 'Speak up actively in meetings. If you have a hidden idea, the timing is right to reveal it today.', ja: '会議で積極的に発言してください。隠していたアイデアがあれば今日出すのがタイミングぴったりです。' },
+      wealth: { ko: '협상에 유리한 기운이에요. 가격 흥정이나 연봉 협상을 오늘 시도해보세요. 말이 돈이 됩니다.', en: 'Favorable energy for negotiations. Try bargaining on prices or salary today. Your words translate to money.', ja: '交渉に有利な気運です。価格交渉や年収交渉を今日試してみてください。言葉がお金になります。' },
+      relationship: { ko: '오해가 있었다면 오늘 풀기 좋은 날이에요. 감정보다 사실 위주로 차분하게 말하세요.', en: 'A good day to clear up misunderstandings. Stay calm and focus on facts over emotions when speaking.', ja: '誤解があったなら今日解くのに良い日です。感情より事実を中心に穏やかに話してください。' },
+    },
+    {
+      keyword: { ko: '빛', en: 'Light', ja: '光' },
+      message: { ko: '어두운 시간은 끝나가요. 밝아지기 직전이에요.', en: 'The dark hours are ending. Dawn is just about to break for you.', ja: '暗い時間は終わりに近づいています。明るくなる直前です。' },
+      career: { ko: '그동안 묵묵히 해온 일이 드러나는 시기예요. 조급해하지 말고 마지막까지 완성도를 높이세요.', en: 'The work you have been quietly doing is about to be noticed. Stay patient and polish it to the end.', ja: 'これまで黙々とやってきた仕事が表に出る時期です。焦らず最後まで完成度を高めてください。' },
+      wealth: { ko: '밀린 돈이 들어오거나 잊고 있던 수입이 생길 수 있어요. 통장을 한 번 확인해보세요.', en: 'Overdue payments may arrive or forgotten income may appear. Check your bank account once today.', ja: '滞っていたお金が入ってきたり忘れていた収入が生まれるかも。通帳を一度確認してみてください。' },
+      relationship: { ko: '오랫동안 연락 못한 사람에게 먼저 손을 내밀어보세요. 당신의 한마디가 상대에게 큰 힘이 됩니다.', en: 'Reach out first to someone you have not contacted in a while. Your single message can be a big comfort to them.', ja: '長い間連絡できなかった人に先に手を差し伸べてみて。あなたの一言が相手に大きな力になります。' },
+    },
+    {
+      keyword: { ko: '에너지', en: 'Energy', ja: 'エネルギー' },
+      message: { ko: '오늘 당신의 에너지가 주변에 좋은 영향을 줄 거예요.', en: 'Your energy today will have a positive influence on those around you.', ja: '今日あなたのエネルギーが周りに良い影響を与えるでしょう。' },
+      career: { ko: '팀 분위기를 바꿀 수 있는 날이에요. 당신이 먼저 웃으면 팀 전체가 밝아져요. 리더십을 보여주세요.', en: 'A day you can change the team mood. If you smile first, the whole team brightens up. Show leadership today.', ja: 'チームの雰囲気を変えられる日です。あなたが先に笑えばチーム全体が明るくなります。リーダーシップを見せて。' },
+      wealth: { ko: '돈보다 경험에 쓰는 게 좋은 날이에요. 맛있는 식사나 좋은 공연처럼 기억에 남는 것에 투자하세요.', en: 'A day better spent on experiences than things. Invest in a great meal or a good show—something memorable.', ja: 'お金よりも経験に使うのが良い日です。美味しい食事や良い公演など、記憶に残るものに投資しましょう。' },
+      relationship: { ko: '당신의 따뜻함이 필요한 사람이 주변에 있어요. 작은 관심이라도 먼저 다가가주세요.', en: 'Someone around you needs your warmth right now. Even a small gesture of care from you will mean a lot.', ja: 'あなたの温かさを必要としている人が周りにいます。小さな関心でも先に近づいてあげてください。' },
+    },
+    {
+      keyword: { ko: '심장', en: 'Heart', ja: '心臓' },
+      message: { ko: '머리가 아닌 가슴이 하는 말을 들어보세요.', en: 'Listen to what your heart says, not just your head.', ja: '頭ではなく胸が語る言葉に耳を傾けてください。' },
+      career: { ko: '논리적으로는 맞지만 마음이 내키지 않는 일이 있다면, 오늘은 마음을 따르세요. 직감이 답인 날이에요.', en: 'If something makes logical sense but your heart resists, follow your heart today. Intuition is the answer.', ja: '論理的には正しいけれど気が進まないなら、今日は心に従ってください。直感が答えの日です。' },
+      wealth: { ko: '감정적으로 지출하기 쉬운 날이에요. 결제 전에 3초만 멈추고, 진짜 필요한지 스스로에게 물어보세요.', en: 'An easy day to spend emotionally. Before paying, pause three seconds and ask yourself if you truly need it.', ja: '感情的に出費しやすい日です。決済前に3秒だけ止まって、本当に必要か自分に聞いてみてください。' },
+      relationship: { ko: '사랑한다면 오늘 말하세요. 내일이면 용기가 사라질 수 있어요. 행동이 마음을 증명합니다.', en: 'If you love someone, say it today. Tomorrow the courage may be gone. Actions prove what words cannot.', ja: '愛しているなら今日伝えてください。明日には勇気がなくなるかも。行動が心を証明します。' },
+    },
+  ],
+  water: [
+    {
+      keyword: { ko: '흐름', en: 'Flow', ja: '流れ' },
+      message: { ko: '억지로 바꾸려 하지 마세요. 자연스럽게 흘러가면 길이 열려요.', en: 'Do not force change. Let things flow naturally and the path will open on its own.', ja: '無理に変えようとしないでください。自然に流れれば道が開けます。' },
+      career: { ko: '조용히 생각을 정리하기 좋은 시간이에요. 기획서, 분석, 리서치에 집중하면 좋은 아이디어가 떠올라요.', en: 'A good time to quietly organize your thoughts. Focusing on plans, analysis, and research will spark good ideas.', ja: '静かに考えを整理するのに良い時間です。企画書や分析、リサーチに集中すれば良いアイデアが浮かびます。' },
+      wealth: { ko: '돈이 나가는 기운이 강해요. 큰 결제는 오늘은 피하고, 내일 이후로 미루세요.', en: 'Outflow energy is strong today. Avoid large payments and postpone them until tomorrow or later.', ja: 'お金が出ていく気が強いです。大きな決済は今日は避けて明日以降に延ばしてください。' },
+      relationship: { ko: '깊은 대화가 되는 날이에요. 평소 못 했던 속마음을 나눠보세요. 관계가 한층 깊어질 거예요.', en: 'A day for deep conversation. Share the innermost feelings you have been holding back and deepen your bond.', ja: '深い対話ができる日です。普段できなかった本音を分かち合ってみてください。関係が一段と深まります。' },
+    },
+    {
+      keyword: { ko: '깊이', en: 'Depth', ja: '深さ' },
+      message: { ko: '표면 아래를 보세요. 오늘 중요한 건 눈에 안 보이는 곳에 있어요.', en: 'Look beneath the surface. What matters today is hidden from plain sight.', ja: '表面の下を見てください。今日大事なものは目に見えないところにあります。' },
+      career: { ko: '데이터의 이면을 읽으세요. 동료에게 직접 물어보면 회의록에 없는 숨겨진 정보를 얻을 수 있어요.', en: 'Read between the lines of the data. Ask colleagues directly and you may uncover information absent from the minutes.', ja: 'データの裏面を読んでください。同僚に直接聞けば議事録にない隠れた情報を得られるかもしれません。' },
+      wealth: { ko: '저축에 좋은 기운이에요. 자동이체 설정하거나 적금 하나를 가입하면 돈이 모이기 시작해요.', en: 'Good energy for saving. Set up automatic transfers or open a savings account to start building wealth.', ja: '貯蓄に良い気運です。自動振替を設定するか積立を一つ始めればお金が貯まり始めます。' },
+      relationship: { ko: '상대방의 말보다 표정을 보세요. 괜찮다고 하면서 눈이 웃지 않는다면 한 번 더 물어봐주세요.', en: 'Watch their expression, not just words. If they say they are fine but their eyes are not smiling, ask again gently.', ja: '相手の言葉より表情を見てください。大丈夫と言いながら目が笑っていないなら、もう一度聞いてあげて。' },
+    },
+    {
+      keyword: { ko: '적응', en: 'Adapt', ja: '適応' },
+      message: { ko: '물처럼 어떤 그릇이든 채울 수 있어요. 변화를 두려워하지 마세요.', en: 'Like water, you can fill any vessel. Do not fear the changes ahead.', ja: '水のようにどんな器でも満たせます。変化を恐れないでください。' },
+      career: { ko: '예상치 못한 업무 변경이 있을 수 있어요. 유연하게 대처하면 오히려 능력을 인정받을 수 있습니다.', en: 'Unexpected work changes may come. Handle them flexibly and you may earn recognition for your adaptability.', ja: '予想外の業務変更があるかもしれません。柔軟に対処すればむしろ能力を認められます。' },
+      wealth: { ko: '고정관념을 버리세요. 새로운 수입원에 대해 열린 마음을 가져보세요. 안 하던 방식이 돈이 될 수 있어요.', en: 'Let go of fixed ideas. Keep an open mind about new income sources. An unconventional approach may pay off.', ja: '固定観念を捨ててください。新しい収入源に対してオープンな心を持ちましょう。やったことのない方法がお金になるかも。' },
+      relationship: { ko: '상대방이 변하길 바라기 전에 내가 먼저 변해보세요. 관계의 흐름이 달라지기 시작합니다.', en: 'Before wishing the other person would change, try changing yourself first. The dynamic will start shifting.', ja: '相手が変わることを望む前に自分から先に変わってみてください。関係の流れが変わり始めます。' },
+    },
+    {
+      keyword: { ko: '지혜', en: 'Wisdom', ja: '知恵' },
+      message: { ko: '급하게 행동하지 마세요. 한 발 뒤에서 보면 답이 보여요.', en: 'Do not act in haste. Step back one pace and the answer will become clear.', ja: '急いで行動しないでください。一歩引いて見れば答えが見えます。' },
+      career: { ko: '오늘은 실행보다 관찰의 날이에요. 회의 마지막에 정리하는 사람이 가장 현명해 보입니다.', en: 'Today is for observing, not executing. The person who summarizes at the end of a meeting looks wisest.', ja: '今日は実行より観察の日です。会議の最後にまとめる人が最も賢く見えます。' },
+      wealth: { ko: '큰 지출 결정은 3일 뒤로 미루세요. 지금은 정보를 모으는 시간이에요. 비교하고 또 비교하세요.', en: 'Delay big spending decisions by three days. Now is the time to gather information and compare thoroughly.', ja: '大きな支出の決定は3日後に延ばしてください。今は情報を集める時間です。比較に比較を重ねて。' },
+      relationship: { ko: '조언을 구하는 사람에게는 답을 주지 말고 질문을 해주세요. 그래야 스스로 답을 찾을 수 있어요.', en: 'When someone asks for advice, do not give answers. Ask them questions so they can find their own answer.', ja: 'アドバイスを求める人には答えを与えず質問をしてあげてください。そうすれば自分で答えを見つけられます。' },
+    },
+    {
+      keyword: { ko: '치유', en: 'Healing', ja: '癒し' },
+      message: { ko: '지친 마음에 물을 주세요. 쉬는 것도 전진이에요.', en: 'Water your weary heart. Resting is also a way of moving forward.', ja: '疲れた心に水をあげてください。休むことも前進です。' },
+      career: { ko: '번아웃 주의보. 오늘 하루쯤 속도를 늦춰도 괜찮아요. 완급 조절이 장기전의 핵심이에요.', en: 'Burnout warning. It is okay to slow down for just one day. Pacing yourself is key to the long game.', ja: 'バーンアウト注意報。今日一日くらいペースを落としても大丈夫。緩急の調整が長期戦の核心です。' },
+      wealth: { ko: '건강이 최고의 재산이에요. 오늘은 건강에 투자하세요. 영양제, 운동, 수면—몸이 자본입니다.', en: 'Health is your greatest wealth. Invest in it today. Supplements, exercise, sleep—your body is your capital.', ja: '健康が最高の財産です。今日は健康に投資してください。サプリ、運動、睡眠—体が資本です。' },
+      relationship: { ko: '혼자만의 시간이 필요해요. 에너지를 충전해야 다시 사람을 만날 수 있어요. 양해를 구하세요.', en: 'You need time alone. Recharge your energy so you can meet people again fully. Ask for understanding.', ja: '一人の時間が必要です。エネルギーを充電してこそまた人に会えます。理解を求めてください。' },
+    },
+    {
+      keyword: { ko: '직감', en: 'Intuition', ja: '直感' },
+      message: { ko: '논리가 아닌 느낌을 믿어보세요. 오늘은 직감이 정확한 날이에요.', en: 'Trust your feeling, not logic. Today your intuition is remarkably accurate.', ja: '論理ではなく感覚を信じてみてください。今日は直感が正確な日です。' },
+      career: { ko: '서류상으로는 괜찮아 보이지만 꺼림칙한 제안이 있다면, 그 느낌이 맞아요. 직감을 따르세요.', en: 'If a proposal looks fine on paper but something feels off, trust that feeling. Your instinct is right.', ja: '書類上は問題なさそうだけど気が進まない提案があるなら、その感覚は正しいです。直感に従って。' },
+      wealth: { ko: '숫자를 보기 전에 먼저 느낌을 확인하세요. 마음이 편한 돈 관리가 장기적으로 이깁니다.', en: 'Check your feeling before the numbers. Money management that feels right wins in the long run.', ja: '数字を見る前にまず感覚に聞いてみてください。心が楽なお金の管理が長期的に勝ちます。' },
+      relationship: { ko: '오늘 만나는 사람에 대한 첫인상을 기억해두세요. 나중에 그 직감이 맞았다는 걸 알게 될 거예요.', en: 'Remember your first impression of people you meet today. You will later realize that intuition was right.', ja: '今日会う人に対する第一印象を覚えておいてください。後でその直感が正しかったと分かるでしょう。' },
+    },
+  ],
+  wood: [
+    {
+      keyword: { ko: '성장', en: 'Growth', ja: '成長' },
+      message: { ko: '어제보다 오늘, 한 뼘이라도 더 자라는 중이에요.', en: 'You are growing today, even if just a little more than yesterday.', ja: '昨日より今日、少しでも成長している最中です。' },
+      career: { ko: '배움의 기운이 강한 날이에요. 새로운 기술을 익히거나 선배에게 조언을 구하면 큰 도움이 됩니다.', en: 'A day with strong learning energy. Picking up a new skill or seeking a mentor will pay off greatly.', ja: '学びの気が強い日です。新しい技術を身につけたり先輩にアドバイスを求めたりすると大きな助けになります。' },
+      wealth: { ko: '지금 당장의 이익보다 미래의 가치를 생각하세요. 교육이나 자격증에 쓰는 돈은 반드시 돌아옵니다.', en: 'Think of future value over immediate profit. Money spent on education or certifications will always come back.', ja: '今すぐの利益より将来の価値を考えてください。教育や資格に使うお金は必ず戻ってきます。' },
+      relationship: { ko: '함께 성장할 수 있는 사람과 시간을 보내세요. 서로 자극이 되는 관계가 오래 갑니다.', en: 'Spend time with someone you can grow alongside. Relationships where you inspire each other last the longest.', ja: '一緒に成長できる人と時間を過ごしてください。互いに刺激になる関係が長く続きます。' },
+    },
+    {
+      keyword: { ko: '유연', en: 'Flexibility', ja: '柔軟' },
+      message: { ko: '바람에 흔들려도 부러지지 않는 나무처럼, 유연함이 무기예요.', en: 'Like a tree that sways in the wind but never breaks, flexibility is your strength.', ja: '風に揺れても折れない木のように、柔軟さがあなたの武器です。' },
+      career: { ko: '계획대로 되지 않아도 괜찮아요. 방향을 살짝 바꾸면 더 좋은 길이 보일 수 있습니다.', en: 'It is okay if things do not go as planned. A slight change in direction may reveal an even better path.', ja: '計画通りにいかなくても大丈夫。方向を少し変えればもっと良い道が見えるかもしれません。' },
+      wealth: { ko: '하나의 수입원에만 의지하지 마세요. 소소한 부업이나 새로운 수익 구조를 탐색해보세요.', en: 'Do not rely on a single income source. Explore small side jobs or new revenue structures worth trying.', ja: '一つの収入源だけに頼らないでください。ちょっとした副業や新しい収益構造を探ってみましょう。' },
+      relationship: { ko: '내 기준만 고집하지 말고 상대의 방식도 받아들여보세요. 관계는 서로 맞춰가는 것이에요.', en: 'Accept the other person\'s way too, not just your own standards. Relationships are about meeting in the middle.', ja: '自分の基準だけにこだわらず相手のやり方も受け入れてみてください。関係はお互い合わせていくものです。' },
+    },
+    {
+      keyword: { ko: '새싹', en: 'Sprout', ja: '新芽' },
+      message: { ko: '작은 시작이 큰 숲이 되는 법이에요. 오늘 심은 씨앗을 믿으세요.', en: 'A small start can become a great forest. Trust the seed you plant today.', ja: '小さな始まりが大きな森になるものです。今日蒔いた種を信じてください。' },
+      career: { ko: '아직 결과가 안 보여도 조급해하지 마세요. 첫 기획서, 첫 시도가 나중에 큰 성과로 이어집니다.', en: 'Do not be impatient even if results are not visible yet. Your first attempt will lead to achievements later.', ja: 'まだ結果が見えなくても焦らないでください。最初の企画書や試みが後に大きな成果につながります。' },
+      wealth: { ko: '소액이라도 오늘부터 시작하세요. 천 원짜리 적금이라도 좋아요. 시작 자체가 돈의 흐름을 바꿔요.', en: 'Start today even with a small amount. Even the tiniest savings plan changes the flow of money for you.', ja: '少額でも今日から始めてください。千ウォンの積立でもいいです。始めること自体がお金の流れを変えます。' },
+      relationship: { ko: '새로운 만남에 마음을 열어두세요. 지금은 어색해도 시간이 지나면 소중한 인연이 될 거예요.', en: 'Keep your heart open to new encounters. Awkward now, but with time it will become a precious bond.', ja: '新しい出会いに心を開いておいてください。今はぎこちなくても時間が経てば大切な縁になるでしょう。' },
+    },
+    {
+      keyword: { ko: '뿌리', en: 'Roots', ja: '根' },
+      message: { ko: '보이지 않는 곳에서 당신의 뿌리는 깊어지고 있어요.', en: 'In places unseen, your roots are growing deeper every day.', ja: '見えないところであなたの根は深くなっています。' },
+      career: { ko: '화려한 성과보다 기본기를 다지세요. 보고서 양식, 이메일 문장력, 시간 관리—기초가 탄탄하면 흔들리지 않아요.', en: 'Strengthen your fundamentals over flashy results. Reports, emails, time management—solid basics keep you steady.', ja: '派手な成果より基礎を固めてください。報告書の書式、メールの文章力、時間管理—基礎がしっかりしていれば揺るぎません。' },
+      wealth: { ko: '가계부를 정리해보세요. 내 돈이 어디로 흘러가는지 파악하는 것이 재테크의 진짜 시작이에요.', en: 'Review your budget. Understanding where your money flows is the real starting point of financial planning.', ja: '家計簿を整理してみてください。自分のお金がどこへ流れているか把握することが資産管理の本当の始まりです。' },
+      relationship: { ko: '오래된 관계를 돌아보세요. 소홀했던 가족이나 옛 친구에게 안부를 전하면 마음이 따뜻해져요.', en: 'Look back on long-standing relationships. A warm hello to neglected family or old friends warms your heart.', ja: '長い付き合いの関係を振り返ってください。疎遠だった家族や旧友に安否を伝えれば心が温かくなります。' },
+    },
+    {
+      keyword: { ko: '인내', en: 'Perseverance', ja: '忍耐' },
+      message: { ko: '나무는 하루아침에 자라지 않아요. 기다리는 당신이 가장 강해요.', en: 'A tree does not grow overnight. You, who wait patiently, are the strongest of all.', ja: '木は一朝一夕には育ちません。待てるあなたが一番強いのです。' },
+      career: { ko: '지금 힘든 시기가 지나면 반드시 좋은 때가 와요. 지치더라도 루틴을 유지하세요. 꾸준함이 실력입니다.', en: 'Good times will surely follow this tough period. Even when tired, maintain your routine. Consistency is skill.', ja: '今の辛い時期が過ぎれば必ず良い時が来ます。疲れてもルーティンを維持してください。継続が実力です。' },
+      wealth: { ko: '단기 수익에 흔들리지 마세요. 장기적으로 안정적인 곳에 자산을 두는 것이 현명한 선택이에요.', en: 'Do not be swayed by short-term gains. Placing assets in stable long-term options is the wise choice.', ja: '短期的な利益に揺れないでください。長期的に安定したところに資産を置くのが賢明な選択です。' },
+      relationship: { ko: '관계도 시간이 필요해요. 성급하게 결론 내지 말고, 서로를 이해하는 시간을 충분히 가지세요.', en: 'Relationships need time too. Do not rush to conclusions. Give yourselves plenty of time to understand each other.', ja: '関係にも時間が必要です。急いで結論を出さず、お互いを理解する時間を十分に取ってください。' },
+    },
+    {
+      keyword: { ko: '방향', en: 'Direction', ja: '方向' },
+      message: { ko: '어디로 갈지 모를 때는 잠시 멈춰도 괜찮아요. 방향이 보일 거예요.', en: 'When you do not know where to go, it is okay to pause. The direction will become clear.', ja: 'どこへ行くか分からない時は少し立ち止まっても大丈夫。方向が見えてきます。' },
+      career: { ko: '커리어의 큰 그림을 다시 그려보세요. 지금 하는 일이 5년 뒤 나를 어디로 데려가는지 생각해보세요.', en: 'Redraw the big picture of your career. Think about where your current work will take you in five years.', ja: 'キャリアの大きな絵をもう一度描いてみてください。今の仕事が5年後の自分をどこへ連れて行くか考えてみて。' },
+      wealth: { ko: '목표 없는 저축은 오래 못 가요. 구체적인 금액과 기한을 정하세요. 방향이 있으면 돈도 모여요.', en: 'Saving without a goal does not last. Set a specific amount and deadline. With direction, money gathers.', ja: '目標のない貯蓄は長続きしません。具体的な金額と期限を決めてみてください。方向があればお金も集まります。' },
+      relationship: { ko: '이 관계가 나를 성장시키는지 돌아보세요. 방향이 같은 사람과 함께할 때 둘 다 더 멀리 갈 수 있어요.', en: 'Reflect on whether this relationship helps you grow. Walking with someone headed the same way, both go further.', ja: 'この関係が自分を成長させているか振り返ってみてください。方向が同じ人と一緒にいれば二人ともより遠くへ行けます。' },
+    },
+  ],
+  metal: [
+    {
+      keyword: { ko: '결단', en: 'Decision', ja: '決断' },
+      message: { ko: '고민은 충분히 했어요. 이제 칼을 내리세요.', en: 'You have deliberated enough. Now bring down the blade and decide.', ja: '十分に悩みました。もう刀を振り下ろしてください。' },
+      career: { ko: '미루던 결정을 오늘 내리세요. 완벽한 타이밍은 없어요. 결단력 자체가 곧 실력으로 인정받는 날이에요.', en: 'Make the decision you have been putting off. There is no perfect timing. Decisiveness is recognized as competence.', ja: '先延ばしにしていた決定を今日下してください。完璧なタイミングはありません。決断力がそのまま実力として認められます。' },
+      wealth: { ko: '불필요한 지출을 과감하게 끊으세요. 안 쓰는 구독 서비스, 습관적인 소비를 오늘 정리하면 큰 절약이 됩니다.', en: 'Cut unnecessary spending decisively. Cancel unused subscriptions and habitual purchases today for real savings.', ja: '不要な支出を思い切って断ちましょう。使わないサブスクや習慣的な消費を今日整理すれば大きな節約になります。' },
+      relationship: { ko: '애매한 관계는 오늘 정리하세요. 마음을 전하든 거리를 두든, 확실하게 결정이 필요한 때예요.', en: 'Sort out ambiguous relationships today. Express your feelings clearly or cleanly distance yourself. A decision is needed.', ja: 'あいまいな関係は今日整理してください。気持ちを伝えるか距離を置くか、はっきりとした決断が必要な時です。' },
+    },
+    {
+      keyword: { ko: '정리', en: 'Clarity', ja: '整理' },
+      message: { ko: '비워야 채울 수 있어요. 오늘은 정리의 날이에요.', en: 'You must empty before you can fill. Today is a day for clearing out.', ja: '空にしてこそ満たせます。今日は整理の日です。' },
+      career: { ko: '책상 위와 컴퓨터 폴더를 정리하세요. 외부 환경이 깔끔해지면 머릿속도 정리되고 업무 효율이 올라가요.', en: 'Clean your desk and organize folders. A tidy environment clears your mind and boosts work efficiency immediately.', ja: 'デスクの上とパソコンのフォルダを整理してください。環境がすっきりすれば頭も整理されて業務効率が上がります。' },
+      wealth: { ko: '가계부를 훑어보세요. 매달 나가는 고정비 중 줄일 수 있는 것이 반드시 있어요. 정리만 해도 돈이 보여요.', en: 'Review your budget. There is surely something to cut from monthly fixed costs. Just organizing reveals money.', ja: '家計簿を見直してください。毎月出ていく固定費の中で減らせるものが必ずあります。整理するだけでお金が見えてきます。' },
+      relationship: { ko: '연락처를 정리해보세요. 진짜 소중한 사람이 누구인지 보이면, 그 사람에게 에너지를 집중할 수 있어요.', en: 'Organize your contacts. Once you see who truly matters, you can focus your energy on that person.', ja: '連絡先を整理してみてください。本当に大切な人が誰か見えれば、その人にエネルギーを集中できます。' },
+    },
+    {
+      keyword: { ko: '빛남', en: 'Shine', ja: '輝き' },
+      message: { ko: '당신의 진가가 드러나는 순간이 다가오고 있어요.', en: 'The moment your true worth shines through is approaching fast.', ja: 'あなたの真価が現れる瞬間が近づいています。' },
+      career: { ko: '그동안의 노력이 빛을 발하는 시기예요. 겸손하되 당당하게 성과를 어필하세요. 자신을 숨기지 마세요.', en: 'This is the time your efforts shine. Be humble yet confident when presenting your achievements. Do not hide.', ja: 'これまでの努力が光を放つ時期です。謙虚でありながら堂々と成果をアピールしてください。自分を隠さないで。' },
+      wealth: { ko: '품질 좋은 물건 하나에 투자하세요. 싼 것 여러 개보다 좋은 것 하나가 오래 가고 만족감도 높아요.', en: 'Invest in one quality item. One good thing lasts longer and brings more satisfaction than many cheap ones.', ja: '品質の良いもの一つに投資してください。安いもの複数より良いもの一つが長持ちし満足感も高いです。' },
+      relationship: { ko: '진심을 담은 칭찬을 해보세요. 상대의 장점을 구체적으로 말해주면 관계가 한층 빛나게 됩니다.', en: 'Give a heartfelt compliment. Naming their specific strengths makes the relationship shine much brighter.', ja: '心を込めた褒め言葉を伝えてみてください。相手の長所を具体的に言えば関係が一段と輝きます。' },
+    },
+    {
+      keyword: { ko: '보호', en: 'Shield', ja: '守護' },
+      message: { ko: '지킬 것은 지키세요. 오늘은 단단한 갑옷이 필요한 날이에요.', en: 'Protect what needs protecting. Today is a day you need solid armor.', ja: '守るべきものは守ってください。今日は堅い鎧が必要な日です。' },
+      career: { ko: '무리한 요구에는 정중하지만 단호하게 거절하세요. 업무 범위를 지키는 것도 프로의 자세입니다.', en: 'Decline unreasonable demands politely but firmly. Protecting your work boundaries is professional behavior.', ja: '無理な要求には丁寧だが断固として断ってください。業務範囲を守ることもプロの姿勢です。' },
+      wealth: { ko: '사기나 과대광고에 주의하세요. 너무 좋은 조건의 제안은 한 번 더 의심하세요. 돈을 지키는 게 먼저예요.', en: 'Beware of scams and exaggerated promises. Be extra skeptical of too-good offers. Protecting money comes first.', ja: '詐欺や誇大広告に注意してください。あまりに良い条件の提案はもう一度疑って。お金を守ることが先です。' },
+      relationship: { ko: '에너지를 빼앗는 사람과는 거리를 두세요. 모든 사람에게 친절할 필요 없어요. 내 마음을 먼저 지키세요.', en: 'Distance yourself from energy drainers. You do not need to be kind to everyone. Protect your heart first.', ja: 'エネルギーを奪う人とは距離を置いてください。すべての人に親切にする必要はありません。自分の心をまず守って。' },
+    },
+    {
+      keyword: { ko: '집중', en: 'Focus', ja: '集中' },
+      message: { ko: '하나에 집중하세요. 날카로운 칼은 한 곳을 벨 때 가장 강해요.', en: 'Focus on one thing. A sharp blade is strongest when striking a single point.', ja: '一つに集中してください。鋭い刃は一点を斬る時が最も強いのです。' },
+      career: { ko: '멀티태스킹을 멈추고 가장 중요한 일 하나만 끝내세요. 오늘 한 가지에 올인하면 확실한 성과가 나와요.', en: 'Stop multitasking and finish the single most important task. Going all in on one thing today yields clear results.', ja: 'マルチタスクをやめて最も重要な仕事一つだけ終わらせてください。今日一つに全力投球すれば確実に成果が出ます。' },
+      wealth: { ko: '분산 투자보다 확실한 한 곳에 집중하세요. 오늘은 선택과 집중이 수익을 만드는 날이에요.', en: 'Concentrate on one sure thing rather than spreading thin. Today, focus and selection create real profit.', ja: '分散投資するより確実な一つに集中してください。今日は選択と集中が収益を生む日です。' },
+      relationship: { ko: '여러 사람보다 가장 중요한 한 사람에게 온전한 관심을 주세요. 깊이가 넓이를 이깁니다.', en: 'Give your full attention to the one who matters most, not many. Depth beats breadth in relationships.', ja: '多くの人に気を遣うより最も大切な一人に全身の関心を向けてください。深さが広さに勝ります。' },
+    },
+    {
+      keyword: { ko: '완성', en: 'Completion', ja: '完成' },
+      message: { ko: '마지막 한 걸음이 남았어요. 끝까지 가면 완전해져요.', en: 'One last step remains. Go all the way and you will be complete.', ja: '最後の一歩が残っています。最後まで行けば完全になります。' },
+      career: { ko: '90%에서 멈추지 마세요. 마지막 마무리가 평가를 결정해요. 디테일을 다듬으면 결과물 격이 달라집니다.', en: 'Do not stop at ninety percent. The final touches determine the evaluation. Refining details elevates everything.', ja: '90%で止まらないでください。最後の仕上げが評価を決めます。ディテールを磨けば成果物の格が変わります。' },
+      wealth: { ko: '저축 목표까지 거의 다 왔다면 포기하지 마세요. 마지막 한 달을 버티면 성취감과 함께 목표가 이루어져요.', en: 'If almost at your savings goal, do not give up. Push through the last month and achieve it with pride.', ja: '貯蓄目標までほぼ達したなら諦めないで。最後の一ヶ月を耐えれば達成感とともに目標が叶います。' },
+      relationship: { ko: '관계에도 마무리가 중요해요. 감사 인사, 사과 한마디—미뤄왔던 말을 오늘 꺼내면 관계가 완성됩니다.', en: 'Closure matters in relationships too. A thank you, an apology—say what you have been putting off today.', ja: '関係にも仕上げが大切です。感謝の言葉、謝罪の一言—先延ばしにしていた言葉を今日伝えれば関係が完成します。' },
+    },
+  ],
+  earth: [
+    {
+      keyword: { ko: '안정', en: 'Stability', ja: '安定' },
+      message: { ko: '흔들리지 않는 땅 위에 서 있어요. 오늘은 안심해도 돼요.', en: 'You stand on solid ground. It is okay to feel at ease today.', ja: '揺るがない大地の上に立っています。今日は安心してください。' },
+      career: { ko: '급하게 움직이기보다 맡은 일에 차분히 집중하세요. 꾸준하고 안정적인 모습이 오히려 높은 평가를 받아요.', en: 'Rather than rushing, calmly focus on assigned tasks. A steady, stable approach earns higher recognition.', ja: '急いで動くより任された仕事に落ち着いて集中してください。着実で安定した姿がむしろ高い評価を受けます。' },
+      wealth: { ko: '안정적인 재테크에 유리한 날이에요. 예금, 적금, 연금—화려하진 않지만 확실한 것에 돈을 두세요.', en: 'A favorable day for stable investments. Deposits, savings, pensions—not flashy, but put money in what is certain.', ja: '安定した資産運用に有利な日です。預金、積立、年金—派手ではないけれど確実なものにお金を置いてください。' },
+      relationship: { ko: '함께 밥 먹는 것이 최고의 관계 관리예요. 오늘 점심이나 저녁을 소중한 사람과 함께하세요.', en: 'Sharing a meal is the finest relationship care. Have lunch or dinner with someone precious to you today.', ja: '一緒にご飯を食べるのが最高の関係管理です。今日のランチか夕食を大切な人と一緒にしてください。' },
+    },
+    {
+      keyword: { ko: '포용', en: 'Embrace', ja: '包容' },
+      message: { ko: '있는 그대로를 받아들이세요. 부족함도 당신의 일부예요.', en: 'Accept things as they are. Even your shortcomings are part of who you are.', ja: 'ありのままを受け入れてください。足りないところもあなたの一部です。' },
+      career: { ko: '동료의 실수를 너그럽게 봐주세요. 오늘 베푼 관용이 나중에 당신이 힘들 때 도움으로 돌아와요.', en: 'Be generous about a colleague\'s mistake. The tolerance you show today returns as help when you need it most.', ja: '同僚のミスを寛大に見てあげてください。今日示した寛容さが後であなたが困った時に助けとなって戻ってきます。' },
+      wealth: { ko: '남에게 베풀면 돌아오는 기운이에요. 커피 한 잔, 작은 선물—인연에 투자하면 예상 못한 곳에서 복이 와요.', en: 'Generosity returns to you. A coffee, a small gift—investing in bonds brings blessings from unexpected places.', ja: '人に施せば戻ってくる気です。コーヒー一杯、小さなプレゼント—縁に投資すれば思わぬところから福が来ます。' },
+      relationship: { ko: '상대를 바꾸려 하지 말고 이해하려 해보세요. 포용하는 마음이 관계의 토양을 비옥하게 만들어요.', en: 'Instead of trying to change the other, try to understand them. An embracing heart enriches your relationship.', ja: '相手を変えようとせず理解しようとしてみてください。包容する心が関係の土壌を豊かにします。' },
+    },
+    {
+      keyword: { ko: '기다림', en: 'Patience', ja: '待つこと' },
+      message: { ko: '때가 되면 반드시 열매를 맺어요. 조급해하지 마세요.', en: 'When the time is right, fruit will surely come. Do not be impatient.', ja: '時が来れば必ず実を結びます。焦らないでください。' },
+      career: { ko: '승진이나 인정이 늦어지더라도 낙담 마세요. 당신이 쌓아온 것은 사라지지 않아요. 조금만 더 기다리세요.', en: 'Even if promotion or recognition is delayed, do not be discouraged. What you built does not disappear. Wait a bit more.', ja: '昇進や認知が遅れても落胆しないでください。積み上げてきたものは消えません。もう少しだけ待ってください。' },
+      wealth: { ko: '지금 당장 돈이 안 보여도 괜찮아요. 씨앗을 뿌린 밭에는 반드시 수확의 날이 옵니다. 꾸준히 저축하세요.', en: 'It is okay if money is not visible now. A seeded field always has its harvest day. Keep saving steadily.', ja: '今すぐお金が見えなくても大丈夫です。種を蒔いた畑には必ず収穫の日が来ます。地道に貯蓄してください。' },
+      relationship: { ko: '연락이 뜸한 사람이 있어도 서운해하지 마세요. 각자의 속도가 있어요. 기다릴 줄 아는 사람이 진짜 인연을 만나요.', en: 'Do not feel hurt if someone has been out of touch. Everyone has their own pace. Those who wait find true connection.', ja: '連絡が途絶えた人がいても寂しがらないでください。それぞれのペースがあります。待てる人が本当の縁に出会います。' },
+    },
+    {
+      keyword: { ko: '균형', en: 'Balance', ja: 'バランス' },
+      message: { ko: '한쪽에 치우치지 마세요. 중심을 잡으면 모든 것이 조화로워져요.', en: 'Do not lean too far to one side. Find your center and everything harmonizes.', ja: '一方に偏らないでください。中心を取ればすべてが調和します。' },
+      career: { ko: '일과 휴식의 균형을 맞추세요. 오버워크는 성과를 떨어뜨려요. 점심시간에 잠깐이라도 바깥 공기를 쐬세요.', en: 'Balance work and rest. Overworking lowers performance. Step outside during lunch for fresh air, even briefly.', ja: '仕事と休息のバランスを取ってください。オーバーワークは成果を下げます。昼休みに少しでも外の空気を吸って。' },
+      wealth: { ko: '소비와 저축의 균형을 점검하세요. 너무 아끼면 지치고, 너무 쓰면 불안해져요. 적절한 중간을 찾으세요.', en: 'Check the balance between spending and saving. Too much frugality exhausts; too much spending causes anxiety.', ja: '消費と貯蓄のバランスを点検してください。節約ばかりだと疲れ、使いすぎると不安になります。適切な中間を見つけて。' },
+      relationship: { ko: '주는 것과 받는 것의 균형을 돌아보세요. 한쪽만 노력하는 관계는 오래 못 가요. 서로 채워주는 관계가 건강해요.', en: 'Reflect on the balance of giving and receiving. A one-sided relationship cannot last. Mutual support is healthy.', ja: '与えることと受け取ることのバランスを振り返ってください。片方だけの関係は長続きしません。互いに満たし合う関係が健全です。' },
+    },
+    {
+      keyword: { ko: '신뢰', en: 'Trust', ja: '信頼' },
+      message: { ko: '믿는 만큼 보여요. 자신을 먼저 믿어주세요.', en: 'You see as much as you believe. Trust yourself first before anything else.', ja: '信じた分だけ見えてきます。まず自分を信じてあげてください。' },
+      career: { ko: '약속한 것을 반드시 지키세요. 작은 약속도 지키는 사람에게 큰 기회가 옵니다. 신뢰가 당신의 브랜드예요.', en: 'Always keep your promises. Even small promises kept bring big opportunities. Trust is your personal brand.', ja: '約束したことを必ず守ってください。小さな約束でも守る人に大きなチャンスが来ます。信頼があなたのブランドです。' },
+      wealth: { ko: '신뢰할 수 있는 정보원을 가지세요. 투자는 믿을 수 있는 사람의 조언을 기반으로 하세요. 소문에 흔들리지 마세요.', en: 'Have reliable information sources. Base investments on advice from trusted people. Do not be swayed by rumors.', ja: '信頼できる情報源を持ってください。投資は信用できる人のアドバイスを基にしてください。噂に惑わされないで。' },
+      relationship: { ko: '신뢰는 한 번에 쌓이지 않아요. 오늘 작은 약속 하나를 꼭 지키세요. 그것이 쌓여 흔들리지 않는 관계가 돼요.', en: 'Trust is not built overnight. Keep one small promise today. Those build up into an unshakable relationship.', ja: '信頼は一度には築けません。今日小さな約束を一つ必ず守ってください。それが積み重なって揺るがない関係になります。' },
+    },
+    {
+      keyword: { ko: '기초', en: 'Foundation', ja: '基礎' },
+      message: { ko: '높이 올라가려면 기초부터 단단히. 오늘은 기반을 다지는 날이에요.', en: 'To rise high, start with a solid foundation. Today is a day for laying groundwork.', ja: '高く上がるには基礎からしっかりと。今日は基盤を固める日です。' },
+      career: { ko: '기본에 충실하세요. 화려한 기술보다 정확한 보고, 시간 엄수, 성실한 태도가 오래가는 경쟁력이에요.', en: 'Stick to the basics. Accurate reports, punctuality, and sincerity are more lasting advantages than flashy skills.', ja: '基本に忠実にしてください。派手な技術より正確な報告、時間厳守、誠実な態度が長続きする競争力です。' },
+      wealth: { ko: '비상금 통장을 점검하세요. 생활비 3개월분은 항상 따로 두는 것이 재테크의 기초예요. 기초가 있어야 도전도 가능해요.', en: 'Check your emergency fund. Keeping three months of expenses aside is the foundation of finance. It enables bold moves.', ja: '非常資金の口座を点検してください。生活費3ヶ月分を別に置くのが資産管理の基礎です。基礎があってこそ挑戦できます。' },
+      relationship: { ko: '관계의 기초는 존중이에요. 상대의 의견을 끝까지 들어주세요. 경청이 모든 관계의 첫 번째 벽돌이에요.', en: 'The foundation of any relationship is respect. Listen to the other person through to the end. Listening is the first brick.', ja: '関係の基礎は尊重です。相手の意見を最後まで聞いてあげてください。傾聴がすべての関係の最初のレンガです。' },
+    },
+  ],
+};

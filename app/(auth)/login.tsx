@@ -97,6 +97,8 @@ export default function LoginScreen() {
     opacity: contentOpacity.value,
   }));
 
+  const isWeb = Platform.OS === 'web';
+
   const handleGoogleLogin = async () => {
     const result = await signInWithGoogle();
     if (__DEV__) console.log('[Login] signInWithGoogle result:', JSON.stringify({
@@ -105,8 +107,10 @@ export default function LoginScreen() {
       hasProviderToken: !!result.providerToken,
     }));
 
+    // 웹: OAuth 리다이렉트 방식이라 success 후 브라우저가 직접 이동 → 네비게이션 불필요
+    if (isWeb) return;
+
     if (result.success) {
-      // 구글 프로필에서 이름/생년월일 가져오기 (providerToken 직접 전달)
       const profile = await fetchGoogleProfile(result.providerToken);
       if (__DEV__) console.log('[Login] fetchGoogleProfile result:', JSON.stringify(profile));
 
@@ -117,7 +121,6 @@ export default function LoginScreen() {
       if (profile.birthDay) params.day = String(profile.birthDay);
 
       const query = new URLSearchParams(params).toString();
-      if (__DEV__) console.log('[Login] navigating with query:', query);
       router.replace(`/(auth)/birth-input${query ? `?${query}` : ''}` as any);
     } else if (result.error && result.error !== 'Login cancelled') {
       Alert.alert(t('common.loginFailed'), result.error);
@@ -135,6 +138,8 @@ export default function LoginScreen() {
 
   const handleKakaoLogin = async () => {
     const result = await signInWithKakao();
+    // 웹: OAuth 리다이렉트 방식
+    if (isWeb) return;
     if (result.success) {
       router.replace('/(auth)/birth-input');
     } else if (result.error && result.error !== 'Login cancelled') {
@@ -144,6 +149,8 @@ export default function LoginScreen() {
 
   const handleLineLogin = async () => {
     const result = await signInWithLine();
+    // 웹: OAuth 리다이렉트 방식
+    if (isWeb) return;
     if (result.success) {
       router.replace('/(auth)/birth-input');
     } else if (result.error && result.error !== 'Login cancelled') {
@@ -164,57 +171,56 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 먹물 방울 — 큰 원이 퍼지고 완전히 사라짐 */}
-      <InkDrop delay={200} x={width * 0.3} y={height * 0.15} size={120} maxScale={3.5} color="#1C1C1E" />
-      <InkDrop delay={900} x={width * 0.72} y={height * 0.22} size={90} maxScale={3} color="#3A3A3C" />
-      <InkDrop delay={1500} x={width * 0.5} y={height * 0.3} size={70} maxScale={2.5} color="#2C2C2E" />
+      {/* 먹물 방울 — MIRi 주변에서 퍼짐 */}
+      <InkDrop delay={200} x={width * 0.35} y={height * 0.28} size={120} maxScale={3.5} color="#1C1C1E" />
+      <InkDrop delay={900} x={width * 0.7} y={height * 0.35} size={90} maxScale={3} color="#3A3A3C" />
+      <InkDrop delay={1500} x={width * 0.5} y={height * 0.4} size={70} maxScale={2.5} color="#2C2C2E" />
 
       <Animated.View style={[styles.contentWrap, contentStyle]}>
-        <View style={styles.top}>
+        {/* 상단 여백 — 타이틀을 시각적 중앙으로 */}
+        <View style={styles.centerArea}>
           <Text style={styles.title}>MIRi</Text>
           <Text style={styles.subtitle}>{t('auth.welcome')}</Text>
+          <View style={styles.decorative}>
+            <Text style={styles.decorChar}>占</Text>
+            <View style={styles.decorLine} />
+          </View>
         </View>
 
-        <View style={styles.decorative}>
-          <Text style={styles.decorChar}>占</Text>
-          <View style={styles.decorLine} />
-        </View>
+        {/* 하단 버튼 영역 */}
+        <View style={styles.bottomArea}>
+          <View style={styles.buttons}>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity style={styles.loginBtn} onPress={handleAppleLogin} disabled={isLoading} activeOpacity={0.8}>
+                <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#000', fontSize: 17 }]}>{'\uF8FF'}</Text></View>
+                <Text style={styles.loginLabel}>{t('auth.loginApple')}</Text>
+              </TouchableOpacity>
+            )}
 
-        <View style={styles.buttons}>
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity style={styles.loginBtn} onPress={handleAppleLogin} disabled={isLoading} activeOpacity={0.8}>
-              <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#000', fontSize: 17 }]}>{'\uF8FF'}</Text></View>
-              <Text style={styles.loginLabel}>{t('auth.loginApple')}</Text>
+            <TouchableOpacity style={styles.loginBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
+              <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#4285F4' }]}>G</Text></View>
+              <Text style={styles.loginLabel}>{t('auth.loginGoogle')}</Text>
             </TouchableOpacity>
-          )}
 
-          <TouchableOpacity style={styles.loginBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
-            <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#4285F4' }]}>G</Text></View>
-            <Text style={styles.loginLabel}>{t('auth.loginGoogle')}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.loginBtn} onPress={handleKakaoLogin} disabled={isLoading} activeOpacity={0.8}>
+              <View style={[styles.iconCircle, { backgroundColor: '#FEE500' }]}><Text style={[styles.iconText, { color: '#3C1E1E', fontSize: 15 }]}>K</Text></View>
+              <Text style={styles.loginLabel}>{t('auth.loginKakao')}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginBtn} onPress={handleKakaoLogin} disabled={isLoading} activeOpacity={0.8}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FEE500' }]}><Text style={[styles.iconText, { color: '#3C1E1E', fontSize: 15 }]}>K</Text></View>
-            <Text style={styles.loginLabel}>{t('auth.loginKakao')}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.loginBtn} onPress={handleLineLogin} disabled={isLoading} activeOpacity={0.8}>
+              <View style={[styles.iconCircle, { backgroundColor: '#06C755' }]}><Text style={[styles.iconText, { color: '#fff', fontSize: 14 }]}>L</Text></View>
+              <Text style={styles.loginLabel}>{t('auth.loginLine')}</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.loginBtn} onPress={handleLineLogin} disabled={isLoading} activeOpacity={0.8}>
-            <View style={[styles.iconCircle, { backgroundColor: '#06C755' }]}><Text style={[styles.iconText, { color: '#fff', fontSize: 14 }]}>L</Text></View>
-            <Text style={styles.loginLabel}>{t('auth.loginLine')}</Text>
+          <TouchableOpacity
+            onPress={handleGuestLogin}
+            style={styles.guestBtn}
+            disabled={isLoading}
+          >
+            <Text style={styles.guestText}>{t('auth.guestLogin')}</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          onPress={handleGuestLogin}
-          style={styles.guestBtn}
-          disabled={isLoading}
-        >
-          <Text style={styles.guestText}>{t('auth.guestLogin')}</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.loginInfo}>{t('auth.loginBenefit')}</Text>
-
-        <Text style={styles.disclaimer}>{t('common.disclaimer')}</Text>
       </Animated.View>
     </View>
   );
@@ -228,11 +234,21 @@ const styles = StyleSheet.create({
   contentWrap: {
     flex: 1,
     paddingHorizontal: theme.spacing.screenPadding,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
   },
-  top: {
+  centerArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
+    justifyContent: 'center',
+    paddingBottom: height * 0.15,
+    pointerEvents: 'none',
+  },
+  bottomArea: {
+    paddingBottom: 40,
   },
   title: {
     fontSize: 44,
@@ -249,7 +265,7 @@ const styles = StyleSheet.create({
   },
   decorative: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
+    marginTop: theme.spacing.xl,
   },
   decorChar: {
     fontSize: 36,
@@ -265,43 +281,44 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   buttons: {
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: 20,
   },
   loginBtn: {
     backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderRadius: theme.radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    minHeight: 50,
+    gap: 8,
+    minHeight: 42,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   iconCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: 'rgba(0,0,0,0.04)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconText: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
   },
   loginLabel: {
     color: '#3C3C3C',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
   guestBtn: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.lg,
-    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   guestText: {
     color: theme.colors.text.tertiary,

@@ -275,8 +275,10 @@ export default function FaceScreen() {
 
         {/* ─── 1. PORTRAIT (얼굴이 젤 먼저) ─── */}
         <Animated.View entering={FadeIn.delay(100).duration(500)}>
-          {transformedUri && (
+          {transformedUri ? (
             <Text style={rs.inkLabel}>水墨 관상화</Text>
+          ) : (
+            <Text style={rs.inkLabelFallback}>관상 분석 (수묵화 생성 실패)</Text>
           )}
           <View style={rs.portraitFrame}>
             <FaceOverlay
@@ -399,7 +401,16 @@ export default function FaceScreen() {
           {faceResult.fortune && (
             <GlassCard style={rs.analysisCard}>
               <Text style={rs.cardLabel}>運 {t('face.fortuneSection')}</Text>
-              <Text style={rs.analysisBody}>{faceResult.fortune}</Text>
+              {typeof faceResult.fortune === 'string' ? (
+                <Text style={rs.analysisBody}>{faceResult.fortune}</Text>
+              ) : (
+                Object.entries(faceResult.fortune as Record<string, string>).map(([key, val]) => (
+                  <View key={key} style={rs.analysisRow}>
+                    <Text style={rs.analysisRowIcon}>{key.replace('운', '')}</Text>
+                    <Text style={rs.analysisRowText}>{val}</Text>
+                  </View>
+                ))
+              )}
             </GlassCard>
           )}
 
@@ -501,11 +512,14 @@ export default function FaceScreen() {
             <Animated.View entering={FadeInDown.delay(150).springify()}>
               <TouchableOpacity style={cs.analyzeBtn} onPress={handleAnalyzePress} activeOpacity={0.8}>
                 <Text style={cs.analyzeBtnText}>
-                  {hasFaceTicket() ? t('face.startAnalysis') : t('face.startAnalysisFree')}
+                  {hasFaceTicket() ? t('face.startAnalysis') : '관상 분석하기'}
                 </Text>
+                {!hasFaceTicket() && (
+                  <Text style={cs.analyzeBtnPrice}>{t('paywall.facePrice')}</Text>
+                )}
               </TouchableOpacity>
               <Text style={cs.statusHint}>
-                {hasFaceTicket() ? t('face.ticketHint') : t('face.purchaseHint')}
+                {hasFaceTicket() ? t('face.ticketHint') : '분석권 구매 후 AI가 관상을 풀어드려요'}
               </Text>
             </Animated.View>
           )}
@@ -568,10 +582,17 @@ const rs = StyleSheet.create({
     marginBottom: 8,
     fontWeight: '400',
   },
+  inkLabelFallback: {
+    fontSize: 11,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    marginBottom: 8,
+    fontWeight: '400',
+  },
   portraitFrame: {
     alignSelf: 'center',
     borderRadius: theme.radius.lg,
-    overflow: 'visible',
+    overflow: 'hidden',
     ...theme.shadow.card,
   },
   tapHint: {
@@ -1030,6 +1051,12 @@ const cs = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.gold.primary,
     letterSpacing: 0.5,
+  },
+  analyzeBtnPrice: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.gold.muted,
+    marginTop: 2,
   },
   statusHint: {
     fontSize: 12,

@@ -34,7 +34,7 @@ const sc = (score: number) =>
 export default function CompatibilityScreen() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const { setCompatibilityResult } = useFortuneStore();
+  const { setCompatibilityResult, saveAndRecord } = useFortuneStore();
 
   const ELEMENT_KO: Record<string, string> = {
     wood: t('elements.wood'), fire: t('elements.fire'), earth: t('elements.earth'),
@@ -118,6 +118,7 @@ export default function CompatibilityScreen() {
         const safeLocal = sanitizeResult(localResult);
         setResult(safeLocal);
         setCompatibilityResult(safeLocal);
+        saveAndRecord('compatibility', false, safeLocal);
       } else {
         const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar);
         const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12);
@@ -139,6 +140,7 @@ export default function CompatibilityScreen() {
         const safeApi = sanitizeResult(apiResult);
         setResult(safeApi);
         setCompatibilityResult(safeApi);
+        saveAndRecord('compatibility', true, safeApi);
       }
     } catch (err) {
       console.error('[Compatibility] error:', err);
@@ -169,9 +171,14 @@ export default function CompatibilityScreen() {
       contentContainerStyle={sty.content}
       showsVerticalScrollIndicator={false}
     >
-      <BackButton />
-
-      <Text style={sty.title}>{t('compatibility.title')}</Text>
+      <View style={sty.navRow}>
+        <BackButton />
+        <View style={sty.brandCenter}>
+          <Text style={sty.brandLogo}>MIRi</Text>
+          <Text style={sty.brandTag}>두 사람의 인연</Text>
+        </View>
+        <View style={{ width: 34 }} />
+      </View>
 
       {/* My Info */}
       <GlassCard style={sty.personCard}>
@@ -872,7 +879,29 @@ function SecHead({ num, title }: { num: number; title: string }) {
 
 const sty = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: theme.spacing.screenPadding, paddingTop: 60, paddingBottom: 120 },
+  content: { padding: theme.spacing.screenPadding, paddingTop: 48, paddingBottom: 120 },
+  navRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginBottom: 6,
+  },
+  brandCenter: {
+    flex: 1,
+    alignItems: 'center' as const,
+  },
+  brandLogo: {
+    fontSize: 15,
+    fontWeight: '200' as const,
+    color: theme.colors.text.primary,
+    letterSpacing: 4,
+  },
+  brandTag: {
+    fontSize: 10,
+    fontWeight: '400' as const,
+    color: theme.colors.text.tertiary,
+    letterSpacing: 1,
+    marginTop: 1,
+  },
   title: {
     ...theme.typo.screenTitle,
     textAlign: 'center', marginBottom: theme.spacing.sectionGap,
@@ -894,7 +923,7 @@ const sty = StyleSheet.create({
   myDetailDivider: { width: 1, height: 24, backgroundColor: theme.colors.glass.border },
   coupleConnector: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.lg },
   connLine: { flex: 1, height: 1, backgroundColor: theme.colors.gold.primary + '30' },
-  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8546B' + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E8546B' + '30' },
+  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.gold.primary + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.gold.primary + '30' },
   connHeartText: { fontSize: 16, color: '#E8546B' },
   genderRow: { flexDirection: 'row', gap: theme.spacing.sm },
   genderBtn: {
@@ -958,7 +987,7 @@ const sty = StyleSheet.create({
   pairCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: theme.colors.gold.primary + '40', marginBottom: 4 },
   pairEmoji: { fontSize: 20, color: theme.colors.gold.primary },
   pairCenter: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  pairHeartBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8546B' + '18', alignItems: 'center', justifyContent: 'center' },
+  pairHeartBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.gold.primary + '18', alignItems: 'center', justifyContent: 'center' },
   pairHeartText: { fontSize: 16, color: '#E8546B' },
   pairName: { fontSize: 14, fontWeight: '700', color: theme.colors.text.primary },
   pairInfo: { fontSize: 11, color: theme.colors.text.secondary },
