@@ -53,18 +53,23 @@ const ANALYSIS_SYSTEM = `당신은 동양 관상학(面相學) 40년 경력 최�
 - 점수 60~95 범위
 - 관상학 전문 용어(한자 병기) 반드시 사용
 
-━━━ 위치 좌표 (position) 규칙 ━━━
+━━━ 위치 좌표 (position) 규칙 — 매우 중요 ━━━
 
-각 feature에 position:{x, y}를 반환하세요. 사진에서 해당 부위의 실제 위치를 0.0~1.0 비율로 표시합니다.
-- x: 0.0=왼쪽 끝, 1.0=오른쪽 끝
-- y: 0.0=위쪽 끝, 1.0=아래쪽 끝
-- 사진 속 얼굴의 실제 위치를 정확히 반영해야 합니다. 얼굴이 중앙이 아닐 수도 있고, 크기도 다를 수 있습니다.
-- 이마(forehead): 이마 중앙점
-- 눈(eyes): 두 눈 사이 미간 중앙
-- 코(nose): 코끝(준두) 위치
-- 입(mouth): 입술 중앙
-- 턱(jawline): 턱 끝 중앙
-- 귀(ears): 보이는 귀(왼쪽 우선) 중앙. 귀가 안 보이면 얼굴 옆면 추정
+각 feature에 position:{x, y}를 반환. 사진 내 해당 부위의 **픽셀 기준 실제 위치**를 0.0~1.0 비율로 표시.
+- x: 0.0=이미지 왼쪽 끝, 1.0=이미지 오른쪽 끝
+- y: 0.0=이미지 위쪽 끝, 1.0=이미지 아래쪽 끝
+
+⚠️ 반드시 **사진 속 얼굴의 실제 픽셀 위치**를 정확히 계산하세요. 대충 중앙(0.5, 0.5) 근처로 때리지 마세요.
+- 일반적인 1:1 셀피에서 얼굴이 정중앙에 있다면:
+  · 이마(forehead): x≈0.50, y≈0.15~0.22
+  · 눈(eyes): 왼쪽 눈 x≈0.35~0.40, 오른쪽 눈 x≈0.60~0.65, y≈0.32~0.40 → 두 눈 중간점 반환
+  · 코(nose): x≈0.50, y≈0.45~0.52
+  · 입(mouth): x≈0.50, y≈0.55~0.62
+  · 턱(jawline): x≈0.50, y≈0.68~0.78
+  · 귀(ears): 왼쪽 귀 x≈0.12~0.22, y≈눈 높이와 비슷
+- 얼굴이 치우쳐 있으면 위 값을 그에 맞게 조정
+- 각 부위의 y좌표는 반드시 이마 < 눈 < 코 < 입 < 턱 순서여야 함
+- 귀의 x좌표는 반드시 코보다 왼쪽(작은 값)이어야 함
 
 ━━━ 톤 & 스타일 ━━━
 
@@ -305,16 +310,21 @@ async function transformToOrientalPainting(
   formData.append('image', file);
   formData.append('prompt',
     'Convert this face photo into a beautiful traditional East Asian ink brush portrait (수묵 초상화). ' +
-    'CRITICAL RULES: ' +
+    'THE #1 PRIORITY: The person in the output MUST be CLEARLY RECOGNIZABLE as the same person in the input photo. ' +
+    'Their unique facial structure (face shape, eye shape, nose shape, lip shape, jawline) must be preserved EXACTLY. ' +
+    'Someone who knows this person should immediately say "oh that\'s them!" when seeing the portrait. ' +
+    '\n\nSTYLE RULES: ' +
     '1. PURE WHITE background — clean, bright, no gradients or scenery. ' +
-    '2. Use black ink (墨) brush strokes to draw the face — elegant calligraphy style. ' +
-    '3. IMPORTANT: The expression must be WARM, PLEASANT, and SLIGHTLY SMILING — not sad, not gloomy, not melancholic. ' +
-    'If the person looks neutral, give them a gentle, content smile. The portrait should feel uplifting and flattering. ' +
-    '4. The person\'s EXACT facial features and face shape must be clearly recognizable. ' +
-    '5. Use varied ink density: bold strokes for hair, fine delicate lines for facial contours, light wash for cheeks. ' +
-    '6. Overall feel: bright, warm, elegant — like a beautiful portrait you would proudly display. NOT dark or somber. ' +
-    '7. Neck and shoulders with minimal loose strokes, fading naturally. ' +
-    'ABSOLUTELY NO: text, stamps, seals, signatures, borders, frames, background objects, color, gloomy atmosphere.'
+    '2. Black ink (墨) brush strokes — elegant East Asian calligraphy style. ' +
+    '3. EXPRESSION: Warm, gentle, SLIGHTLY SMILING. Not sad, not gloomy. ' +
+    'If the original expression is neutral or serious, add a subtle pleasant smile — like someone who just heard good news. ' +
+    'The portrait should make the person look their best version — slightly more attractive, approachable, and radiant. ' +
+    '4. SUBTLE BEAUTIFICATION ALLOWED: Slightly smoother skin, slightly brighter eyes, slightly more defined features. ' +
+    'But do NOT change the fundamental face structure. Think "good lighting on a good day", not "plastic surgery". ' +
+    '5. Varied ink density: bold confident strokes for hair outline, fine delicate lines for facial contours, light wash for cheeks and soft areas. ' +
+    '6. Overall feel: bright, warm, elegant, FLATTERING — a portrait you would proudly set as your profile picture. ' +
+    '7. Neck and shoulders with minimal loose strokes, fading naturally into white. ' +
+    '\nABSOLUTELY NO: text, stamps, seals, signatures, borders, frames, background objects, color, gloomy atmosphere, different person.'
   );
   formData.append('size', '1024x1024');
 

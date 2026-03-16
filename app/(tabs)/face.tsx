@@ -443,12 +443,16 @@ export default function FaceScreen() {
         {/* No face detected */}
         {noFaceDetected && (
           <Animated.View entering={FadeInDown.springify()} style={cs.noFaceCard}>
+            <Text style={cs.noFaceEmoji}>{'\uD83D\uDE45'}</Text>
             <Text style={cs.noFaceTitle}>{t('face.noFaceTitle')}</Text>
             <Text style={cs.noFaceDesc}>{noFaceReason}</Text>
-            <Text style={cs.tipText}>{t('face.tipText')}</Text>
-            {hasFaceTicket() && (
-              <Button title={t('common.retryOther')} onPress={() => { clearNoFace(); setImageUri(null); }} style={cs.retryBtn} />
-            )}
+            <View style={cs.noFaceTips}>
+              <Text style={cs.noFaceTipItem}>{'\u2022'} 사람 얼굴이 정면으로 보이는 사진</Text>
+              <Text style={cs.noFaceTipItem}>{'\u2022'} 밝은 조명에서 촬영한 사진</Text>
+              <Text style={cs.noFaceTipItem}>{'\u2022'} 얼굴이 가려지지 않은 사진</Text>
+            </View>
+            <Text style={cs.noFaceReassure}>{t('face.ticketPreserved')}</Text>
+            <Button title={t('common.retryOther')} onPress={() => { clearNoFace(); setImageUri(null); }} style={cs.retryBtn} />
           </Animated.View>
         )}
 
@@ -895,9 +899,13 @@ const cs = StyleSheet.create({
   analyzeBtn: { marginTop: theme.spacing.md },
   priceHint: { fontSize: 12, color: theme.colors.text.tertiary, textAlign: 'center', marginTop: theme.spacing.xs },
   ticketHint: { fontSize: 12, color: theme.colors.gold.primary, textAlign: 'center', marginTop: theme.spacing.xs, fontWeight: '600' },
-  noFaceCard: { backgroundColor: '#FFF8F0', borderRadius: theme.radius.md, padding: theme.spacing.md, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8D5B8' },
-  noFaceTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: theme.spacing.xs },
-  noFaceDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
+  noFaceCard: { backgroundColor: '#FFF8F0', borderRadius: theme.radius.lg, padding: 20, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8D5B8', alignItems: 'center' },
+  noFaceEmoji: { fontSize: 36, marginBottom: 8 },
+  noFaceTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 6, textAlign: 'center' },
+  noFaceDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 14, textAlign: 'center', lineHeight: 20 },
+  noFaceTips: { alignSelf: 'stretch', backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 12, marginBottom: 12, gap: 4 },
+  noFaceTipItem: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 20 },
+  noFaceReassure: { fontSize: 12, color: theme.colors.gold.primary, fontWeight: '600', marginBottom: 12 },
   tipText: { fontSize: 12, color: theme.colors.text.tertiary, lineHeight: 20 },
   errorCard: { backgroundColor: '#FFF0F0', borderRadius: theme.radius.md, padding: theme.spacing.md, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8B8B8' },
   errorTitle: { fontSize: 15, fontWeight: '700', color: '#C44', marginBottom: theme.spacing.xs },
