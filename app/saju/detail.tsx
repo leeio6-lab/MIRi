@@ -6,12 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   LayoutChangeEvent,
+  Platform,
 } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { HelpButton } from '../../src/components/ui/HelpButton';
+import { TermTip, TermBadge } from '../../src/components/ui/TermTip';
 import { BackButton } from '../../src/components/ui/BackButton';
 import { ElementRadar } from '../../src/components/saju/ElementRadar';
 import { useAuthStore } from '../../src/stores/authStore';
@@ -146,7 +148,7 @@ function SectionHeader({ title, subtitle, helpKey }: { title: string; subtitle?:
     <View style={s.sectionHeader}>
       <View style={s.sectionTitleRow}>
         <Text style={s.sectionTitle}>{title}</Text>
-        {helpKey && <HelpButton termKey={helpKey as any} size={20} color={theme.colors.gold.muted} />}
+        {helpKey && <TermTip termKey={helpKey as any} label="?" style={{ fontSize: 14, fontWeight: '700' }} />}
       </View>
       {subtitle && <Text style={s.sectionSubtitle}>{subtitle}</Text>}
     </View>
@@ -308,7 +310,7 @@ function MyGuideSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard gold style={s.cardSpacing}>
-      <SectionHeader title="나에게 맞는 것들" subtitle="용신 기반 실생활 가이드" />
+      <SectionHeader title="나에게 맞는 것들" subtitle="용신 기반 실생활 가이드" helpKey="yongShin" />
       <View style={s.guideGrid}>
         {items.map((item, i) => (
           <View key={i} style={[s.guideItem, i === items.length - 1 && s.guideItemLast]}>
@@ -336,12 +338,16 @@ function TodaySajuSection({ analysis }: { analysis: FullSajuAnalysis }) {
         </View>
         <View style={s.todayInfo}>
           <View style={s.todayBadgeRow}>
-            <View style={[s.pillBadge, { backgroundColor: color + '18' }]}>
-              <Text style={[s.pillBadgeText, { color }]}>{todaySaju.tenGod}</Text>
-            </View>
-            <View style={[s.pillBadge, { backgroundColor: theme.colors.bg.tertiary }]}>
-              <Text style={[s.pillBadgeText, { color: theme.colors.text.secondary }]}>{todaySaju.lifeStage}</Text>
-            </View>
+            <TermBadge termKey="tenGods" label={todaySaju.tenGod}>
+              <View style={[s.pillBadge, { backgroundColor: color + '18' }]}>
+                <Text style={[s.pillBadgeText, { color }]}>{todaySaju.tenGod}</Text>
+              </View>
+            </TermBadge>
+            <TermBadge termKey="lifeStages" label={todaySaju.lifeStage}>
+              <View style={[s.pillBadge, { backgroundColor: theme.colors.bg.tertiary }]}>
+                <Text style={[s.pillBadgeText, { color: theme.colors.text.secondary }]}>{todaySaju.lifeStage}</Text>
+              </View>
+            </TermBadge>
           </View>
           <Text style={s.todayDesc}>{todaySaju.description}</Text>
         </View>
@@ -440,30 +446,40 @@ function FourPillarsCardSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
                 {/* Ten gods — fixed height */}
                 <View style={s.pillarBadgesCol}>
-                  <View style={[s.pillBadge, { backgroundColor: sColor + '15' }]}>
-                    <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{p.stemTG}</Text>
-                  </View>
-                  <View style={[s.pillBadge, { backgroundColor: bColor + '15' }]}>
-                    <Text style={[s.pillBadgeTextSm, { color: bColor }]}>{p.branchTG}</Text>
-                  </View>
+                  <TermBadge termKey="tenGods" label={p.stemTG}>
+                    <View style={[s.pillBadge, { backgroundColor: sColor + '15' }]}>
+                      <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{p.stemTG}</Text>
+                    </View>
+                  </TermBadge>
+                  <TermBadge termKey="tenGods" label={p.branchTG}>
+                    <View style={[s.pillBadge, { backgroundColor: bColor + '15' }]}>
+                      <Text style={[s.pillBadgeTextSm, { color: bColor }]}>{p.branchTG}</Text>
+                    </View>
+                  </TermBadge>
                 </View>
 
                 {/* Hidden stems — fixed height */}
-                <View style={s.pillarMetaRow}>
-                  <Text style={s.pillarMeta}>{hiddenStr}</Text>
-                </View>
+                <TermBadge termKey="hiddenStems">
+                  <View style={s.pillarMetaRow}>
+                    <Text style={s.pillarMeta}>{hiddenStr}</Text>
+                  </View>
+                </TermBadge>
 
                 {/* Life stage — fixed height */}
-                <View style={s.pillarMetaRow}>
-                  <Text style={s.pillarLifeStage}>{p.ls}</Text>
-                </View>
+                <TermBadge termKey="lifeStages" label={p.ls}>
+                  <View style={s.pillarMetaRow}>
+                    <Text style={s.pillarLifeStage}>{p.ls}</Text>
+                  </View>
+                </TermBadge>
 
                 {/* Spirit star — fixed height */}
-                <View style={s.pillarMetaRow}>
-                  <View style={[s.pillBadge, { backgroundColor: theme.colors.bg.tertiary }]}>
-                    <Text style={[s.pillBadgeTextSm, { color: theme.colors.text.secondary }]}>{p.ss}</Text>
+                <TermBadge termKey="spiritStars" label={p.ss}>
+                  <View style={s.pillarMetaRow}>
+                    <View style={[s.pillBadge, { backgroundColor: theme.colors.bg.tertiary }]}>
+                      <Text style={[s.pillBadgeTextSm, { color: theme.colors.text.secondary }]}>{p.ss}</Text>
+                    </View>
                   </View>
-                </View>
+                </TermBadge>
               </View>
             </View>
           );
@@ -739,10 +755,14 @@ function DaeunTimelineSection({ analysis, birthYear }: { analysis: FullSajuAnaly
                 {item.stemHanja}{item.branchHanja}
               </Text>
               <Text style={s.daeunKo}>{item.stem}{item.branch}</Text>
-              <View style={[s.pillBadge, { backgroundColor: sColor + '15', marginTop: 4 }]}>
-                <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{item.tenGod}</Text>
-              </View>
-              <Text style={s.daeunLS}>{item.lifeStage}</Text>
+              <TermBadge termKey="tenGods" label={item.tenGod}>
+                <View style={[s.pillBadge, { backgroundColor: sColor + '15', marginTop: 4 }]}>
+                  <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{item.tenGod}</Text>
+                </View>
+              </TermBadge>
+              <TermBadge termKey="lifeStages" label={item.lifeStage}>
+                <Text style={s.daeunLS}>{item.lifeStage}</Text>
+              </TermBadge>
             </View>
           );
         })}
@@ -789,12 +809,16 @@ function ThisYearFlowSection({ analysis }: { analysis: FullSajuAnalysis }) {
             <Text style={s.yearHighlightKo}>{currentYearData.stem}{currentYearData.branch}</Text>
           </View>
           <View style={s.yearHighlightRight}>
-            <View style={[s.pillBadge, { backgroundColor: stemColor(currentYearData.stemIdx) + '15' }]}>
-              <Text style={[s.pillBadgeText, { color: stemColor(currentYearData.stemIdx) }]}>
-                {currentYearData.tenGod}
-              </Text>
-            </View>
-            <Text style={s.yearHighlightLS}>{currentYearData.lifeStage}</Text>
+            <TermBadge termKey="tenGods" label={currentYearData.tenGod}>
+              <View style={[s.pillBadge, { backgroundColor: stemColor(currentYearData.stemIdx) + '15' }]}>
+                <Text style={[s.pillBadgeText, { color: stemColor(currentYearData.stemIdx) }]}>
+                  {currentYearData.tenGod}
+                </Text>
+              </View>
+            </TermBadge>
+            <TermBadge termKey="lifeStages" label={currentYearData.lifeStage}>
+              <Text style={s.yearHighlightLS}>{currentYearData.lifeStage}</Text>
+            </TermBadge>
           </View>
         </View>
       )}
@@ -807,9 +831,11 @@ function ThisYearFlowSection({ analysis }: { analysis: FullSajuAnalysis }) {
             <View key={item.year} style={s.nearbyYearItem}>
               <Text style={s.nearbyYearNumber}>{item.year}</Text>
               <Text style={[s.nearbyYearHanja, { color: sColor }]}>{item.stemHanja}{item.branchHanja}</Text>
-              <View style={[s.pillBadge, { backgroundColor: sColor + '12' }]}>
-                <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{item.tenGod}</Text>
-              </View>
+              <TermBadge termKey="tenGods" label={item.tenGod}>
+                <View style={[s.pillBadge, { backgroundColor: sColor + '12' }]}>
+                  <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{item.tenGod}</Text>
+                </View>
+              </TermBadge>
             </View>
           );
         })}
@@ -826,9 +852,11 @@ function ThisYearFlowSection({ analysis }: { analysis: FullSajuAnalysis }) {
             <View key={m.month} style={[s.monthItem, isCurrent && s.monthItemCurrent]}>
               <Text style={[s.monthLabel, isCurrent && s.monthLabelCurrent]}>{m.month}월</Text>
               <Text style={[s.monthHanja, { color: sColor }]}>{m.stemHanja}{m.branchHanja}</Text>
-              <View style={[s.pillBadge, { backgroundColor: sColor + '15' }]}>
-                <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{m.tenGod}</Text>
-              </View>
+              <TermBadge termKey="tenGods" label={m.tenGod}>
+                <View style={[s.pillBadge, { backgroundColor: sColor + '15' }]}>
+                  <Text style={[s.pillBadgeTextSm, { color: sColor }]}>{m.tenGod}</Text>
+                </View>
+              </TermBadge>
             </View>
           );
         })}
@@ -1118,11 +1146,16 @@ const s = StyleSheet.create({
     backgroundColor: theme.colors.gold.primary + '0A',
     borderWidth: 1.5,
     borderColor: theme.colors.gold.primary + '30',
-    shadowColor: theme.colors.gold.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      web: { boxShadow: `0px 4px 8px ${theme.colors.gold.primary}1F` },
+      default: {
+        shadowColor: theme.colors.gold.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+    }),
     transform: [{ scale: 1.02 }],
   },
   pillarWatermark: {

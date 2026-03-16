@@ -99,7 +99,7 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     const result = await signInWithGoogle();
-    console.log('[Login] signInWithGoogle result:', JSON.stringify({
+    if (__DEV__) console.log('[Login] signInWithGoogle result:', JSON.stringify({
       success: result.success,
       error: result.error,
       hasProviderToken: !!result.providerToken,
@@ -108,7 +108,7 @@ export default function LoginScreen() {
     if (result.success) {
       // 구글 프로필에서 이름/생년월일 가져오기 (providerToken 직접 전달)
       const profile = await fetchGoogleProfile(result.providerToken);
-      console.log('[Login] fetchGoogleProfile result:', JSON.stringify(profile));
+      if (__DEV__) console.log('[Login] fetchGoogleProfile result:', JSON.stringify(profile));
 
       const params: Record<string, string> = {};
       if (profile.name) params.name = profile.name;
@@ -117,7 +117,7 @@ export default function LoginScreen() {
       if (profile.birthDay) params.day = String(profile.birthDay);
 
       const query = new URLSearchParams(params).toString();
-      console.log('[Login] navigating with query:', query);
+      if (__DEV__) console.log('[Login] navigating with query:', query);
       router.replace(`/(auth)/birth-input${query ? `?${query}` : ''}` as any);
     } else if (result.error && result.error !== 'Login cancelled') {
       Alert.alert(t('common.loginFailed'), result.error);

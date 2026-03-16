@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MIRI - 미리",
+    "name": "MIRI",
     "slug": "miri-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,11 +10,12 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FAFAF7"
+      "backgroundColor": "#0B0A0F"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.miri.app",
+      "bundleIdentifier": "com.miri.fortune",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "관상 분석을 위해 카메라 접근이 필요합니다.",
         "NSPhotoLibraryUsageDescription": "관상 분석을 위해 사진 접근이 필요합니다."
@@ -22,11 +23,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FAFAF7",
+        "backgroundColor": "#0B0A0F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
-      "package": "com.miri.app",
+      "package": "com.miri.fortune",
       "permissions": [
         "CAMERA"
       ]

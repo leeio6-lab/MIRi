@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   Image,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, FadeInUp } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -18,16 +19,20 @@ import { GlassCard } from '../../src/components/ui/GlassCard';
 import { Button } from '../../src/components/ui/Button';
 import { LoadingInk } from '../../src/components/ui/LoadingInk';
 import { PaywallModal } from '../../src/components/ui/PaywallModal';
+import { ShareCard } from '../../src/components/ui/ShareCard';
 import { FaceOverlay } from '../../src/components/face/FaceOverlay';
 import { FaceGuide } from '../../src/components/face/FaceGuide';
-import { FeatureCard } from '../../src/components/face/FeatureCard';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { usePurchaseStore } from '../../src/stores/purchaseStore';
 import { useFace } from '../../src/hooks/useFace';
 
 const { width } = Dimensions.get('window');
 
-function ensureFeaturesArray(features: unknown): { area: string; score: number; description: string; detail?: string }[] {
+// ────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────────────────
+
+function ensureFeaturesArray(features: unknown): { area: string; score: number; description: string; detail?: string; nickname?: string; position?: { x: number; y: number } }[] {
   if (Array.isArray(features)) return features;
   if (features && typeof features === 'object') {
     const areaOrder = ['forehead', 'eyes', 'nose', 'mouth', 'jawline', 'chin', 'ears'];
@@ -39,50 +44,131 @@ function ensureFeaturesArray(features: unknown): { area: string; score: number; 
         score: obj[area].score ?? 75,
         description: obj[area].title ?? obj[area].description ?? obj[area].name ?? '',
         detail: obj[area].detail,
+        nickname: obj[area].nickname,
+        position: obj[area].position,
       }));
   }
   return [];
 }
+
+const AREA_LABELS: Record<string, string> = {
+  forehead: '천정(天庭)',
+  eyes: '감찰관(監察)',
+  nose: '재백궁(財帛)',
+  mouth: '출납관(出納)',
+  jawline: '지각(地閣)',
+  ears: '채청관(採聽)',
+  chin: '지각(地閣)',
+};
+
+const AREA_ICONS: Record<string, string> = {
+  forehead: '額', eyes: '目', nose: '鼻', mouth: '口', jawline: '顎', ears: '耳', chin: '顎',
+};
+
+const RADAR_LABELS: Record<string, { label: string; icon: string }> = {
+  wealth:  { label: '재물운', icon: '財' },
+  love:    { label: '연애운', icon: '愛' },
+  health:  { label: '건강운', icon: '壽' },
+  success: { label: '성공운', icon: '祿' },
+  social:  { label: '사교운', icon: '和' },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Expandable Feature Card
+// ────────────────────────────────────────────────────────────────────────────
+
+function FeatureExpandCard({
+  feature,
+  isActive,
+  onToggle,
+}: {
+  feature: { area: string; score: number; description: string; detail?: string; nickname?: string };
+  isActive: boolean;
+  onToggle: () => void;
+}) {
+  const icon = AREA_ICONS[feature.area] ?? '相';
+  const label = AREA_LABELS[feature.area] ?? feature.area;
+  const scoreColor = feature.score >= 85 ? '#D4B245' : feature.score >= 75 ? '#B59530' : '#8A7220';
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onToggle}
+      style={[rs.featureCard, isActive && rs.featureCardActive]}
+    >
+      {/* Header row */}
+      <View style={rs.featureHeader}>
+        <View style={rs.featureLeft}>
+          <View style={rs.featureIconBox}>
+            <Text style={rs.featureIcon}>{icon}</Text>
+          </View>
+          <View>
+            <View style={rs.featureNameRow}>
+              <Text style={rs.featureLabel}>{label}</Text>
+              {feature.nickname && (
+                <View style={rs.nicknameBadge}>
+                  <Text style={rs.nicknameText}>{feature.nickname}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={rs.featureDesc} numberOfLines={isActive ? undefined : 1}>
+              {feature.description}
+            </Text>
+          </View>
+        </View>
+        <View style={rs.featureScoreBox}>
+          <Text style={[rs.featureScore, { color: scoreColor }]}>{feature.score}</Text>
+          <View style={rs.featureBarTrack}>
+            <View style={[rs.featureBarFill, { width: `${feature.score}%`, backgroundColor: scoreColor }]} />
+          </View>
+        </View>
+      </View>
+
+      {/* Expanded detail */}
+      {isActive && feature.detail && (
+        <Animated.View entering={FadeInDown.duration(300)} style={rs.featureDetailBox}>
+          <View style={rs.detailDivider} />
+          <Text style={rs.featureDetail}>{feature.detail}</Text>
+        </Animated.View>
+      )}
+
+      {/* Expand indicator */}
+      <Text style={rs.expandArrow}>{isActive ? '\u25B2' : '\u25BC'}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Main Screen
+// ────────────────────────────────────────────────────────────────────────────
 
 export default function FaceScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { faceResult, transformedImageBase64, analyze, isLoading, error, clearError, noFaceDetected, noFaceReason, clearNoFace } = useFace();
   const { setFaceResult, setTransformedImage, saveAndRecord } = useFortuneStore();
-  const { hasFaceTicket, useFaceTicket, purchaseAnalysis } = usePurchaseStore();
+  const { hasFaceTicket, useFaceTicket } = usePurchaseStore();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
+  const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
-  // 관상화 크기 및 부위별 데이터
-  const portraitSize = width - theme.spacing.lg * 2;
+  const portraitSize = Math.min(width - 32, 420);
   const features = faceResult ? ensureFeaturesArray(faceResult.features) : [];
 
-  // ─── 사진 선택 ───
+  // ─── Photo pick ───
   const pickImage = async (useCamera: boolean) => {
     const permission = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permission.granted) {
       Alert.alert(t('common.permissionRequired'), t('face.photoPermission'));
       return;
     }
-
     const result = useCamera
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.7,
-        });
-
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
       clearNoFace();
@@ -93,271 +179,705 @@ export default function FaceScreen() {
     }
   };
 
-  // ─── 분석 시작 (티켓 보유 상태에서) ───
+  // ─── Analysis ───
   const startAnalysis = async () => {
     if (!imageUri) return;
-
     const faceRes = await analyze(imageUri);
     if (faceRes) {
-      // 성공 시에만 티켓 소모
       useFaceTicket();
       setAnalyzed(true);
       saveAndRecord('face', true, faceRes);
     }
-    // 실패/noFace 시 티켓 유지 → 재시도 가능
   };
 
-  // ─── "관상 분석하기" 버튼 ───
   const handleAnalyzePress = async () => {
     if (hasFaceTicket()) {
-      // 이미 티켓 보유 → 바로 분석
       startAnalysis();
     } else {
-      // 티켓 없음 → 결제
       setShowPaywall(true);
     }
   };
 
-  // ─── 결제 완료 후 ───
-  const handlePaywallUnlocked = () => {
-    // purchaseAnalysis에서 faceTicket이 이미 추가됨 → 바로 분석
-    startAnalysis();
-  };
-
-  // ─── 재시도 (에러 후) ───
   const handleRetry = () => {
     clearError();
     clearNoFace();
     startAnalysis();
   };
 
-  // 원본 사진 (수묵화 필터는 FaceOverlay에서 적용)
-  const displayImageUri = imageUri;
+  const resetAnalysis = () => {
+    setAnalyzed(false);
+    setImageUri(null);
+    setFaceResult(null);
+    setTransformedImage(null);
+    setExpandedFeature(null);
+  };
+
+  // Image URIs
+  const transformedUri = transformedImageBase64
+    ? `data:image/png;base64,${transformedImageBase64}`
+    : null;
+  const displayImageUri = transformedUri ?? imageUri;
 
   if (isLoading) {
-    return <LoadingInk steps={t('loading.faceSteps', { returnObjects: true }) as string[]} finalMessage={t('loading.faceFinal')} />;
+    return (
+      <LoadingInk
+        steps={t('loading.faceSteps', { returnObjects: true }) as string[]}
+        tips={t('loading.sajuTips', { returnObjects: true }) as string[]}
+        finalMessage={t('loading.faceFinal')}
+        estimatedSeconds={15}
+      />
+    );
   }
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.title}>{t('face.title')}</Text>
+  // ════════════════════════════════════════════════════════════════════════════
+  //  RESULTS VIEW
+  // ════════════════════════════════════════════════════════════════════════════
 
-      {/* ═══ Phase 1: 사진 선택 + 분석 시작 ═══ */}
-      {!analyzed ? (
-        <Animated.View entering={FadeIn.delay(200)}>
-          {/* 사진 프리뷰 / 플레이스홀더 */}
-          <View style={styles.captureArea}>
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.previewImage} />
-            ) : (
-              <View style={styles.placeholderContainer}>
-                <Text style={styles.placeholderIcon}>相</Text>
-                <Text style={styles.guideText}>{t('face.guide')}</Text>
+  const handleShare = async () => {
+    const shareText = `[MIRi 관상] ${faceResult?.shareTitle ?? ''} ${faceResult?.overallScore ?? ''}점\n\n${faceResult?.hookLine ?? faceResult?.summary ?? ''}\n\nhttps://dist-drab-ten-14.vercel.app/share?type=face&score=${faceResult?.overallScore}`;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
+      try { await (navigator as any).share({ title: 'MIRi 관상 분석', text: shareText }); } catch {}
+    } else if (Platform.OS === 'web' && navigator?.clipboard) {
+      await navigator.clipboard.writeText(shareText);
+    }
+  };
+
+  if (analyzed && faceResult) {
+    return (
+      <ScrollView
+        ref={scrollRef}
+        style={rs.container}
+        contentContainerStyle={rs.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ─── 1. PORTRAIT (얼굴이 젤 먼저) ─── */}
+        <Animated.View entering={FadeIn.delay(100).duration(500)}>
+          {transformedUri && (
+            <Text style={rs.inkLabel}>水墨 관상화</Text>
+          )}
+          <View style={rs.portraitFrame}>
+            <FaceOverlay
+              imageUri={displayImageUri!}
+              features={features}
+              imageSize={portraitSize}
+              isTransformed={!!transformedUri}
+              onFeatureSelect={(area) => setExpandedFeature(area)}
+            />
+          </View>
+          <Text style={rs.tapHint}>{t('face.tapHint')}</Text>
+        </Animated.View>
+
+        {/* ─── 2. HOOK + SCORE + SHARE (자극적 → 바로 공유) ─── */}
+        <Animated.View entering={FadeInDown.delay(300).springify()}>
+          {faceResult.shareTitle && (
+            <View style={rs.tagRow}>
+              <View style={rs.tag}>
+                <Text style={rs.tagText}>{faceResult.shareTitle}</Text>
               </View>
-            )}
-            <FaceGuide size={portraitSize} />
+              <Text style={rs.scoreText}>{faceResult.overallScore}<Text style={rs.scoreUnit}>점</Text></Text>
+            </View>
+          )}
+
+          <Text style={rs.hookLine}>
+            {faceResult.hookLine ?? faceResult.summary}
+          </Text>
+
+          {faceResult.celebrity && (
+            <Text style={rs.celebrityText}>{'\u2605'} {faceResult.celebrity}</Text>
+          )}
+
+          <TouchableOpacity style={rs.shareBtn} onPress={handleShare} activeOpacity={0.8}>
+            <Text style={rs.shareBtnText}>친구에게 공유하기</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* ─── 3. BEST POINT ─── */}
+        {faceResult.highlight && (
+          <Animated.View entering={FadeInDown.delay(450).springify()}>
+            <View style={rs.bestCard}>
+              <View style={rs.bestBadge}>
+                <Text style={rs.bestBadgeText}>BEST</Text>
+              </View>
+              <Text style={rs.bestArea}>
+                {AREA_LABELS[faceResult.highlight.area] ?? faceResult.highlight.area}
+              </Text>
+              <Text style={rs.bestMessage}>{faceResult.highlight.message}</Text>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ─── 4. RADAR ─── */}
+        {faceResult.radarScores && (
+          <Animated.View entering={FadeInDown.delay(550).springify()}>
+            <View style={rs.radarCard}>
+              <Text style={rs.radarTitle}>운명 레이더</Text>
+              {(['wealth', 'love', 'health', 'success', 'social'] as const).map((key) => {
+                const meta = RADAR_LABELS[key];
+                const val = faceResult.radarScores![key];
+                return (
+                  <View key={key} style={rs.radarRow}>
+                    <Text style={rs.radarIcon}>{meta.icon}</Text>
+                    <Text style={rs.radarLabel}>{meta.label}</Text>
+                    <View style={rs.radarBarTrack}>
+                      <View style={[rs.radarBarFill, { width: `${val}%` }]} />
+                    </View>
+                    <Text style={rs.radarScore}>{val}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ─── 5. FEATURE CARDS ─── */}
+        <Animated.View entering={FadeInDown.delay(650).springify()}>
+          <View style={rs.sectionHeader}>
+            <View style={rs.sectionLine} />
+            <Text style={rs.sectionTitle}>부위별 상세 분석</Text>
+            <View style={rs.sectionLine} />
           </View>
 
-          {/* 얼굴 미감지 */}
-          {noFaceDetected && (
-            <Animated.View entering={FadeInDown.springify()} style={styles.noFaceCard}>
-              <Text style={styles.noFaceTitle}>{t('face.noFaceTitle')}</Text>
-              <Text style={styles.noFaceDesc}>{noFaceReason}</Text>
-              <Text style={styles.tipText}>{t('face.tipText')}</Text>
-              {hasFaceTicket() && (
-                <Button title={t('common.retryOther')} onPress={() => { clearNoFace(); setImageUri(null); }} style={styles.retryBtn} />
-              )}
+          {features.map((feature, i) => (
+            <Animated.View key={feature.area} entering={FadeInDown.delay(700 + i * 50).springify()}>
+              <FeatureExpandCard
+                feature={feature}
+                isActive={expandedFeature === feature.area}
+                onToggle={() => setExpandedFeature(expandedFeature === feature.area ? null : feature.area)}
+              />
             </Animated.View>
-          )}
+          ))}
+        </Animated.View>
 
-          {/* 분석 실패 — 티켓 유지, 재시도 가능 */}
-          {error && !noFaceDetected && (
-            <Animated.View entering={FadeInDown.springify()} style={styles.errorCard}>
-              <Text style={styles.errorTitle}>{t('face.analysisFailed')}</Text>
-              <Text style={styles.errorDesc}>{error}</Text>
-              <Text style={styles.tipText}>{t('face.ticketPreserved')}</Text>
-              <Button title={t('common.retryAgain')} onPress={handleRetry} style={styles.retryBtn} />
-            </Animated.View>
-          )}
-
-          {/* 버튼 영역 */}
-          {!error && !noFaceDetected && (
-            <View style={styles.buttonGroup}>
-              {/* 사진 선택 버튼 */}
-              <View style={styles.captureButtons}>
-                <Button
-                  title={t('face.takePhoto')}
-                  onPress={() => pickImage(true)}
-                  variant="secondary"
-                  style={styles.captureBtn}
-                />
-                <Button
-                  title={t('face.choosePhoto')}
-                  onPress={() => pickImage(false)}
-                  variant="secondary"
-                  style={styles.captureBtn}
-                />
+        {/* ─── 6. DEEP ANALYSIS ─── */}
+        <Animated.View entering={FadeInDown.delay(900).springify()}>
+          <GlassCard style={rs.analysisCard}>
+            <Text style={rs.analysisBody}>{faceResult.summary}</Text>
+            {faceResult.faceType && (
+              <View style={rs.analysisRow}>
+                <Text style={rs.analysisRowIcon}>五</Text>
+                <Text style={rs.analysisRowText}>{faceResult.faceType}</Text>
               </View>
+            )}
+            {faceResult.samjeong && (
+              <View style={rs.analysisRow}>
+                <Text style={rs.analysisRowIcon}>三</Text>
+                <Text style={rs.analysisRowText}>{faceResult.samjeong}</Text>
+              </View>
+            )}
+          </GlassCard>
 
-              {/* 분석 시작 버튼 — 사진 선택 후에만 표시 */}
-              {imageUri && (
-                <Animated.View entering={FadeInDown.delay(200).springify()}>
-                  <Button
-                    title={hasFaceTicket() ? t('face.startAnalysis') : t('face.startAnalysisFree')}
-                    onPress={handleAnalyzePress}
-                    style={styles.analyzeBtn}
-                  />
-                  {!hasFaceTicket() && (
-                    <Text style={styles.priceHint}>{t('face.purchaseHint')}</Text>
-                  )}
-                  {hasFaceTicket() && (
-                    <Text style={styles.ticketHint}>{t('face.ticketHint')}</Text>
-                  )}
-                </Animated.View>
-              )}
-            </View>
+          {faceResult.personality && (
+            <GlassCard style={rs.analysisCard}>
+              <Text style={rs.cardLabel}>性 {t('face.personalitySection')}</Text>
+              <Text style={rs.analysisBody}>{faceResult.personality}</Text>
+            </GlassCard>
+          )}
+
+          {faceResult.fortune && (
+            <GlassCard style={rs.analysisCard}>
+              <Text style={rs.cardLabel}>運 {t('face.fortuneSection')}</Text>
+              <Text style={rs.analysisBody}>{faceResult.fortune}</Text>
+            </GlassCard>
+          )}
+
+          {faceResult.advice && (
+            <GlassCard style={rs.analysisCard}>
+              <Text style={rs.cardLabel}>開 {t('face.adviceSection')}</Text>
+              <Text style={rs.analysisBody}>{faceResult.advice}</Text>
+            </GlassCard>
           )}
         </Animated.View>
 
-      ) : faceResult ? (
-        /* ═══ Phase 2: 결과 — 관상화 크게 + 부위별 오버레이 ═══ */
-        <>
-          {/* 관상화 + 부위별 포인트 오버레이 */}
-          {/* 사진 + 부위별 오버레이 (터치 시 상세) */}
-          {displayImageUri && (
-            <Animated.View entering={FadeInDown.delay(100).springify()}>
-              <View style={styles.portraitSection}>
-                <FaceOverlay
-                  imageUri={displayImageUri}
-                  features={features}
-                  imageSize={portraitSize}
-                />
-              </View>
-              <Text style={styles.tapHint}>부위를 터치하면 상세 분석을 볼 수 있습니다</Text>
-            </Animated.View>
-          )}
+        {/* ─── 7. BOTTOM ─── */}
+        <View style={rs.bottomActions}>
+          <TouchableOpacity style={rs.shareBtn} onPress={handleShare} activeOpacity={0.8}>
+            <Text style={rs.shareBtnText}>공유하기</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={rs.newBtn} onPress={resetAnalysis} activeOpacity={0.8}>
+            <Text style={rs.newBtnText}>{t('face.newAnalysis')}</Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* 종합 점수 */}
-          <Animated.View entering={FadeInDown.delay(300).springify()}>
-            <GlassCard gold style={styles.overallCard}>
-              <Text style={styles.overallLabel}>{t('face.overallScore')}</Text>
-              <Text style={styles.overallScore}>{faceResult.overallScore}</Text>
-              <Text style={styles.overallMax}>/100</Text>
-              {faceResult.faceType && (
-                <Text style={styles.faceType}>{faceResult.faceType}</Text>
-              )}
-              {faceResult.samjeong && (
-                <Text style={styles.samjeong}>{faceResult.samjeong}</Text>
-              )}
-              <Text style={styles.overallSummary}>{faceResult.summary}</Text>
-            </GlassCard>
+        <Text style={rs.disclaimer}>{t('common.disclaimer')}</Text>
+      </ScrollView>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  //  CAPTURE VIEW (Phase 1)
+  // ════════════════════════════════════════════════════════════════════════════
+
+  return (
+    <ScrollView
+      style={cs.container}
+      contentContainerStyle={cs.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={cs.title}>{t('face.title')}</Text>
+
+      <Animated.View entering={FadeIn.delay(200)}>
+        {/* Photo preview / placeholder */}
+        <View style={[cs.captureArea, { width: portraitSize, height: portraitSize }]}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={cs.previewImage} />
+          ) : (
+            <View style={cs.placeholderContainer}>
+              <Text style={cs.placeholderIcon}>相</Text>
+              <Text style={cs.guideText}>{t('face.guide')}</Text>
+            </View>
+          )}
+          <FaceGuide size={portraitSize} />
+        </View>
+
+        {/* No face detected */}
+        {noFaceDetected && (
+          <Animated.View entering={FadeInDown.springify()} style={cs.noFaceCard}>
+            <Text style={cs.noFaceTitle}>{t('face.noFaceTitle')}</Text>
+            <Text style={cs.noFaceDesc}>{noFaceReason}</Text>
+            <Text style={cs.tipText}>{t('face.tipText')}</Text>
+            {hasFaceTicket() && (
+              <Button title={t('common.retryOther')} onPress={() => { clearNoFace(); setImageUri(null); }} style={cs.retryBtn} />
+            )}
           </Animated.View>
+        )}
 
-          {/* 성격 분석 */}
-          {faceResult.personality && (
-            <Animated.View entering={FadeInDown.delay(1000).springify()}>
-              <GlassCard style={styles.paidSection}>
-                <Text style={styles.sectionTitle}>{t('face.personalitySection')}</Text>
-                <Text style={styles.sectionText}>{faceResult.personality}</Text>
-              </GlassCard>
-            </Animated.View>
-          )}
+        {/* Error */}
+        {error && !noFaceDetected && (
+          <Animated.View entering={FadeInDown.springify()} style={cs.errorCard}>
+            <Text style={cs.errorTitle}>{t('face.analysisFailed')}</Text>
+            <Text style={cs.errorDesc}>{error}</Text>
+            <Text style={cs.tipText}>{t('face.ticketPreserved')}</Text>
+            <Button title={t('common.retryAgain')} onPress={handleRetry} style={cs.retryBtn} />
+          </Animated.View>
+        )}
 
-          {/* 운세 예측 */}
-          {faceResult.fortune && (
-            <Animated.View entering={FadeInDown.delay(1100).springify()}>
-              <GlassCard style={styles.paidSection}>
-                <Text style={styles.sectionTitle}>{t('face.fortuneSection')}</Text>
-                <Text style={styles.sectionText}>{faceResult.fortune}</Text>
-              </GlassCard>
-            </Animated.View>
-          )}
+        {/* Buttons */}
+        {!error && !noFaceDetected && (
+          <View style={cs.buttonGroup}>
+            <View style={cs.captureButtons}>
+              <Button title={t('face.takePhoto')} onPress={() => pickImage(true)} variant="secondary" style={cs.captureBtn} />
+              <Button title={t('face.choosePhoto')} onPress={() => pickImage(false)} variant="secondary" style={cs.captureBtn} />
+            </View>
+            {imageUri && (
+              <Animated.View entering={FadeInDown.delay(200).springify()}>
+                <Button
+                  title={hasFaceTicket() ? t('face.startAnalysis') : t('face.startAnalysisFree')}
+                  onPress={handleAnalyzePress}
+                  style={cs.analyzeBtn}
+                />
+                {!hasFaceTicket() && <Text style={cs.priceHint}>{t('face.purchaseHint')}</Text>}
+                {hasFaceTicket() && <Text style={cs.ticketHint}>{t('face.ticketHint')}</Text>}
+              </Animated.View>
+            )}
+          </View>
+        )}
+      </Animated.View>
 
-          {/* 오행 레이더 */}
-          {faceResult.radarScores && (
-            <Animated.View entering={FadeInDown.delay(1200).springify()}>
-              <GlassCard style={styles.paidSection}>
-                <Text style={styles.sectionTitle}>{t('face.radarSection')}</Text>
-                <View style={styles.radarGrid}>
-                  {(['wealth', 'love', 'health', 'success', 'social'] as const).map((key) => (
-                    <View key={key} style={styles.radarItem}>
-                      <Text style={styles.radarLabel}>
-                        {t(`face.faceCategories.${key}`)}
-                      </Text>
-                      <Text style={styles.radarScore}>{faceResult.radarScores![key]}</Text>
-                      <View style={styles.radarBarTrack}>
-                        <View style={[styles.radarBarFill, { width: `${faceResult.radarScores![key]}%` }]} />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </GlassCard>
-            </Animated.View>
-          )}
-
-          {/* 관상 조언 */}
-          {faceResult.advice && (
-            <Animated.View entering={FadeInDown.delay(1300).springify()}>
-              <GlassCard gold style={styles.paidSection}>
-                <Text style={styles.sectionTitle}>{t('face.adviceSection')}</Text>
-                <Text style={styles.sectionTextGold}>{faceResult.advice}</Text>
-              </GlassCard>
-            </Animated.View>
-          )}
-
-          {/* 베스트 포인트 */}
-          {faceResult.highlight && (
-            <Animated.View entering={FadeInDown.delay(1400).springify()}>
-              <GlassCard style={styles.highlightCard}>
-                <Text style={styles.highlightLabel}>{t('face.bestPoint')}</Text>
-                <Text style={styles.highlightArea}>
-                  {t(`face.features.${faceResult.highlight.area}`, { defaultValue: faceResult.highlight.area })}
-                </Text>
-                <Text style={styles.highlightMessage}>{faceResult.highlight.message}</Text>
-              </GlassCard>
-            </Animated.View>
-          )}
-
-          {/* 다시 분석 */}
-          <Button
-            title={t('face.newAnalysis')}
-            onPress={() => {
-              setAnalyzed(false);
-              setImageUri(null);
-              setFaceResult(null);
-              setTransformedImage(null);
-            }}
-            variant="secondary"
-            style={styles.retryBtn}
-          />
-        </>
-      ) : null}
-
-      <Text style={styles.disclaimer}>{t('common.disclaimer')}</Text>
+      <Text style={cs.disclaimer}>{t('common.disclaimer')}</Text>
 
       <PaywallModal
         visible={showPaywall}
         onClose={() => setShowPaywall(false)}
-        onUnlocked={handlePaywallUnlocked}
+        onUnlocked={() => startAnalysis()}
         productType="face"
       />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+// ════════════════════════════════════════════════════════════════════════════
+//  RESULT STYLES
+// ════════════════════════════════════════════════════════════════════════════
+
+const rs = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
   content: { padding: theme.spacing.screenPadding, paddingTop: 60, paddingBottom: 120 },
-  title: { fontSize: 24, fontWeight: '200', color: theme.colors.text.primary, textAlign: 'center', marginBottom: theme.spacing.lg, letterSpacing: 4 },
 
-  // 촬영 영역
+  // ── 1. Portrait ──
+  inkLabel: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    letterSpacing: 3,
+    marginBottom: 8,
+    fontWeight: '400',
+  },
+  portraitFrame: {
+    alignSelf: 'center',
+    borderRadius: theme.radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.glass.border,
+    ...theme.shadow.card,
+  },
+  tapHint: {
+    fontSize: 11,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: theme.spacing.lg,
+  },
+
+  // ── 2. Hook + Score + Share ──
+  tagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: theme.spacing.sm,
+  },
+  tag: {
+    backgroundColor: theme.colors.gold.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  scoreText: {
+    fontSize: 28,
+    fontWeight: '200',
+    color: theme.colors.gold.primary,
+    letterSpacing: -1,
+  },
+  scoreUnit: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: theme.colors.gold.dark,
+  },
+  hookLine: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+    lineHeight: 26,
+    marginBottom: theme.spacing.sm,
+    paddingHorizontal: 4,
+  },
+  celebrityText: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: theme.spacing.md,
+  },
+  shareBtn: {
+    backgroundColor: theme.colors.goldCard.bg,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: theme.radius.full,
+    alignSelf: 'center',
+    marginBottom: theme.spacing.xl,
+    borderWidth: 1,
+    borderColor: theme.colors.gold.dark + '60',
+  },
+  shareBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    letterSpacing: 0.5,
+  },
+
+  // ── 3. Best Card ──
+  bestCard: {
+    backgroundColor: theme.colors.bg.elevated,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.cardPadding,
+    marginBottom: theme.spacing.cardGap,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.gold.dark + '30',
+    ...theme.shadow.card,
+  },
+  bestBadge: {
+    backgroundColor: theme.colors.gold.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  bestBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 2,
+  },
+  bestArea: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    marginBottom: 6,
+  },
+  bestMessage: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+
+  // ── 4. Radar ──
+  radarCard: {
+    backgroundColor: theme.colors.bg.elevated,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.cardPadding,
+    marginBottom: theme.spacing.cardGap,
+    borderWidth: 1,
+    borderColor: theme.colors.glass.border,
+    ...theme.shadow.card,
+  },
+  radarTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    letterSpacing: 2,
+    marginBottom: 14,
+    textAlign: 'center',
+  },
+  radarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  radarIcon: {
+    fontSize: 13,
+    color: theme.colors.gold.dark,
+    fontWeight: '300',
+  },
+  radarLabel: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    width: 48,
+  },
+  radarBarTrack: {
+    flex: 1,
+    height: 5,
+    backgroundColor: theme.colors.bg.tertiary,
+    borderRadius: 2.5,
+    overflow: 'hidden',
+  },
+  radarBarFill: {
+    height: '100%',
+    backgroundColor: theme.colors.gold.primary,
+    borderRadius: 2.5,
+  },
+  radarScore: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.gold.dark,
+    width: 28,
+    textAlign: 'right',
+  },
+
+  // ── 5. Section Header ──
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.xs,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.glass.border,
+  },
+  sectionTitle: {
+    ...theme.typo.sectionTitle,
+    fontSize: 14,
+    letterSpacing: 2,
+  },
+
+  // ── Feature Expand Cards ──
+  featureCard: {
+    backgroundColor: theme.colors.bg.elevated,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.glass.border,
+    position: 'relative',
+    ...theme.shadow.card,
+  },
+  featureCardActive: {
+    borderColor: theme.colors.gold.dark + '50',
+  },
+  featureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  featureLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  featureIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(181,149,48,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureIcon: {
+    fontSize: 16,
+    color: theme.colors.gold.primary,
+    fontWeight: '300',
+  },
+  featureNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  featureLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  nicknameBadge: {
+    backgroundColor: 'rgba(181,149,48,0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  nicknameText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.gold.dark,
+    letterSpacing: 0.3,
+  },
+  featureDesc: {
+    ...theme.typo.caption,
+    color: theme.colors.text.secondary,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  featureScoreBox: {
+    alignItems: 'flex-end',
+    width: 52,
+  },
+  featureScore: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  featureBarTrack: {
+    width: 52,
+    height: 3,
+    backgroundColor: theme.colors.bg.tertiary,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  featureBarFill: {
+    height: '100%',
+    borderRadius: 1.5,
+  },
+  featureDetailBox: {
+    marginTop: 10,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: theme.colors.glass.border,
+    marginBottom: 10,
+  },
+  featureDetail: {
+    ...theme.typo.body,
+    fontSize: 13,
+  },
+  expandArrow: {
+    position: 'absolute',
+    bottom: 4,
+    right: 14,
+    fontSize: 8,
+    color: theme.colors.text.tertiary,
+  },
+
+  // ── 6. Analysis Cards (uses GlassCard) ──
+  analysisCard: {
+    marginBottom: theme.spacing.cardGap,
+  },
+  analysisBody: {
+    ...theme.typo.body,
+  },
+  analysisRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 10,
+  },
+  analysisRowIcon: {
+    fontSize: 14,
+    color: theme.colors.gold.dark,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  analysisRowText: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+    flex: 1,
+  },
+  cardLabel: {
+    ...theme.typo.cardTitle,
+    marginBottom: theme.spacing.sm,
+  },
+
+  // ── 7. Bottom Actions ──
+  bottomActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  newBtn: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.glass.border,
+    paddingVertical: 12,
+    borderRadius: theme.radius.full,
+    alignItems: 'center',
+  },
+  newBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text.secondary,
+  },
+
+  // ── Disclaimer ──
+  disclaimer: {
+    ...theme.typo.caption,
+    textAlign: 'center',
+    lineHeight: 14,
+    marginTop: theme.spacing.sm,
+  },
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CAPTURE STYLES
+// ════════════════════════════════════════════════════════════════════════════
+
+const cs = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.bg.primary },
+  content: { padding: theme.spacing.screenPadding, paddingTop: 60, paddingBottom: 120 },
+  title: {
+    fontSize: 24,
+    fontWeight: '200',
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+    letterSpacing: 4,
+  },
   captureArea: {
-    width: width - theme.spacing.lg * 2,
-    aspectRatio: 1,
+    alignSelf: 'center',
     backgroundColor: theme.colors.bg.secondary,
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
@@ -370,70 +890,12 @@ const styles = StyleSheet.create({
   placeholderContainer: { alignItems: 'center', gap: theme.spacing.md },
   placeholderIcon: { fontSize: 60, color: theme.colors.gold.primary, opacity: 0.6 },
   guideText: { fontSize: 14, color: theme.colors.text.tertiary, textAlign: 'center', paddingHorizontal: theme.spacing.xl },
-  faceGuide: { position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  faceOval: { width: '60%', height: '75%', borderRadius: 9999, borderWidth: 1.5, borderColor: theme.colors.gold.primary, borderStyle: 'dashed', opacity: 0.25 },
-
-  // 버튼
   buttonGroup: { marginTop: theme.spacing.lg },
   captureButtons: { flexDirection: 'row', gap: theme.spacing.sm },
   captureBtn: { flex: 1 },
   analyzeBtn: { marginTop: theme.spacing.md },
   priceHint: { fontSize: 12, color: theme.colors.text.tertiary, textAlign: 'center', marginTop: theme.spacing.xs },
   ticketHint: { fontSize: 12, color: theme.colors.gold.primary, textAlign: 'center', marginTop: theme.spacing.xs, fontWeight: '600' },
-
-  // 관상화 + 오버레이
-  portraitSection: {
-    alignSelf: 'center',
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: theme.colors.gold.dark,
-    position: 'relative',
-  },
-  portraitBadge: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    right: theme.spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.gold.dark,
-  },
-  portraitBadgeText: { fontSize: 11, color: theme.colors.gold.primary, fontWeight: '600' },
-
-  // 결과
-  overallCard: { alignItems: 'center', marginBottom: theme.spacing.md },
-  overallLabel: { fontSize: 14, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
-  overallScore: { fontSize: 56, fontWeight: '700', color: theme.colors.gold.primary },
-  overallMax: { fontSize: 16, color: theme.colors.text.tertiary, marginBottom: theme.spacing.md },
-  faceType: { fontSize: 13, color: theme.colors.gold.primary, textAlign: 'center', marginBottom: theme.spacing.xs, fontWeight: '600' },
-  samjeong: { fontSize: 12, color: theme.colors.text.tertiary, textAlign: 'center', marginBottom: theme.spacing.sm },
-  overallSummary: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 22, textAlign: 'center' },
-
-  // 섹션
-  paidSection: { marginTop: theme.spacing.md },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: theme.spacing.sm },
-  sectionText: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 22 },
-  sectionTextGold: { fontSize: 14, color: theme.colors.gold.muted ?? theme.colors.gold.primary, lineHeight: 22 },
-
-  // 레이더
-  radarGrid: { gap: theme.spacing.sm },
-  radarItem: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
-  radarLabel: { fontSize: 13, color: theme.colors.text.secondary, width: 36 },
-  radarScore: { fontSize: 13, fontWeight: '700', color: theme.colors.gold.primary, width: 28, textAlign: 'right' },
-  radarBarTrack: { flex: 1, height: 6, backgroundColor: theme.colors.bg.tertiary, borderRadius: 3, overflow: 'hidden' },
-  radarBarFill: { height: '100%', backgroundColor: theme.colors.gold.primary, borderRadius: 3 },
-
-  // 하이라이트
-  highlightCard: { marginTop: theme.spacing.md, alignItems: 'center', borderWidth: 1.5, borderColor: theme.colors.gold.dark },
-  highlightLabel: { fontSize: 12, color: theme.colors.text.tertiary, marginBottom: theme.spacing.xs },
-  highlightArea: { fontSize: 20, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: theme.spacing.xs },
-  highlightMessage: { fontSize: 14, color: theme.colors.text.secondary, textAlign: 'center', lineHeight: 22 },
-
-  // 에러/미감지
   noFaceCard: { backgroundColor: '#FFF8F0', borderRadius: theme.radius.md, padding: theme.spacing.md, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8D5B8' },
   noFaceTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: theme.spacing.xs },
   noFaceDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
@@ -441,8 +903,6 @@ const styles = StyleSheet.create({
   errorCard: { backgroundColor: '#FFF0F0', borderRadius: theme.radius.md, padding: theme.spacing.md, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8B8B8' },
   errorTitle: { fontSize: 15, fontWeight: '700', color: '#C44', marginBottom: theme.spacing.xs },
   errorDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
-
-  tapHint: { fontSize: 11, color: theme.colors.text.tertiary, textAlign: 'center', marginTop: theme.spacing.xs, marginBottom: theme.spacing.md },
-  retryBtn: { marginTop: theme.spacing.lg },
+  retryBtn: { marginTop: theme.spacing.md },
   disclaimer: { fontSize: 10, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 14, marginTop: theme.spacing.xl },
 });

@@ -2,16 +2,57 @@ import { supabase } from './supabase';
 import type { SajuInput, SajuResult, FaceResult, CompatibilityResult, DailyFortune } from '../types/api';
 import type { AnalysisMode } from '../stores/userStore';
 import type { FourPillarsCalc } from '../utils/saju-calc';
+import { calculateDaeun, calculateMonthlyFortune, calculateYearlyFortune } from '../utils/saju-calc';
+
+// ─── Rate Limiter ───
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMITS: Record<string, { maxCalls: number; windowMs: number }> = {
+  'saju':           { maxCalls: 5,  windowMs: 60_000 },
+  'compatibility':  { maxCalls: 5,  windowMs: 60_000 },
+  'face-transform': { maxCalls: 3,  windowMs: 60_000 },
+  'daily-fortune':  { maxCalls: 10, windowMs: 60_000 },
+};
+
+function checkRateLimit(functionName: string): void {
+  const limit = RATE_LIMITS[functionName];
+  if (!limit) return;
+
+  const now = Date.now();
+  const calls = rateLimitMap.get(functionName) ?? [];
+  const recent = calls.filter((t) => now - t < limit.windowMs);
+
+  if (recent.length >= limit.maxCalls) {
+    throw new Error('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.');
+  }
+
+  recent.push(now);
+  rateLimitMap.set(functionName, recent);
+}
 
 const invokeFunction = async <T>(functionName: string, body: Record<string, unknown>): Promise<T> => {
+  checkRateLimit(functionName);
+
   const { data, error } = await supabase.functions.invoke(functionName, {
     body,
   });
 
   if (error) {
-    // data에 서버 에러 상세가 포함될 수 있음
-    const serverMsg = data?.error ?? data?.details ?? '';
+    // FunctionsHttpError: try to extract response body for details
+    let serverMsg = '';
+    try {
+      if (data) {
+        serverMsg = data?.error ?? data?.details ?? '';
+      } else if ((error as any).context?.body) {
+        // supabase-js v2: response body might be in error context
+        const bodyText = await (error as any).context.body.text?.() ?? '';
+        if (bodyText) {
+          const parsed = JSON.parse(bodyText);
+          serverMsg = parsed.error ?? parsed.details ?? bodyText;
+        }
+      }
+    } catch { /* ignore parse errors */ }
     const detail = serverMsg ? `: ${serverMsg}` : '';
+    if (__DEV__) console.error(`[API] ${functionName} error:`, error.message, detail);
     throw new Error(`${error.message}${detail}`);
   }
 
@@ -21,6 +62,7 @@ const invokeFunction = async <T>(functionName: string, body: Record<string, unkn
 export interface FaceTransformResponse {
   transformedImage: string | null;
   analysis: FaceResult | null;
+  analysisError?: string | null;
   transformError: string | null;
   noFace?: boolean;
   reason?: string;
@@ -148,8 +190,15 @@ function analyzeStrengthAndYongShin(pillars: FourPillarsCalc) {
 
 /**
  * Format computed four pillars into a string for the AI prompt.
+ * Optional birthMonth/birthDay/gender enables deterministic daeun + monthly fortune data.
  */
-export function formatPillarInfo(pillars: FourPillarsCalc, birthYear: number) {
+export function formatPillarInfo(
+  pillars: FourPillarsCalc,
+  birthYear: number,
+  birthMonth?: number,
+  birthDay?: number,
+  gender?: 'male' | 'female',
+) {
   const fmt = (p: { stem: string; stemHanja: string; branch: string; branchHanja: string }) =>
     `${p.stem}${p.branch}(${p.stemHanja}${p.branchHanja})`;
 
@@ -157,15 +206,38 @@ export function formatPillarInfo(pillars: FourPillarsCalc, birthYear: number) {
   const age = currentYear - birthYear + 1;
   const analysis = analyzeStrengthAndYongShin(pillars);
 
+  // Pre-calculated daeun + monthly fortune (deterministic)
+  let daeunSequence: string | undefined;
+  let monthlyFortune: string | undefined;
+  let yearlyFortune: string | undefined;
+
+  if (birthMonth && birthDay && gender) {
+    const daeun = calculateDaeun(pillars, birthYear, birthMonth, birthDay, gender);
+    daeunSequence = daeun.pillars.map(p =>
+      `${p.startAge}세: ${p.stemHanja}${p.branchHanja}(${p.tenGod}, ${p.lifeStage})`
+    ).join(' | ');
+
+    const monthly = calculateMonthlyFortune(pillars.day.stemIdx, currentYear);
+    monthlyFortune = monthly.map(m =>
+      `${m.month}월: ${m.stemHanja}${m.branchHanja}(${m.tenGod}, ${m.lifeStage})`
+    ).join(' | ');
+
+    const yearly = calculateYearlyFortune(pillars.day.stemIdx, currentYear);
+    yearlyFortune = `${currentYear}년: ${yearly.stemHanja}${yearly.branchHanja}(${yearly.tenGod}, ${yearly.lifeStage})`;
+  }
+
   return {
     fourPillars: `연주: ${fmt(pillars.year)} | 월주: ${fmt(pillars.month)} | 일주: ${fmt(pillars.day)} | 시주: ${fmt(pillars.hour)}`,
     dayMaster: STEM_ELEMENT_NAMES[pillars.day.stem] || pillars.day.stem,
     age,
     elements: pillars.elementBalance,
-    // 신강/신약 + 용신 (AI에게 확정값으로 전달)
     strength: analysis.strength,
     yongShin: analysis.yongShin,
     yongShinReason: analysis.yongShinReason,
+    // Deterministic fortune data (pre-calculated)
+    daeunSequence,
+    monthlyFortune,
+    yearlyFortune,
   };
 }
 
@@ -268,9 +340,10 @@ export const api = {
     locale: string,
     isPaid: boolean,
     mode: AnalysisMode = 'integrated',
-    pillarInfo?: ReturnType<typeof formatPillarInfo>
+    pillarInfo?: ReturnType<typeof formatPillarInfo>,
+    userName?: string,
   ) =>
-    invokeFunction<SajuResult>('saju', { input, locale, isPaid, mode, pillarInfo }),
+    invokeFunction<SajuResult>('saju', { input, locale, isPaid, mode, pillarInfo, userName }),
 
   analyzeFace: (imageBase64: string, locale: string, isPaid: boolean, mode: AnalysisMode = 'integrated') =>
     invokeFunction<FaceTransformResponse>('face-transform', { imageBase64, locale, isPaid, mode }),

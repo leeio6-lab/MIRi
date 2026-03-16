@@ -15,6 +15,15 @@ interface FortuneState {
   isLoading: boolean;
   error: string | null;
 
+  // Retention: yesterday score
+  yesterdayScore: number;
+  lastScoreDate: string | null;
+
+  // Retention: streak
+  streakCount: number;
+  lastVisitDate: string | null;
+  streakCelebration: number | null; // 7 or 30 when just achieved
+
   setSajuResult: (result: SajuResult | null) => void;
   setFaceResult: (result: FaceResult | null) => void;
   setTransformedImage: (base64: string | null) => void;
@@ -22,6 +31,11 @@ interface FortuneState {
   setCompatibilityResult: (result: CompatibilityResult | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  clearStreakCelebration: () => void;
+
+  // Streak & daily check
+  checkStreak: () => void;
+  checkDailyScore: (todayScore: number) => void;
 
   // History
   loadHistory: (type?: string) => Promise<void>;
@@ -40,6 +54,53 @@ export const useFortuneStore = create<FortuneState>()(
       history: [],
       isLoading: false,
       error: null,
+
+      yesterdayScore: 0,
+      lastScoreDate: null,
+      streakCount: 0,
+      lastVisitDate: null,
+      streakCelebration: null,
+
+      clearStreakCelebration: () => set({ streakCelebration: null }),
+
+      checkDailyScore: (todayScore: number) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const state = get();
+        if (state.lastScoreDate === today) return; // already checked today
+        // Move current todayScore to yesterdayScore
+        const prevFortune = state.dailyFortune;
+        const prevScore = prevFortune?.overallScore ?? 0;
+        set({ yesterdayScore: prevScore, lastScoreDate: today });
+      },
+
+      checkStreak: () => {
+        const today = new Date().toISOString().slice(0, 10);
+        const state = get();
+        if (state.lastVisitDate === today) return; // already checked today
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+        let newStreak: number;
+        let celebration: number | null = null;
+
+        if (state.lastVisitDate === yesterdayStr) {
+          newStreak = state.streakCount + 1;
+        } else {
+          newStreak = 1;
+        }
+
+        // Streak rewards
+        if (newStreak === 7) celebration = 7;
+        if (newStreak === 30) celebration = 30;
+
+        set({
+          streakCount: newStreak,
+          lastVisitDate: today,
+          streakCelebration: celebration,
+        });
+      },
 
       setSajuResult: (result) => set({ sajuResult: result }),
       setFaceResult: (result) => set({ faceResult: result }),
@@ -96,6 +157,7 @@ export const useFortuneStore = create<FortuneState>()(
     }),
     {
       name: 'miri-fortune',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         sajuResult: state.sajuResult,
@@ -103,8 +165,19 @@ export const useFortuneStore = create<FortuneState>()(
         transformedImageBase64: state.transformedImageBase64,
         dailyFortune: state.dailyFortune,
         compatibilityResult: state.compatibilityResult,
-        history: state.history.slice(0, 20), // 최근 20개만 로컬 캐시
+        history: state.history.slice(0, 20),
+        yesterdayScore: state.yesterdayScore,
+        lastScoreDate: state.lastScoreDate,
+        streakCount: state.streakCount,
+        lastVisitDate: state.lastVisitDate,
       }),
+      migrate: (persisted: any, version: number) => {
+        if (version < 2) {
+          // v1→v2: 캐시된 sajuResult/compatibilityResult 클리어 (mock 데이터 제거)
+          return { ...persisted, sajuResult: null, compatibilityResult: null };
+        }
+        return persisted;
+      },
       // 복원 시 features 객체→배열 변환 (이전 데이터 호환)
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as object) };

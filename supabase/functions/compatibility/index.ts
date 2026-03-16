@@ -231,17 +231,20 @@ JSON 응답:
     const data = await response.json();
     const rawResult = JSON.parse(data.choices[0].message.content);
 
-    // Normalize timeline keys (bestMonths2026 -> bestMonths2026)
+    // Normalize timeline keys (bestMonthsXXXX -> bestMonths2026 for UI compatibility)
     if (rawResult.timeline) {
       const tl = rawResult.timeline;
       const bestKey = Object.keys(tl).find(k => k.startsWith('bestMonths'));
       const worstKey = Object.keys(tl).find(k => k.startsWith('worstMonths'));
-      if (bestKey && bestKey !== 'bestMonths2026') {
-        tl.bestMonths2026 = tl[bestKey];
+      if (bestKey && bestKey !== `bestMonths${currentYear}`) {
+        tl[`bestMonths${currentYear}`] = tl[bestKey];
       }
-      if (worstKey && worstKey !== 'worstMonths2026') {
-        tl.worstMonths2026 = tl[worstKey];
+      // UI reads bestMonths2026 — alias for backward compat
+      if (!tl.bestMonths2026 && tl[`bestMonths${currentYear}`]) tl.bestMonths2026 = tl[`bestMonths${currentYear}`];
+      if (worstKey && worstKey !== `worstMonths${currentYear}`) {
+        tl[`worstMonths${currentYear}`] = tl[worstKey];
       }
+      if (!tl.worstMonths2026 && tl[`worstMonths${currentYear}`]) tl.worstMonths2026 = tl[`worstMonths${currentYear}`];
     }
 
     return new Response(JSON.stringify(rawResult), {

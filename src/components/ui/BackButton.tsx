@@ -13,11 +13,15 @@ export function BackButton({ fallback = '/(tabs)/home' }: BackButtonProps) {
   const { t } = useTranslation();
 
   const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace(fallback as any);
+    try {
+      if (router.canGoBack()) {
+        router.back();
+        return;
+      }
+    } catch {
+      // GO_BACK not handled — fall through to replace
     }
+    router.replace(fallback as any);
   };
 
   return (

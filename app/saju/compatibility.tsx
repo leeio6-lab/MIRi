@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -24,7 +25,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { api, formatPillarInfo } from '../../src/services/api';
 import { calculateFourPillars } from '../../src/utils/saju-calc';
-import { calculateLocalCompatibility } from '../../src/utils/compatibility-calc';
+import { calculateLocalCompatibility, getCoupleTitle } from '../../src/utils/compatibility-calc';
 import type { CompatibilityResult, CompatCategories, CompatDayMaster, CompatCategoryScore } from '../../src/types/api';
 
 const sc = (score: number) =>
@@ -40,15 +41,30 @@ export default function CompatibilityScreen() {
     metal: t('elements.metal'), water: t('elements.water'),
   };
 
+  const [partnerName, setPartnerName] = useState('');
   const [partnerYear, setPartnerYear] = useState('');
   const [partnerMonth, setPartnerMonth] = useState('');
   const [partnerDay, setPartnerDay] = useState('');
   const [partnerGender, setPartnerGender] = useState<'male' | 'female'>('female');
 
-  const myPillarsData = React.useMemo(
-    () => user ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour) : null,
-    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour]
-  );
+  // 내 정보 수정
+  const [editingMy, setEditingMy] = useState(false);
+  const [myYear, setMyYear] = useState(user ? String(user.birthYear) : '');
+  const [myMonth, setMyMonth] = useState(user ? String(user.birthMonth) : '');
+  const [myDay, setMyDay] = useState(user ? String(user.birthDay) : '');
+  const [myGender, setMyGender] = useState<'male' | 'female'>(user?.gender ?? 'male');
+
+  const myEffectiveYear = editingMy ? parseInt(myYear, 10) : user?.birthYear;
+  const myEffectiveMonth = editingMy ? parseInt(myMonth, 10) : user?.birthMonth;
+  const myEffectiveDay = editingMy ? parseInt(myDay, 10) : user?.birthDay;
+  const myEffectiveHour = user?.birthHour ?? 12;
+  const myEffectiveGender = editingMy ? myGender : (user?.gender ?? 'male');
+
+  const myPillarsData = React.useMemo(() => {
+    const y = myEffectiveYear; const m = myEffectiveMonth; const d = myEffectiveDay;
+    if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return null;
+    try { return calculateFourPillars(y, m, d, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar); } catch { return null; }
+  }, [myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CompatibilityResult | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -70,52 +86,74 @@ export default function CompatibilityScreen() {
     partnerDayNum >= 1 &&
     partnerDayNum <= 31;
 
+  const partnerPillarsData = React.useMemo(() => {
+    if (!isPartnerValid) return null;
+    try { return calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12); } catch { return null; }
+  }, [isPartnerValid, partnerYearNum, partnerMonthNum, partnerDayNum]);
+
+  const myName = user?.name || t('common.me');
+  const ptName = partnerName.trim() || t('common.partner');
+
+  /** Validate/sanitize a CompatibilityResult so missing AI fields never crash the UI */
+  const sanitizeResult = (r: CompatibilityResult): CompatibilityResult => ({
+    ...r,
+    overallScore: typeof r.overallScore === 'number' && !isNaN(r.overallScore) ? r.overallScore : 65,
+    categories: r.categories ?? ({} as CompatCategories),
+    dynamics: r.dynamics ?? ({} as NonNullable<CompatibilityResult['dynamics']>),
+    strengthPoints: Array.isArray(r.strengthPoints) ? r.strengthPoints : [],
+    conflictPoints: Array.isArray(r.conflictPoints) ? r.conflictPoints : [],
+  });
+
   const handleAnalyze = async (isPaid = false) => {
-    if (!isPartnerValid || !user) return;
+    if (!isPartnerValid || !myEffectiveYear || !myEffectiveMonth || !myEffectiveDay) return;
 
     setLoading(true);
     try {
       if (!isPaid) {
         const localResult = calculateLocalCompatibility(
-          user.birthYear, user.birthMonth, user.birthDay, user.birthHour, user.gender,
-          partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender,
+          myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, myEffectiveGender,
+          partnerYearNum, partnerMonthNum, partnerDayNum, 12, partnerGender,
+          editingMy ? false : user?.isLunar, false,
         );
-        setResult(localResult);
-        setCompatibilityResult(localResult);
+        const safeLocal = sanitizeResult(localResult);
+        setResult(safeLocal);
+        setCompatibilityResult(safeLocal);
       } else {
-        const myPillars = calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour);
+        const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar);
         const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12);
-        const myPillarInfo = formatPillarInfo(myPillars, user.birthYear);
+        const myPillarInfo = formatPillarInfo(myPillars, myEffectiveYear);
         const partnerPillarInfo = formatPillarInfo(partnerPillars, partnerYearNum);
 
         const apiResult = await api.analyzeCompatibility(
           {
-            year: user.birthYear, month: user.birthMonth, day: user.birthDay,
-            hour: user.birthHour, isLunar: user.isLunar, gender: user.gender,
+            year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay,
+            hour: myEffectiveHour, isLunar: user?.isLunar ?? false, gender: myEffectiveGender,
           },
           {
             year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum,
             hour: 12, isLunar: false, gender: partnerGender,
           },
-          user.locale, true, myPillarInfo, partnerPillarInfo,
-          user?.name || '나', t('common.partner'),
+          user?.locale ?? 'ko', true, myPillarInfo, partnerPillarInfo,
+          myName, ptName,
         );
-        setResult(apiResult);
-        setCompatibilityResult(apiResult);
+        const safeApi = sanitizeResult(apiResult);
+        setResult(safeApi);
+        setCompatibilityResult(safeApi);
       }
     } catch (err) {
       console.error('[Compatibility] error:', err);
       const fallback = calculateLocalCompatibility(
-        user.birthYear, user.birthMonth, user.birthDay, user.birthHour, user.gender,
-        partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender,
+        myEffectiveYear!, myEffectiveMonth!, myEffectiveDay!, myEffectiveHour, myEffectiveGender,
+        partnerYearNum, partnerMonthNum, partnerDayNum, 12, partnerGender,
+        editingMy ? false : user?.isLunar, false,
       );
-      setResult(fallback);
+      setResult(sanitizeResult(fallback));
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <LoadingInk steps={t('loading.compatSteps', { returnObjects: true }) as string[]} finalMessage={t('loading.compatFinal')} />;
+  if (loading) return <LoadingInk steps={t('loading.compatSteps', { returnObjects: true }) as string[]} tips={t('loading.sajuTips', { returnObjects: true }) as string[]} finalMessage={t('loading.compatFinal')} estimatedSeconds={30} />;
 
   /* ─── Section counter ─── */
   let secIdx = 0;
@@ -137,36 +175,44 @@ export default function CompatibilityScreen() {
 
       {/* My Info */}
       <GlassCard style={sty.personCard}>
-        <Text style={sty.personLabel}>나의 정보</Text>
-        {user && (
+        <View style={sty.personHeader}>
+          <Text style={sty.personLabel}>{t('compatibility.myInfo')}</Text>
+          <TouchableOpacity onPress={() => setEditingMy(!editingMy)} activeOpacity={0.7}>
+            <Text style={sty.editBtn}>{editingMy ? t('common.confirm') : t('home.profileEdit')}</Text>
+          </TouchableOpacity>
+        </View>
+        {editingMy ? (
           <View>
-            {user.name ? (
-              <Text style={sty.personName}>{user.name}</Text>
-            ) : null}
+            <DateInputRow
+              year={myYear} month={myMonth} day={myDay}
+              onChangeYear={setMyYear} onChangeMonth={setMyMonth} onChangeDay={setMyDay}
+              variant="inline"
+            />
+            <View style={sty.genderRow}>
+              <TouchableOpacity style={[sty.genderBtn, myGender === 'male' && sty.genderActive]} onPress={() => setMyGender('male')}>
+                <Text style={[sty.genderText, myGender === 'male' && sty.genderTextActive]}>{t('birth.male')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[sty.genderBtn, myGender === 'female' && sty.genderActive]} onPress={() => setMyGender('female')}>
+                <Text style={[sty.genderText, myGender === 'female' && sty.genderTextActive]}>{t('birth.female')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View>
             <Text style={sty.personInfo}>
-              {user.birthYear}.{String(user.birthMonth).padStart(2, '0')}.{String(user.birthDay).padStart(2, '0')}
-              {' · '}{user.gender === 'male' ? t('common.male_short') : t('common.female_short')}
-              {' · '}{user.isLunar ? t('birth.lunar') : t('birth.solar')}
+              {myEffectiveYear}.{String(myEffectiveMonth).padStart(2, '0')}.{String(myEffectiveDay).padStart(2, '0')}
+              {' · '}{myEffectiveGender === 'male' ? t('common.male_short') : t('common.female_short')}
             </Text>
             {myPillarsData && (
               <View style={sty.myDetailRow}>
                 <View style={sty.myDetailItem}>
                   <Text style={sty.myDetailLabel}>일간</Text>
-                  <Text style={sty.myDetailValue}>
-                    {myPillarsData.dayMaster}({ELEMENT_KO[myPillarsData.dayMasterElement]})
-                  </Text>
+                  <Text style={sty.myDetailValue}>{myPillarsData.dayMaster}({ELEMENT_KO[myPillarsData.dayMasterElement]})</Text>
                 </View>
                 <View style={sty.myDetailDivider} />
                 <View style={sty.myDetailItem}>
                   <Text style={sty.myDetailLabel}>주 오행</Text>
-                  <Text style={sty.myDetailValue}>
-                    {ELEMENT_KO[Object.entries(myPillarsData.elementBalance).reduce((a, b) => a[1] > b[1] ? a : b)[0]]}
-                  </Text>
-                </View>
-                <View style={sty.myDetailDivider} />
-                <View style={sty.myDetailItem}>
-                  <Text style={sty.myDetailLabel}>띠</Text>
-                  <Text style={sty.myDetailValue}>{myPillarsData.year.zodiac}</Text>
+                  <Text style={sty.myDetailValue}>{ELEMENT_KO[Object.entries(myPillarsData.elementBalance).reduce((a, b) => a[1] > b[1] ? a : b)[0]]}</Text>
                 </View>
               </View>
             )}
@@ -186,6 +232,14 @@ export default function CompatibilityScreen() {
       {/* Partner Info */}
       <GlassCard style={sty.personCard}>
         <Text style={sty.personLabel}>{t('compatibility.partner')}</Text>
+        <TextInput
+          style={sty.nameInput}
+          value={partnerName}
+          onChangeText={setPartnerName}
+          placeholder={t('compatibility.namePlaceholder')}
+          placeholderTextColor={theme.colors.text.tertiary}
+          maxLength={10}
+        />
         <DateInputRow
           year={partnerYear}
           month={partnerMonth}
@@ -220,10 +274,12 @@ export default function CompatibilityScreen() {
         />
       ) : (
         <Animated.View entering={FadeInDown.springify()}>
-          {/* Headline */}
-          {result.headline && (
+          {/* Headline — 직관적 커플 타이틀 */}
+          {(myPillarsData && partnerPillarsData) ? (
+            <Text style={sty.headline}>{getCoupleTitle(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement)}</Text>
+          ) : result.headline ? (
             <Text style={sty.headline}>{result.headline}</Text>
-          )}
+          ) : null}
 
           {/* ══════ SUMMARY DASHBOARD ══════ */}
           <GlassCard gold style={sty.summaryDash}>
@@ -291,7 +347,7 @@ export default function CompatibilityScreen() {
                 <View style={sty.pairCircle}>
                   <Text style={sty.pairEmoji}>{user?.gender === 'male' ? '\u2642' : '\u2640'}</Text>
                 </View>
-                <Text style={sty.pairName}>{user?.name || t('common.me')}</Text>
+                <Text style={sty.pairName}>{myName}</Text>
                 <Text style={sty.pairInfo}>
                   {user ? `${user.birthYear}.${String(user.birthMonth).padStart(2, '0')}.${String(user.birthDay).padStart(2, '0')}` : ''}
                 </Text>
@@ -308,7 +364,7 @@ export default function CompatibilityScreen() {
                 <View style={sty.pairCircle}>
                   <Text style={sty.pairEmoji}>{partnerGender === 'male' ? '\u2642' : '\u2640'}</Text>
                 </View>
-                <Text style={sty.pairName}>{t('common.partner')}</Text>
+                <Text style={sty.pairName}>{ptName}</Text>
                 <Text style={sty.pairInfo}>
                   {partnerYear}.{partnerMonth.padStart(2, '0')}.{partnerDay.padStart(2, '0')}
                 </Text>
@@ -373,8 +429,8 @@ export default function CompatibilityScreen() {
                   <GlassCard style={sty.detailCard}>
                     <SecHead num={nextSec()} title="오행 궁합" />
                     <ElementMatch
-                      aName={user?.name || t('common.me')}
-                      bName={t('common.partner')}
+                      aName={myName}
+                      bName={ptName}
                       aDominant={result.elementInteraction.aElements.dominant}
                       aPercent={result.elementInteraction.aElements.percent}
                       bDominant={result.elementInteraction.bElements.dominant}
@@ -399,12 +455,12 @@ export default function CompatibilityScreen() {
                         <Text style={sty.detailText}>{(result.dayMasterRelation as CompatDayMaster).analysis}</Text>
                         <View style={sty.dmPairRow}>
                           <View style={sty.dmPairCol}>
-                            <Text style={sty.dmPairLabel}>나 → 상대</Text>
+                            <Text style={sty.dmPairLabel} numberOfLines={1}>{myName} → {ptName}</Text>
                             <Text style={sty.dmPairText}>{(result.dayMasterRelation as CompatDayMaster).aToB}</Text>
                           </View>
                           <View style={sty.dmDivider} />
                           <View style={sty.dmPairCol}>
-                            <Text style={sty.dmPairLabel}>상대 → 나</Text>
+                            <Text style={sty.dmPairLabel} numberOfLines={1}>{ptName} → {myName}</Text>
                             <Text style={sty.dmPairText}>{(result.dayMasterRelation as CompatDayMaster).bToA}</Text>
                           </View>
                         </View>
@@ -746,7 +802,7 @@ export default function CompatibilityScreen() {
                   <GlassCard gold style={sty.detailCard}>
                     <View style={sty.finalHeader}>
                       <View style={sty.finalQuote}><Text style={sty.finalQuoteText}>"</Text></View>
-                      <Text style={sty.finalLabel}>선생님의 한 마디</Text>
+                      <Text style={sty.finalLabel}>MIRi의 한 마디</Text>
                     </View>
                     <Text style={[sty.detailText, { fontWeight: '500', lineHeight: 24, fontSize: 15 }]}>{result.finalWords}</Text>
                   </GlassCard>
@@ -822,7 +878,10 @@ const sty = StyleSheet.create({
     textAlign: 'center', marginBottom: theme.spacing.sectionGap,
   },
   personCard: { marginBottom: theme.spacing.sm },
-  personLabel: { fontSize: 14, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
+  personHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.sm },
+  personLabel: { fontSize: 14, color: theme.colors.text.secondary },
+  nameInput: { backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, paddingVertical: 12, paddingHorizontal: 12, color: theme.colors.text.primary, fontSize: 15, borderWidth: 1, borderColor: theme.colors.glass.border, marginBottom: theme.spacing.sm, marginTop: theme.spacing.sm },
+  editBtn: { fontSize: 13, fontWeight: '600', color: theme.colors.gold.primary },
   personName: { fontSize: 18, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 4 },
   personInfo: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 20 },
   myDetailRow: {
@@ -835,8 +894,8 @@ const sty = StyleSheet.create({
   myDetailDivider: { width: 1, height: 24, backgroundColor: theme.colors.glass.border },
   coupleConnector: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.lg },
   connLine: { flex: 1, height: 1, backgroundColor: theme.colors.gold.primary + '30' },
-  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.gold.primary + '12', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.gold.primary + '25' },
-  connHeartText: { fontSize: 16, color: theme.colors.gold.primary },
+  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8546B' + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E8546B' + '30' },
+  connHeartText: { fontSize: 16, color: '#E8546B' },
   genderRow: { flexDirection: 'row', gap: theme.spacing.sm },
   genderBtn: {
     flex: 1, paddingVertical: 10, alignItems: 'center',
@@ -899,8 +958,8 @@ const sty = StyleSheet.create({
   pairCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: theme.colors.gold.primary + '40', marginBottom: 4 },
   pairEmoji: { fontSize: 20, color: theme.colors.gold.primary },
   pairCenter: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  pairHeartBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.gold.primary + '15', alignItems: 'center', justifyContent: 'center' },
-  pairHeartText: { fontSize: 16, color: theme.colors.gold.primary },
+  pairHeartBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8546B' + '18', alignItems: 'center', justifyContent: 'center' },
+  pairHeartText: { fontSize: 16, color: '#E8546B' },
   pairName: { fontSize: 14, fontWeight: '700', color: theme.colors.text.primary },
   pairInfo: { fontSize: 11, color: theme.colors.text.secondary },
   pairElement: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.primary, marginTop: 2 },

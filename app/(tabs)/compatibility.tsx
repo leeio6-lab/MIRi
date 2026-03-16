@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
@@ -23,12 +23,28 @@ import { CompatibilityRadar } from '../../src/components/saju/CompatibilityRadar
 import { ElementMatch } from '../../src/components/saju/ElementMatch';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
+import { CONFIG } from '../../src/constants/config';
 import { api, formatPillarInfo } from '../../src/services/api';
 import { calculateFourPillars } from '../../src/utils/saju-calc';
-import { calculateLocalCompatibility } from '../../src/utils/compatibility-calc';
+import { getCoupleTitle, getCompatOverview, getZodiacEmoji } from '../../src/utils/compatibility-calc';
 import type { CompatibilityResult, CompatCategories, CompatCategoryScore, CompatDayMaster, CompatRelationshipStages, CompatSurvivalGuide, CompatDateRecommend, CompatSecretMessage, CompatCoupleArchetype } from '../../src/types/api';
 
 // ELEMENT_KO removed — use t(`elements.${el}`) inside component
+
+const HOURS = [
+  { labelKey: 'hourZi', sub: '23-01', value: 0 },
+  { labelKey: 'hourChou', sub: '01-03', value: 2 },
+  { labelKey: 'hourYin', sub: '03-05', value: 4 },
+  { labelKey: 'hourMao', sub: '05-07', value: 6 },
+  { labelKey: 'hourChen', sub: '07-09', value: 8 },
+  { labelKey: 'hourSi', sub: '09-11', value: 10 },
+  { labelKey: 'hourWu', sub: '11-13', value: 12 },
+  { labelKey: 'hourWei', sub: '13-15', value: 14 },
+  { labelKey: 'hourShen', sub: '15-17', value: 16 },
+  { labelKey: 'hourYou', sub: '17-19', value: 18 },
+  { labelKey: 'hourXu', sub: '19-21', value: 20 },
+  { labelKey: 'hourHai', sub: '21-23', value: 22 },
+];
 
 export default function CompatibilityScreen() {
   const router = useRouter();
@@ -43,17 +59,37 @@ export default function CompatibilityScreen() {
   const [partnerDay, setPartnerDay] = useState('');
   const [partnerGender, setPartnerGender] = useState<'male' | 'female'>('female');
 
-  const myPillarsData = React.useMemo(
-    () => user ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour) : null,
-    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour]
-  );
+  // 내 정보 수정 — user가 없으면 자동으로 편집모드
+  const [editingMy, setEditingMy] = useState(!user);
+  const [myYear, setMyYear] = useState(user ? String(user.birthYear) : '');
+  const [myMonth, setMyMonth] = useState(user ? String(user.birthMonth) : '');
+  const [myDay, setMyDay] = useState(user ? String(user.birthDay) : '');
+  const [myGender, setMyGender] = useState<'male' | 'female'>(user?.gender ?? 'male');
+  const [partnerIsLunar, setPartnerIsLunar] = useState(false);
+  const [partnerSelectedHour, setPartnerSelectedHour] = useState<number | null>(null);
+  const [partnerUnknownTime, setPartnerUnknownTime] = useState(false);
+
+  const myEffectiveYear = editingMy ? parseInt(myYear, 10) : user?.birthYear;
+  const myEffectiveMonth = editingMy ? parseInt(myMonth, 10) : user?.birthMonth;
+  const myEffectiveDay = editingMy ? parseInt(myDay, 10) : user?.birthDay;
+  const myEffectiveHour = user?.birthHour ?? 12;
+  const myEffectiveGender = editingMy ? myGender : (user?.gender ?? 'male');
+
+  const myPillarsData = React.useMemo(() => {
+    const y = myEffectiveYear; const m = myEffectiveMonth; const d = myEffectiveDay;
+    if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return null;
+    try { return calculateFourPillars(y, m, d, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar); } catch { return null; }
+  }, [myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CompatibilityResult | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionY = useRef<Record<string, number>>({});
 
   const partnerYearNum = parseInt(partnerYear, 10);
   const partnerMonthNum = parseInt(partnerMonth, 10);
   const partnerDayNum = parseInt(partnerDay, 10);
+  const partnerHourNum = partnerUnknownTime ? 12 : (partnerSelectedHour ?? 12);
   const isPartnerValid =
     partnerYear.length === 4 && !isNaN(partnerYearNum) && partnerYearNum >= 1900 && partnerYearNum <= new Date().getFullYear() &&
     partnerMonth.length >= 1 && !isNaN(partnerMonthNum) && partnerMonthNum >= 1 && partnerMonthNum <= 12 &&
@@ -62,53 +98,66 @@ export default function CompatibilityScreen() {
   const myName = user?.name || t('common.me');
   const ptName = partnerName.trim() || t('common.partner');
 
+  // Heart spin animation
+  const heartRotation = useSharedValue(0);
+  React.useEffect(() => {
+    heartRotation.value = withRepeat(
+      withTiming(360, { duration: 4000, easing: Easing.linear }),
+      -1, false,
+    );
+  }, []);
+  const heartAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ rotateY: `${heartRotation.value}deg` }],
+  }));
+
   const partnerPillarsData = React.useMemo(() => {
     if (!isPartnerValid) return null;
-    try { return calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12); }
+    try { return calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum, undefined, undefined, undefined, partnerIsLunar); }
     catch { return null; }
-  }, [isPartnerValid, partnerYearNum, partnerMonthNum, partnerDayNum]);
+  }, [isPartnerValid, partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum]);
 
-  const handleAnalyze = async (isPaid = false) => {
-    if (!isPartnerValid || !user) return;
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+
+  const handleAnalyze = async () => {
+    console.log('[Compat] handleAnalyze called', { myEffectiveYear, myEffectiveMonth, myEffectiveDay, isPartnerValid });
+    if (!isPartnerValid || !myEffectiveYear || !myEffectiveMonth || !myEffectiveDay) return;
     setLoading(true);
+    setAnalyzeError(null);
     try {
-      if (!isPaid) {
-        const localResult = calculateLocalCompatibility(
-          user.birthYear, user.birthMonth, user.birthDay, user.birthHour, user.gender,
-          partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender,
-        );
-        setResult(localResult);
-        setCompatibilityResult(localResult);
-      } else {
-        const myPillars = calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour);
-        const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12);
-        const apiResult = await api.analyzeCompatibility(
-          { year: user.birthYear, month: user.birthMonth, day: user.birthDay, hour: user.birthHour, isLunar: user.isLunar, gender: user.gender },
-          { year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum, hour: 12, isLunar: false, gender: partnerGender },
-          user.locale, true, formatPillarInfo(myPillars, user.birthYear), formatPillarInfo(partnerPillars, partnerYearNum),
-          myName, ptName,
-        );
-        setResult(apiResult);
-        setCompatibilityResult(apiResult);
-        saveAndRecord('compatibility', true, apiResult);
-      }
+      const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar);
+      const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum, undefined, undefined, undefined, partnerIsLunar);
+      console.log('[Compat] Calling API...');
+      const apiResult = await api.analyzeCompatibility(
+        { year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay, hour: myEffectiveHour, isLunar: user?.isLunar ?? false, gender: myEffectiveGender },
+        { year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum, hour: partnerHourNum, isLunar: partnerIsLunar, gender: partnerGender },
+        user?.locale ?? 'ko', true, formatPillarInfo(myPillars, myEffectiveYear!), formatPillarInfo(partnerPillars, partnerYearNum),
+        myName, ptName,
+      );
+      console.log('[Compat] API success');
+      setResult(apiResult);
+      setCompatibilityResult(apiResult);
+      saveAndRecord('compatibility', true, apiResult);
     } catch (err) {
       console.error('[Compatibility] error:', err);
-      const fallback = calculateLocalCompatibility(
-        user.birthYear, user.birthMonth, user.birthDay, user.birthHour, user.gender,
-        partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender,
-      );
-      setResult(fallback);
+      setAnalyzeError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <LoadingInk steps={t('loading.compatSteps', { returnObjects: true }) as string[]} finalMessage={t('loading.compatFinal')} />;
+  if (loading) return <LoadingInk steps={t('loading.compatSteps', { returnObjects: true }) as string[]} tips={t('loading.sajuTips', { returnObjects: true }) as string[]} finalMessage={t('loading.compatFinal')} estimatedSeconds={30} />;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView style={st.container} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} style={st.container} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
+
+      {/* Error banner */}
+      {analyzeError && (
+        <TouchableOpacity style={{ backgroundColor: '#FF3B30', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }} onPress={() => setAnalyzeError(null)}>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '500', flex: 1 }}>{analyzeError}</Text>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginLeft: 12 }}>X</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── INPUT FORM (hide after result) ── */}
       {!result && (
@@ -117,13 +166,34 @@ export default function CompatibilityScreen() {
 
           {/* My Info */}
           <GlassCard style={st.personCard}>
-            <Text style={st.personLabel}>{t('compatibility.myInfo')}</Text>
-            {user && (
+            <View style={st.personHeader}>
+              <Text style={st.personLabel}>{t('compatibility.myInfo')}</Text>
+              <TouchableOpacity onPress={() => setEditingMy(!editingMy)} activeOpacity={0.7}>
+                <Text style={st.editBtn}>{editingMy ? t('common.confirm') : t('home.profileEdit')}</Text>
+              </TouchableOpacity>
+            </View>
+            {editingMy ? (
               <View>
-                {user.name ? <Text style={st.personName}>{user.name}</Text> : null}
+                <DateInputRow
+                  year={myYear} month={myMonth} day={myDay}
+                  onChangeYear={setMyYear} onChangeMonth={setMyMonth} onChangeDay={setMyDay}
+                  variant="inline"
+                />
+                <View style={st.genderRow}>
+                  <TouchableOpacity style={[st.genderBtn, myGender === 'male' && st.genderActive]} onPress={() => setMyGender('male')}>
+                    <Text style={[st.genderText, myGender === 'male' && st.genderTextActive]}>{t('compatibility.maleGender')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[st.genderBtn, myGender === 'female' && st.genderActive]} onPress={() => setMyGender('female')}>
+                    <Text style={[st.genderText, myGender === 'female' && st.genderTextActive]}>{t('compatibility.femaleGender')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View>
+                {user?.name ? <Text style={st.personName}>{user.name}</Text> : null}
                 <Text style={st.personInfo}>
-                  {user.birthYear}.{String(user.birthMonth).padStart(2, '0')}.{String(user.birthDay).padStart(2, '0')}
-                  {' · '}{user.gender === 'male' ? t('common.male_short') : t('common.female_short')}
+                  {myEffectiveYear}.{String(myEffectiveMonth).padStart(2, '0')}.{String(myEffectiveDay).padStart(2, '0')}
+                  {' · '}{myEffectiveGender === 'male' ? t('common.male_short') : t('common.female_short')}
                 </Text>
                 {myPillarsData && (
                   <View style={st.myDetailRow}>
@@ -145,7 +215,7 @@ export default function CompatibilityScreen() {
           {/* Heart connector */}
           <View style={st.coupleConnector}>
             <View style={st.connLine} />
-            <View style={st.connHeart}><Text style={st.connHeartText}>&hearts;</Text></View>
+            <View style={st.connHeart}><Animated.Text style={[st.connHeartText, heartAnimStyle]}>&hearts;</Animated.Text></View>
             <View style={st.connLine} />
           </View>
 
@@ -160,6 +230,18 @@ export default function CompatibilityScreen() {
               placeholderTextColor={theme.colors.text.tertiary}
               maxLength={10}
             />
+
+            {/* Calendar type (양력/음력) */}
+            <Text style={st.inputLabel}>{t('home.editCalendar')}</Text>
+            <View style={st.calToggleRow}>
+              <TouchableOpacity style={[st.calToggleBtn, !partnerIsLunar && st.calToggleActive]} onPress={() => setPartnerIsLunar(false)}>
+                <Text style={[st.calToggleText, !partnerIsLunar && st.calToggleTextActive]}>{t('birth.solar')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[st.calToggleBtn, partnerIsLunar && st.calToggleActive]} onPress={() => setPartnerIsLunar(true)}>
+                <Text style={[st.calToggleText, partnerIsLunar && st.calToggleTextActive]}>{t('birth.lunar')}</Text>
+              </TouchableOpacity>
+            </View>
+
             <DateInputRow
               year={partnerYear}
               month={partnerMonth}
@@ -169,6 +251,8 @@ export default function CompatibilityScreen() {
               onChangeDay={setPartnerDay}
               variant="inline"
             />
+
+            {/* Gender */}
             <View style={st.genderRow}>
               <TouchableOpacity style={[st.genderBtn, partnerGender === 'male' && st.genderActive]} onPress={() => setPartnerGender('male')}>
                 <Text style={[st.genderText, partnerGender === 'male' && st.genderTextActive]}>{t('compatibility.maleGender')}</Text>
@@ -177,9 +261,38 @@ export default function CompatibilityScreen() {
                 <Text style={[st.genderText, partnerGender === 'female' && st.genderTextActive]}>{t('compatibility.femaleGender')}</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Birth hour (생시) */}
+            <View style={st.hourHeader}>
+              <Text style={st.inputLabel}>{t('home.editBirthHour')}</Text>
+              <TouchableOpacity style={st.unknownRow} onPress={() => setPartnerUnknownTime(!partnerUnknownTime)}>
+                <View style={[st.checkbox, partnerUnknownTime && st.checkboxActive]}>
+                  {partnerUnknownTime && <Text style={st.checkIcon}>{'\u2713'}</Text>}
+                </View>
+                <Text style={st.unknownText}>{t('birth.unknownTime')}</Text>
+              </TouchableOpacity>
+            </View>
+            {!partnerUnknownTime && (
+              <View style={st.hoursGrid}>
+                {HOURS.map((h) => {
+                  const active = partnerSelectedHour === h.value;
+                  return (
+                    <TouchableOpacity
+                      key={h.value}
+                      style={[st.hourBtn, active && st.hourBtnActive]}
+                      onPress={() => setPartnerSelectedHour(h.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[st.hourLabel, active && st.hourLabelActive]}>{t(`birth.${h.labelKey}`)}</Text>
+                      <Text style={[st.hourSub, active && st.hourSubActive]}>{h.sub}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
           </GlassCard>
 
-          <Button title={t('compatibility.analyzeButton')} onPress={() => handleAnalyze(false)} disabled={!isPartnerValid} style={st.analyzeBtn} />
+          <Button title={`${t('compatibility.analyzeButton')} · ${t('paywall.price')}`} onPress={() => CONFIG.DEV_BYPASS_PAYMENT ? handleAnalyze() : setShowPaywall(true)} disabled={!isPartnerValid} style={st.analyzeBtn} />
         </>
       )}
 
@@ -191,45 +304,93 @@ export default function CompatibilityScreen() {
             <Text style={st.resetText}>{'< '}{t('compatibility.reAnalyze')}</Text>
           </TouchableOpacity>
 
-          {/* Headline */}
-          {result.headline && <Text style={st.headline}>{result.headline}</Text>}
-
-          {/* Couple Archetype */}
-          {result.coupleArchetype && (
-            <GlassCard gold style={st.archetypeCard}>
-              <Text style={st.archetypeEmoji}>{result.coupleArchetype.emoji}</Text>
-              <Text style={st.archetypeTitle}>{result.coupleArchetype.title}</Text>
-              <Text style={st.archetypeDesc}>{result.coupleArchetype.description}</Text>
-            </GlassCard>
-          )}
-
-          {/* Couple card with score */}
-          <GlassCard gold style={st.resultCard}>
-            <View style={st.coupleRow}>
-              <View style={st.coupleCol}>
-                <View style={st.coupleCircle}>
-                  <Text style={st.coupleEmoji}>{user?.gender === 'male' ? '\u2642' : '\u2640'}</Text>
+          {/* ═══ 궁합 요약 카드 (사주분석 overview 스타일) ═══ */}
+          {(() => {
+            const ov = (myPillarsData && partnerPillarsData)
+              ? getCompatOverview(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement, myPillarsData.year.zodiac ?? '', partnerPillarsData.year.zodiac ?? '')
+              : null;
+            return (
+              <>
+                {/* 커플 타이틀 + 점수 */}
+                <View style={st.hookHero}>
+                  <Text style={st.hookTitle}>{ov?.coupleTitle ?? result.headline ?? ''}</Text>
+                  <Text style={st.hookScore}>{result.overallScore}<Text style={st.hookScoreUnit}>점</Text></Text>
                 </View>
-                <Text style={st.coupleName}>{myName}</Text>
-                {myPillarsData && <Text style={st.coupleEl}>{myPillarsData.dayMaster}</Text>}
-              </View>
-              <View style={st.coupleScoreCol}>
-                <Text style={st.scoreNum}>{result.overallScore}</Text>
-                <Text style={st.scoreLabel}>{t('result.scoreUnit')}</Text>
-              </View>
-              <View style={st.coupleCol}>
-                <View style={st.coupleCircle}>
-                  <Text style={st.coupleEmoji}>{partnerGender === 'male' ? '\u2642' : '\u2640'}</Text>
-                </View>
-                <Text style={st.coupleName}>{ptName}</Text>
-                {partnerPillarsData && <Text style={st.coupleEl}>{partnerPillarsData.dayMaster}</Text>}
-              </View>
-            </View>
-            <Text style={st.resultSummary}>{result.summary}</Text>
-          </GlassCard>
+
+                {/* 커플 프로필 카드 */}
+                <GlassCard gold style={st.coupleCard}>
+                  <View style={st.coupleRow}>
+                    <View style={st.coupleCol}>
+                      <View style={st.coupleCircle}>
+                        {myPillarsData && <Text style={st.coupleHanja}>{myPillarsData.dayMaster}</Text>}
+                      </View>
+                      <Text style={st.coupleName}>{myName}</Text>
+                      <Text style={st.coupleZodiac}>{ov?.myZodiac ?? ''}띠</Text>
+                    </View>
+                    <View style={st.coupleVs}>
+                      <View style={[st.relBadge, ov?.elRelation === '상극' && st.relBadgeClash]}>
+                        <Text style={st.relBadgeText}>{ov?.elRelation ?? ''}</Text>
+                      </View>
+                    </View>
+                    <View style={st.coupleCol}>
+                      <View style={st.coupleCircle}>
+                        {partnerPillarsData && <Text style={st.coupleHanja}>{partnerPillarsData.dayMaster}</Text>}
+                      </View>
+                      <Text style={st.coupleName}>{ptName}</Text>
+                      <Text style={st.coupleZodiac}>{ov?.ptZodiac ?? ''}띠</Text>
+                    </View>
+                  </View>
+                </GlassCard>
+
+                {/* 10줄 요약 카드 (클릭 → 해당 섹션 이동) */}
+                {ov && (
+                  <GlassCard gold style={st.overviewCard}>
+                    {[
+                      { hanja: '初', meaning: '첫인상', value: ov.first, section: 'dynamics' },
+                      { hanja: '魅', meaning: '매력', value: ov.charm, section: 'stages' },
+                      { hanja: '愛', meaning: '사랑', value: ov.love, section: 'stages' },
+                      { hanja: '戰', meaning: '갈등', value: ov.fight, section: 'dynamics' },
+                      { hanja: '嫉', meaning: '질투', value: ov.jealousy, section: 'dynamics' },
+                      { hanja: '財', meaning: '금전', value: ov.money, section: 'survival' },
+                      { hanja: '夜', meaning: '밤', value: ov.bed, section: 'date' },
+                      { hanja: '婚', meaning: '결혼', value: ov.family, section: 'marriage' },
+                      { hanja: '危', meaning: '위험', value: ov.danger, section: 'survival', warn: true },
+                      { hanja: '判', meaning: '판정', value: ov.verdict, section: 'dynamics', gold: true },
+                    ].map((item, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={[st.ovRow, i < 9 && st.ovRowBorder]}
+                        onPress={() => {
+                          const y = sectionY.current[item.section];
+                          if (y != null) scrollRef.current?.scrollTo({ y: y - 20, animated: true });
+                        }}
+                        activeOpacity={0.6}
+                      >
+                        <View style={st.ovBadgeWrap}>
+                          <View style={[st.ovBadge, (item as any).warn && st.ovBadgeWarn, (item as any).gold && st.ovBadgeGold]}>
+                            <Text style={[st.ovBadgeText, (item as any).warn && st.ovBadgeTextWarn, (item as any).gold && st.ovBadgeTextGold]}>{item.hanja}</Text>
+                          </View>
+                          <Text style={st.ovBadgeMeaning}>{(item as any).meaning}</Text>
+                        </View>
+                        <View style={st.ovBody}>
+                          <Text style={[st.ovValue, (item as any).gold && st.ovValueGold]}>{item.value}</Text>
+                        </View>
+                        <Text style={st.ovArrow}>›</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </GlassCard>
+                )}
+
+                {/* 요약 텍스트 */}
+                {result.summary && (
+                  <Text style={st.resultSummary}>{result.summary}</Text>
+                )}
+              </>
+            );
+          })()}
 
           {/* ── PAID SECTIONS ── */}
-          {result.categories ? (
+          {result.categories && (
             <>
               {/* Radar */}
               <GlassCard style={st.detailCard}>
@@ -301,7 +462,7 @@ export default function CompatibilityScreen() {
 
               {/* Dynamics */}
               {result.dynamics && (
-                <GlassCard style={st.detailCard}>
+                <View onLayout={(e) => { sectionY.current['dynamics'] = e.nativeEvent.layout.y; }}><GlassCard style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.dynamicsTitle')}</Text>
                   {result.dynamics.powerBalance ? <View style={st.dynSec}><Text style={st.dynTitle}>{t('compatibility.powerBalance')}</Text><Text style={st.detailText}>{result.dynamics.powerBalance}</Text></View> : null}
                   {result.dynamics.fightPattern ? <View style={st.dynSec}><Text style={st.dynTitle}>{t('compatibility.fightPattern')}</Text><Text style={st.detailText}>{result.dynamics.fightPattern}</Text></View> : null}
@@ -309,7 +470,7 @@ export default function CompatibilityScreen() {
                   {result.dynamics.dealBreaker ? (
                     <View style={st.dealBox}><Text style={st.dealTitle}>{t('compatibility.dealBreaker')}</Text><Text style={st.dealText}>{result.dynamics.dealBreaker}</Text></View>
                   ) : null}
-                </GlassCard>
+                </GlassCard></View>
               )}
 
               {/* Strength / Conflict */}
@@ -328,7 +489,7 @@ export default function CompatibilityScreen() {
 
               {/* Relationship Stages */}
               {result.relationshipStages && (
-                <GlassCard style={st.detailCard}>
+                <View onLayout={(e) => { sectionY.current['stages'] = e.nativeEvent.layout.y; }}><GlassCard style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.relationTimeline')}</Text>
                   {[
                     { label: t('compatibility.stage0_3'), icon: '🌱', text: result.relationshipStages.first3months },
@@ -348,12 +509,12 @@ export default function CompatibilityScreen() {
                       </View>
                     </View>
                   ))}
-                </GlassCard>
+                </GlassCard></View>
               )}
 
               {/* Survival Guide */}
               {result.survivalGuide && (
-                <GlassCard style={st.detailCard}>
+                <View onLayout={(e) => { sectionY.current['survival'] = e.nativeEvent.layout.y; }}><GlassCard style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.survivalRules')}</Text>
                   {[result.survivalGuide.rule1, result.survivalGuide.rule2, result.survivalGuide.rule3].map((r, i) => (
                     <View key={i} style={st.ruleRow}>
@@ -367,12 +528,12 @@ export default function CompatibilityScreen() {
                       <Text style={st.dealText}>{result.survivalGuide.neverDo}</Text>
                     </View>
                   )}
-                </GlassCard>
+                </GlassCard></View>
               )}
 
               {/* Date Recommend */}
               {result.dateRecommend && (
-                <GlassCard style={st.detailCard}>
+                <View onLayout={(e) => { sectionY.current['date'] = e.nativeEvent.layout.y; }}><GlassCard style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.dateRecommendTitle')}</Text>
                   <View style={st.dateGrid}>
                     <View style={[st.dateItem, st.dateGood]}>
@@ -388,19 +549,19 @@ export default function CompatibilityScreen() {
                       <Text style={st.dateItemText}>{result.dateRecommend.worstDate}</Text>
                     </View>
                   </View>
-                </GlassCard>
+                </GlassCard></View>
               )}
 
               {/* Marriage Grade */}
               {result.marriageGrade && (
-                <GlassCard gold style={st.detailCard}>
+                <View onLayout={(e) => { sectionY.current['marriage'] = e.nativeEvent.layout.y; }}><GlassCard gold style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.marriageGradeTitle')}</Text>
                   <Text style={st.gradeText}>{result.marriageGrade.grade}</Text>
                   <Text style={st.detailText}>{result.marriageGrade.summary}</Text>
                   {result.marriageGrade.ifMarried && <><View style={st.divider} /><Text style={st.dynTitle}>{t('compatibility.afterMarriage')}</Text><Text style={st.detailText}>{result.marriageGrade.ifMarried}</Text></>}
                   {result.marriageGrade.childrenNote && <><View style={st.divider} /><Text style={st.dynTitle}>{t('compatibility.childrenNote')}</Text><Text style={st.detailText}>{result.marriageGrade.childrenNote}</Text></>}
                   {result.marriageGrade.inlaws && <><View style={st.divider} /><Text style={st.dynTitle}>{t('compatibility.inlaws')}</Text><Text style={st.detailText}>{result.marriageGrade.inlaws}</Text></>}
-                </GlassCard>
+                </GlassCard></View>
               )}
 
               {/* Secret Message */}
@@ -427,7 +588,7 @@ export default function CompatibilityScreen() {
                 const best = tl.bestMonths2026 ?? Object.values(tl).find((v: any) => Array.isArray(v) && v[0]?.month) ?? [];
                 const worst = tl.worstMonths2026 ?? [];
                 return (
-                  <GlassCard style={st.detailCard}>
+                  <View onLayout={(e) => { sectionY.current['timeline'] = e.nativeEvent.layout.y; }}><GlassCard style={st.detailCard}>
                     <Text style={st.detailLabel}>{t('compatibility.monthlyCompatTitle', { year: new Date().getFullYear() })}</Text>
                     {best.length > 0 && <View style={st.tlSec}><Text style={st.tlSecTitle}>{t('compatibility.goodMonths')}</Text>
                       {best.map((m: any, i: number) => <View key={i} style={st.tlRow}><Text style={st.tlMonth}>{m.month}</Text><View style={st.tlBar}><View style={[st.tlFill, st.tlGood, { width: `${m.score}%` }]} /></View><Text style={[st.tlScore, { color: theme.colors.success }]}>{m.score}</Text></View>)}
@@ -436,7 +597,7 @@ export default function CompatibilityScreen() {
                       {worst.map((m: any, i: number) => <View key={i} style={st.tlRow}><Text style={st.tlMonth}>{m.month}</Text><View style={st.tlBar}><View style={[st.tlFill, st.tlWarn, { width: `${m.score}%` }]} /></View><Text style={[st.tlScore, { color: theme.colors.warning }]}>{m.score}</Text></View>)}
                     </View>}
                     {tl.marriageTiming && <View style={st.tlHi}><Text style={st.tlHiLabel}>{t('compatibility.bestMarriageTiming')}</Text><Text style={st.tlHiText}>{tl.marriageTiming}</Text></View>}
-                  </GlassCard>
+                  </GlassCard></View>
                 );
               })()}
 
@@ -454,27 +615,37 @@ export default function CompatibilityScreen() {
                 </GlassCard>
               )}
               {result.finalWords && <GlassCard gold style={st.detailCard}><Text style={st.detailLabel}>{t('compatibility.masterWord')}</Text><Text style={[st.detailText, { fontWeight: '500', lineHeight: 24 }]}>{result.finalWords}</Text></GlassCard>}
-            </>
-          ) : (
-            <TouchableOpacity onPress={() => setShowPaywall(true)} style={st.unlockCta}>
-              <View style={st.unlockCtaInner}>
-                <Text style={st.unlockCtaTitle}>{t('compatibility.unlockDetail')}</Text>
-                <Text style={st.unlockCtaDesc}>{t('compatibility.unlockCtaDesc')}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
 
-          {/* Share */}
-          <View style={{ marginTop: theme.spacing.xl }}>
-            <ShareCard type="compatibility" score={result.overallScore} summary={result.headline || (typeof result.summary === 'string' ? result.summary : '')} />
-          </View>
+              {/* Share (only after paid unlock) */}
+              <View style={{ marginTop: theme.spacing.xl }}>
+                <ShareCard
+                  type="compatibility"
+                  score={result.overallScore}
+                  title={(myPillarsData && partnerPillarsData) ? getCoupleTitle(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement) : result.headline}
+                  summary={typeof result.summary === 'string' ? result.summary : ''}
+                  items={(() => {
+                    const ov2 = (myPillarsData && partnerPillarsData)
+                      ? getCompatOverview(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement, myPillarsData.year.zodiac ?? '', partnerPillarsData.year.zodiac ?? '')
+                      : null;
+                    return ov2 ? [
+                      { label: '첫인상', value: ov2.first },
+                      { label: '연애', value: ov2.love },
+                      { label: '싸움', value: ov2.fight },
+                      { label: '질투', value: ov2.jealousy },
+                      { label: '판결', value: ov2.verdict },
+                    ] : undefined;
+                  })()}
+                />
+              </View>
+            </>
+          )}
         </Animated.View>
       )}
 
       <Text style={st.disclaimer}>{t('common.disclaimer')}</Text>
 
       <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)}
-        onUnlocked={() => { setShowPaywall(false); handleAnalyze(true); }} productType="compatibility" />
+        onUnlocked={() => { setShowPaywall(false); handleAnalyze(); }} productType="compatibility" />
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -486,8 +657,10 @@ const st = StyleSheet.create({
   title: { ...theme.typo.screenTitle, textAlign: 'center', marginBottom: theme.spacing.sectionGap },
   // Input form
   personCard: { marginBottom: theme.spacing.sm },
-  personLabel: { fontSize: 14, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
-  personName: { fontSize: 18, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 4 },
+  personHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.sm },
+  personLabel: { fontSize: 14, color: theme.colors.text.secondary },
+  editBtn: { fontSize: 13, fontWeight: '600', color: theme.colors.gold.primary },
+  personName: { fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 2 },
   personInfo: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 20 },
   myDetailRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: theme.colors.bg.secondary, borderRadius: theme.radius.sm, padding: 10 },
   myDetailItem: { flex: 1, alignItems: 'center' },
@@ -496,31 +669,73 @@ const st = StyleSheet.create({
   myDetailDivider: { width: 1, height: 24, backgroundColor: theme.colors.glass.border },
   coupleConnector: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.lg },
   connLine: { flex: 1, height: 1, backgroundColor: theme.colors.gold.primary + '30' },
-  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.gold.primary + '12', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.gold.primary + '25' },
-  connHeartText: { fontSize: 16, color: theme.colors.gold.primary },
+  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8546B' + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E8546B' + '30' },
+  connHeartText: { fontSize: 16, color: '#E8546B' },
   nameInput: { backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, paddingVertical: 12, paddingHorizontal: 12, color: theme.colors.text.primary, fontSize: 15, borderWidth: 1, borderColor: theme.colors.glass.border, marginBottom: theme.spacing.sm },
-  genderRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xs },
-  genderBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: theme.radius.sm, borderWidth: 1, borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.primary },
+  inputLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.primary, marginBottom: 6, marginTop: theme.spacing.sm },
+  calToggleRow: { flexDirection: 'row', backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, padding: 2, marginBottom: theme.spacing.sm, borderWidth: 1, borderColor: theme.colors.glass.border },
+  calToggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
+  calToggleActive: { backgroundColor: '#1C1C1E' },
+  calToggleText: { color: theme.colors.text.tertiary, fontSize: 13, fontWeight: '500' },
+  calToggleTextActive: { color: theme.colors.gold.light, fontWeight: '600' },
+  hourHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: theme.spacing.md, marginBottom: 6 },
+  unknownRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: theme.colors.text.tertiary, alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: theme.colors.gold.primary, borderColor: theme.colors.gold.primary },
+  checkIcon: { fontSize: 11, color: '#FFFFFF', fontWeight: '700' },
+  unknownText: { color: theme.colors.text.secondary, fontSize: 12 },
+  hoursGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs, marginBottom: theme.spacing.sm },
+  hourBtn: { width: '31%', paddingVertical: 10, backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glass.border },
+  hourBtnActive: { borderColor: theme.colors.gold.primary, backgroundColor: '#1C1C1E' },
+  hourLabel: { color: theme.colors.text.primary, fontSize: 13, fontWeight: '500' },
+  hourLabelActive: { color: theme.colors.gold.light, fontWeight: '600' },
+  hourSub: { color: theme.colors.text.tertiary, fontSize: 10, marginTop: 1 },
+  hourSubActive: { color: theme.colors.gold.muted },
+  genderRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  genderBtn: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: theme.radius.sm, borderWidth: 1, borderColor: theme.colors.glass.border, backgroundColor: theme.colors.bg.primary },
   genderActive: { borderColor: theme.colors.gold.primary, backgroundColor: theme.colors.gold.primary + '0A' },
-  genderText: { color: theme.colors.text.tertiary, fontSize: 14 },
+  genderText: { color: theme.colors.text.tertiary, fontSize: 14, lineHeight: 20, textAlignVertical: 'center' } as any,
   genderTextActive: { color: theme.colors.gold.primary, fontWeight: '600' },
   analyzeBtn: { marginTop: theme.spacing.xl },
   // Result header
   resetBtn: { marginBottom: theme.spacing.md },
   resetText: { color: theme.colors.text.secondary, fontSize: 14 },
-  headline: { fontSize: 20, fontWeight: '700', color: theme.colors.gold.primary, textAlign: 'center', marginBottom: theme.spacing.sm, lineHeight: 28 },
-  resultCard: { marginTop: theme.spacing.md, alignItems: 'center' },
-  coupleRow: { flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: theme.spacing.md },
+  // Hook hero
+  hookHero: { alignItems: 'center', marginBottom: theme.spacing.md },
+  hookTitle: { fontSize: 22, fontWeight: '800', color: theme.colors.gold.primary, textAlign: 'center', lineHeight: 30, letterSpacing: -0.5 },
+  hookScore: { fontSize: 56, fontWeight: '800', color: theme.colors.gold.dark, marginTop: 4 },
+  hookScoreUnit: { fontSize: 16, fontWeight: '500', color: theme.colors.text.tertiary },
+  // Couple card
+  coupleCard: { marginBottom: theme.spacing.sm },
+  coupleRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
   coupleCol: { flex: 1, alignItems: 'center', gap: 3 },
-  coupleCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: theme.colors.gold.primary + '40', marginBottom: 4 },
-  coupleEmoji: { fontSize: 20, color: theme.colors.gold.primary },
-  coupleName: { fontSize: 14, fontWeight: '700', color: theme.colors.text.primary },
-  coupleEl: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.primary },
-  coupleScoreCol: { alignItems: 'center' },
-  scoreNum: { fontSize: 48, fontWeight: '700', color: theme.colors.gold.primary },
-  scoreLabel: { fontSize: 12, color: theme.colors.text.tertiary },
-  resultSummary: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 22, textAlign: 'center' },
+  coupleCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: theme.colors.bg.secondary, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: theme.colors.gold.primary + '40', marginBottom: 4 },
+  coupleHanja: { fontSize: 22, fontWeight: '800', color: theme.colors.gold.primary },
+  coupleName: { fontSize: 15, fontWeight: '700', color: theme.colors.text.primary },
+  coupleZodiac: { fontSize: 11, color: theme.colors.text.tertiary },
+  coupleVs: { alignItems: 'center', paddingHorizontal: 8 },
+  relBadge: { backgroundColor: theme.colors.gold.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.gold.primary + '30' },
+  relBadgeClash: { backgroundColor: 'rgba(196,80,61,0.08)', borderColor: 'rgba(196,80,61,0.20)' },
+  relBadgeText: { fontSize: 12, fontWeight: '700', color: theme.colors.gold.primary },
+  // Overview rows
+  overviewCard: { marginBottom: theme.spacing.sm },
+  ovRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, gap: 10 },
+  ovRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.06)' },
+  ovBadgeWrap: { alignItems: 'center', width: 34 },
+  ovBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(181,149,48,0.10)', alignItems: 'center', justifyContent: 'center' },
+  ovBadgeMeaning: { fontSize: 8, color: theme.colors.text.tertiary, marginTop: 2, fontWeight: '500' },
+  ovBadgeWarn: { backgroundColor: 'rgba(196,80,61,0.10)' },
+  ovBadgeGold: { backgroundColor: theme.colors.gold.primary },
+  ovBadgeText: { fontSize: 13, fontWeight: '700', color: theme.colors.gold.primary },
+  ovBadgeTextWarn: { color: theme.colors.error },
+  ovBadgeTextGold: { color: '#FFFFFF' },
+  ovValueGold: { fontWeight: '700', color: theme.colors.gold.dark },
+  ovBody: { flex: 1 },
+  ovValue: { fontSize: 14, fontWeight: '500', color: theme.colors.text.primary, lineHeight: 20 },
+  ovArrow: { fontSize: 18, fontWeight: '300', color: theme.colors.text.tertiary, marginLeft: 2 },
+  resultSummary: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 20, textAlign: 'center', marginVertical: theme.spacing.sm },
   // Detail cards
+  pillarDivider: { height: 1, backgroundColor: theme.colors.glass.border, marginVertical: 14 },
   detailCard: { marginTop: theme.spacing.md },
   detailLabel: { fontSize: 14, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: theme.spacing.sm },
   detailText: { flex: 1, fontSize: 13, color: theme.colors.text.secondary, lineHeight: 20 },
@@ -565,7 +780,7 @@ const st = StyleSheet.create({
   // Advice
   advRow: { flexDirection: 'row', gap: 8, marginBottom: theme.spacing.sm },
   advNum: { fontSize: 12, fontWeight: '700', color: theme.colors.gold.primary, width: 16, textAlign: 'center', backgroundColor: theme.colors.bg.tertiary, borderRadius: 8, height: 18, lineHeight: 18 },
-  // Archetype
+  // Archetype (used in paid section)
   archetypeCard: { marginTop: theme.spacing.md, alignItems: 'center' },
   archetypeEmoji: { fontSize: 36, marginBottom: 6 },
   archetypeTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: 6, textAlign: 'center' },
@@ -600,10 +815,88 @@ const st = StyleSheet.create({
   // Fun fact
   funFactCard: { marginTop: theme.spacing.md, alignItems: 'center' },
   funFactText: { fontSize: 14, color: theme.colors.gold.primary, fontWeight: '600', textAlign: 'center', lineHeight: 22 },
-  // Unlock CTA
-  unlockCta: { marginTop: theme.spacing.lg },
-  unlockCtaInner: { backgroundColor: theme.colors.gold.primary, borderRadius: theme.radius.md, paddingVertical: 18, paddingHorizontal: theme.spacing.cardPadding, alignItems: 'center' },
-  unlockCtaTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
-  unlockCtaDesc: { fontSize: 12, color: 'rgba(255,255,255,0.8)' },
+  // Unlock CTA (black box matching home screen)
+  unlockCta: {
+    marginTop: theme.spacing.lg,
+    backgroundColor: '#1C1C1E',
+    borderRadius: theme.radius.lg,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: theme.colors.gold.primary + '60',
+    overflow: 'hidden' as const,
+  },
+  unlockGlowTop: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: theme.colors.gold.primary + '50',
+  },
+  unlockCtaInner: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+  },
+  unlockLeft: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    flex: 1,
+    marginRight: 12,
+  },
+  unlockIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.gold.primary + '18',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1,
+    borderColor: theme.colors.gold.primary + '30',
+  },
+  unlockIcon: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: theme.colors.gold.primary,
+  },
+  unlockTextWrap: {
+    flex: 1,
+  },
+  unlockCtaTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: theme.colors.gold.light,
+    marginBottom: 3,
+  },
+  unlockCtaDesc: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 0.3,
+  },
+  unlockRight: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  unlockPriceBox: {
+    backgroundColor: theme.colors.gold.primary + '20',
+    borderRadius: theme.radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.gold.primary + '30',
+  },
+  unlockPrice: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: theme.colors.gold.primary,
+  },
+  unlockArrow: {
+    fontSize: 18,
+    color: theme.colors.gold.primary + '80',
+    fontWeight: '300' as const,
+  },
   disclaimer: { fontSize: 10, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 14, marginTop: theme.spacing.xl },
 });

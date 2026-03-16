@@ -6,8 +6,8 @@ import { theme } from '../../src/constants/theme';
 
 function TabIcon({ label, focused, char }: { label: string; focused: boolean; char: string }) {
   return (
-    <View style={styles.tabIcon}>
-      <Text style={[styles.tabChar, focused && styles.tabCharActive]}>{char}</Text>
+    <View style={styles.tabIcon} accessibilityLabel={label} accessibilityRole="tab">
+      <Text style={[styles.tabChar, focused && styles.tabCharActive]} aria-hidden>{char}</Text>
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
     </View>
   );
@@ -29,6 +29,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
+          tabBarAccessibilityLabel: t('tabs.home'),
           tabBarIcon: ({ focused }) => (
             <TabIcon label={t('tabs.home')} focused={focused} char="占" />
           ),
@@ -37,6 +38,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="saju"
         options={{
+          tabBarAccessibilityLabel: t('tabs.saju'),
           tabBarIcon: ({ focused }) => (
             <TabIcon label={t('tabs.saju')} focused={focused} char="命" />
           ),
@@ -45,6 +47,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="compatibility"
         options={{
+          tabBarAccessibilityLabel: t('tabs.compatibility'),
           tabBarIcon: ({ focused }) => (
             <TabIcon label={t('tabs.compatibility')} focused={focused} char="緣" />
           ),
@@ -53,6 +56,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="face"
         options={{
+          tabBarAccessibilityLabel: t('tabs.face'),
           tabBarIcon: ({ focused }) => (
             <TabIcon label={t('tabs.face')} focused={focused} char="相" />
           ),
@@ -61,6 +65,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="mypage"
         options={{
+          tabBarAccessibilityLabel: t('tabs.mypage'),
           tabBarIcon: ({ focused }) => (
             <TabIcon label={t('tabs.mypage')} focused={focused} char="我" />
           ),

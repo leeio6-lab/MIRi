@@ -111,15 +111,17 @@ export default function SplashScreen() {
       const url = window.location.href;
       if (url.includes('code=') || url.includes('access_token=')) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          console.log('[Splash] onAuthStateChange event:', event, 'session:', !!session);
+          if (__DEV__) console.log('[Splash] onAuthStateChange event:', event, 'session:', !!session);
           if (session) {
             subscription.unsubscribe();
             hasNavigated = true;
             const pt = session.provider_token;
             const meta = session.user?.user_metadata;
             const name = meta?.full_name ?? meta?.name;
-            console.log('[Splash] provider_token:', !!pt, 'name:', name);
-            console.log('[Splash] user_metadata:', JSON.stringify(meta));
+            if (__DEV__) {
+              console.log('[Splash] provider_token:', !!pt, 'name:', name);
+              console.log('[Splash] user_metadata:', JSON.stringify(meta));
+            }
             const params: Record<string, string> = {};
             if (pt) params.pt = pt;
             if (name) params.name = name;
@@ -128,7 +130,7 @@ export default function SplashScreen() {
               router.replace('/(tabs)/home');
             } else {
               const qs = new URLSearchParams(params).toString();
-              console.log('[Splash] navigating to birth-input with:', qs);
+              if (__DEV__) console.log('[Splash] navigating to birth-input with:', qs);
               router.replace(`/(auth)/birth-input${qs ? `?${qs}` : ''}` as any);
             }
           }

@@ -20,6 +20,7 @@ interface PurchaseState {
   canAccess: (type: 'saju' | 'face' | 'compatibility') => boolean;
   hasFaceTicket: () => boolean;
   useFaceTicket: () => boolean;
+  addFreeCredits: (count: number) => void;
 }
 
 export const usePurchaseStore = create<PurchaseState>()(
@@ -52,6 +53,10 @@ export const usePurchaseStore = create<PurchaseState>()(
         return false;
       },
 
+      addFreeCredits: (count: number) => {
+        set((s) => ({ freeCredits: s.freeCredits + count }));
+      },
+
       useFreeCredit: () => {
         const state = get();
         if (state.freeCredits > 0) {
@@ -63,6 +68,9 @@ export const usePurchaseStore = create<PurchaseState>()(
 
       purchaseAnalysis: async (type) => {
         const state = get();
+
+        // 중복 결제 방지
+        if (state.isProcessing) return false;
 
         // DEV 모드
         if (CONFIG.DEV_BYPASS_PAYMENT) {

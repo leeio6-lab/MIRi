@@ -32,7 +32,7 @@ export default function MyPageScreen() {
   const { setSajuResult, setFaceResult, setTransformedImage, setDailyFortune, setCompatibilityResult } = useFortuneStore();
 
   const pillars = user
-    ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour)
+    ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar)
     : null;
 
   const performLogout = async () => {

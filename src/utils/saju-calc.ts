@@ -329,12 +329,32 @@ export function calculateFourPillars(
   minute?: number,       // optional birth minute (default: 0)
   longitude?: number,    // optional birth city longitude (for solar time correction)
   utcOffset?: number,    // optional UTC offset in hours (for solar time correction)
+  isLunar?: boolean,     // optional: true면 음력→양력 변환 후 계산
 ): FourPillarsCalc {
+  // -1. 음력 → 양력 변환
+  let solarYear = year;
+  let solarMonth = month;
+  let solarDay = day;
+
+  if (isLunar) {
+    try {
+      const KoreanLunarCalendar = require('korean-lunar-calendar');
+      const cal = new KoreanLunarCalendar();
+      cal.setLunarDate(year, month, day, false);
+      const solar = cal.getSolarCalendar();
+      solarYear = solar.year;
+      solarMonth = solar.month;
+      solarDay = solar.day;
+    } catch {
+      // 변환 실패 시 원본 날짜 그대로 사용
+    }
+  }
+
   // 0. 지역시 보정 (longitude/utcOffset 제공 시)
   let correctedHour = hour;
-  let correctedDay = day;
-  let correctedMonth = month;
-  let correctedYear = year;
+  let correctedDay = solarDay;
+  let correctedMonth = solarMonth;
+  let correctedYear = solarYear;
 
   if (longitude !== undefined && utcOffset !== undefined) {
     const birthMinute = minute ?? 0;
@@ -343,7 +363,7 @@ export function calculateFourPillars(
 
     // 일자 보정 (보정으로 인해 날짜가 바뀌는 경우)
     if (correction.dayOffset !== 0) {
-      const jdn = gregorianToJDN(year, month, day) + correction.dayOffset;
+      const jdn = gregorianToJDN(solarYear, solarMonth, solarDay) + correction.dayOffset;
       const adjusted = jdnToGregorian(jdn);
       correctedYear = adjusted.year;
       correctedMonth = adjusted.month;
@@ -1198,6 +1218,57 @@ export function getHiddenStemsHanja(branchIdx: number): string {
     .join('');
 }
 
+// ============================================================
+// 주간 운세 (Weekly Fortune)
+// ============================================================
+
+export interface WeeklyFortuneDay {
+  date: string;           // YYYY-MM-DD
+  dayOfWeek: number;      // 0=Sun, 1=Mon, ..., 6=Sat
+  dayPillar: string;      // 일주 한자 (예: 甲子)
+  tenStar: string;        // 십성
+  score: number;          // 점수
+}
+
+const TEN_STAR_SCORES: Record<string, number> = {
+  '비견': 60, '겁재': 55, '식신': 75, '상관': 65, '편재': 70,
+  '정재': 80, '편관': 50, '정관': 85, '편인': 72, '정인': 78,
+};
+
+/**
+ * 주간 운세 계산 — 이번 주 월~일 7일의 일진 기반
+ */
+export function calculateWeeklyFortune(dayMasterIdx: number): WeeklyFortuneDay[] {
+  const now = new Date();
+  const currentDay = now.getDay(); // 0=Sun
+  // 월요일 기준으로 이번 주 시작일 계산
+  const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+
+  const result: WeeklyFortuneDay[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() + mondayOffset + i);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const jdn = gregorianToJDN(year, month, day);
+    const stemIdx = (jdn + 9) % 10;
+    const branchIdx = (jdn + 1) % 12;
+    const tenStar = getTenGod(dayMasterIdx, stemIdx);
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    result.push({
+      date: dateStr,
+      dayOfWeek: d.getDay(),
+      dayPillar: `${HEAVENLY_STEMS_HANJA[stemIdx]}${EARTHLY_BRANCHES_HANJA[branchIdx]}`,
+      tenStar,
+      score: TEN_STAR_SCORES[tenStar] ?? 65,
+    });
+  }
+
+  return result;
+}
+
 // Export additional constants and utility functions
 export {
   LIFE_STAGE_NAMES,
@@ -1207,4 +1278,5 @@ export {
   STEM_YINYANG,
   HEAVENLY_STEMS_EN,
   EARTHLY_BRANCHES_EN,
+  hourToBranchIndex,
 };

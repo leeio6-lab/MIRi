@@ -31,6 +31,14 @@ export function useFace() {
 
       const response = await api.analyzeFace(base64, locale, true, analysisMode);
 
+      if (__DEV__) {
+        console.log('[Face] response keys:', Object.keys(response));
+        console.log('[Face] transformedImage:', response.transformedImage ? `${(response.transformedImage.length / 1024).toFixed(0)}KB` : 'NULL');
+        console.log('[Face] analysis:', response.analysis ? 'present' : 'NULL');
+        if (response.transformError) console.log('[Face] transformError:', response.transformError);
+        if (response.analysisError) console.log('[Face] analysisError:', response.analysisError);
+      }
+
       // 얼굴 미감지
       if (response.noFace) {
         setNoFaceDetected(true);
@@ -42,6 +50,7 @@ export function useFace() {
       // 관상화 이미지 저장
       if (response.transformedImage) {
         setTransformedImage(response.transformedImage);
+        if (__DEV__) console.log('[Face] setTransformedImage done');
       }
 
       // 분석 결과
@@ -54,6 +63,11 @@ export function useFace() {
         const directResult = response as unknown as FaceResult;
         setFaceResult(directResult);
         return directResult;
+      }
+
+      // 서버가 분석 에러를 반환한 경우
+      if (response.analysisError) {
+        throw new Error(response.analysisError);
       }
 
       throw new Error('분석 결과를 받지 못했습니다. 다시 시도해주세요.');

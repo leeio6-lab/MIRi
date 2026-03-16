@@ -63,6 +63,7 @@
     "dayMasterDesc": "The energy that represents you",
     "todayEnergy": "Today's Energy",
     "luckyItemLabel": "Lucky Item",
+    "manseryeok": "Calendar",
     "myDetailAnalysis": "Detailed Fortune Analysis",
     "myDetailSub": "Personality · Career · Wealth · Love · Health",
     "myFourPillars": "My Four Pillars",
@@ -85,7 +86,24 @@
       "metal_low": "Practice systematic thinking. White/silver tones help balance your metal energy.",
       "water_high": "Excellent wisdom and adaptability. Flexible in handling situations, but can be indecisive.",
       "water_low": "Develop deeper thinking. Dark blue/black tones and staying hydrated help."
-    }
+    },
+    "fortuneUp": "Your fortune is rising!",
+    "fortuneDown": "Take it easy today",
+    "fortuneSame": "No change",
+    "nowBadge": "NOW",
+    "currentHourLabel": "This Hour",
+    "nextHourPreview": "Up next",
+    "weeklyTitle": "This Week",
+    "weeklyBest": "Best day this week",
+    "todayLabel": "Today",
+    "dailyInsightTitle": "Today's Insight",
+    "streakBadge": "{{count}} days",
+    "streakGoal7": "Visit 7 days in a row for 1 free analysis!",
+    "streakGoal30": "Visit 30 days in a row for 2 free analyses!",
+    "streakProgress": "{{current}} / {{goal}}",
+    "streakCelebration7": "7-day streak! 1 free analysis has been added",
+    "streakCelebration30": "30-day streak! 2 free analyses have been added",
+    "streakCelebrationTitle": "Congratulations!"
   },
   "auth": {
     "welcome": "Welcome to MIRI",
@@ -185,13 +203,25 @@
       "lucky_title": "Lucky Elements",
       "lucky_desc": "Lucky colors, numbers, directions, things to avoid"
     },
+    "overview": {
+      "personality": "Personality",
+      "career": "Career",
+      "wealth": "Wealth",
+      "love": "Love",
+      "health": "Health",
+      "family": "Family",
+      "social": "Social",
+      "yearly": "This Year",
+      "lifePeak": "Life Peak",
+      "lifeDirection": "Life Path"
+    },
     "defaultHeadline": "Fortune Analysis",
     "defaultSummary": "Your four pillars show balanced energy flowing through your destiny.",
     "heroTitle": "Saju Detailed Analysis",
     "heroSub": "3,000 years of Eastern wisdom\nrevealing your destiny",
     "ctaTitle": "Analyze My Saju",
     "ctaSub": "Personality · Wealth · Love · Health · Fortune",
-    "ctaPriceOld": "₩500",
+    "ctaPriceOld": "$1.99",
     "includedAnalysis": "Included Analysis"
   },
   "face": {
@@ -209,7 +239,7 @@
       "jawline": "Jawline",
       "ears": "Ears"
     },
-    "unlockDetail": "Unlock detailed analysis for $0.49",
+    "unlockDetail": "Portrait + detailed analysis for $0.99",
     "history": "Analysis History",
     "permissionNeeded": "Camera access is needed for face reading.",
     "permissionDenied": "Camera permission denied. Please allow camera access in settings.",
@@ -226,6 +256,7 @@
       "success": "Success",
       "social": "Social"
     },
+    "tapHint": "Tap a feature to see detailed analysis",
     "noFaceTitle": "Face not detected",
     "tipText": "* Face the camera directly\n* Take photos in well-lit areas\n* Choose a photo where your face is clearly visible",
     "analysisFailed": "Analysis failed",
@@ -295,7 +326,7 @@
     "bestMarriageTiming": "Best Marriage Timing",
     "yearlyAdviceTitle": "This Year's Advice",
     "practicalAdvice": "Practical Advice",
-    "masterWord": "Master's Word",
+    "masterWord": "MIRi's Word",
     "unlockCtaDesc": "Radar chart · Conflict patterns · Marriage grade · Monthly timing",
     "stage0_3": "0-3 months",
     "stage3_6": "3-6 months",
@@ -306,7 +337,7 @@
   "paywall": {
     "title": "Unlock Detailed Analysis",
     "subtitle": "AI-powered deep dive into your destiny",
-    "price": "$0.49",
+    "price": "$0.99",
     "purchase": "Purchase",
     "restore": "Restore Purchase",
     "features": [
@@ -368,11 +399,11 @@
   },
   "privacy": {
     "title": "Privacy Policy",
-    "body": "MIRi Privacy Policy\n\nLast updated: March 15, 2026\n\n1. Personal Information Collected\n- Date and time of birth, gender (for fortune analysis)\n- Facial images (for face reading, automatically deleted within 30 days after analysis)\n- Social login information (email, name)\n\n2. Purpose of Use\n- Providing Four Pillars of Destiny analysis service\n- Providing AI face reading service\n- Providing compatibility analysis service\n- Service improvement and statistical analysis\n\n3. Retention and Destruction\n- Facial images: Automatically deleted within 30 days after analysis\n- Analysis results: Immediately deleted upon account deletion\n- Account information: Immediately deleted upon account deletion\n\n4. Third-Party Sharing\n- We do not provide personal information to third parties in principle\n- Anonymized data may be transmitted to OpenAI API for AI analysis\n\n5. User Rights\n- You may request to view, modify, or delete your personal information\n- You may delete all data by deleting your account\n- Contact: support@miri-app.com\n\n6. Cookies and Tracking\n- Anonymous usage statistics collected for service improvement\n- Third-party ad tracking is only enabled with user consent\n\nThis service is provided for entertainment purposes and does not replace professional advice for important decisions."
+    "body": "MIRi Privacy Policy\n\nLast updated: March 16, 2026\n\n1. Information Collected\n- Name, date of birth, gender (for fortune/compatibility analysis)\n- Face photos (for face reading analysis)\n\n2. Purpose of Use\n- Providing AI-powered fortune, face reading, and compatibility analysis services\n\n3. Third-Party Services\n- OpenAI: AI analysis processing\n- Supabase: Data storage\n\n4. Data Retention\n- Face photos: Automatically deleted within 30 days after analysis\n- All data: Immediately deleted upon account deletion\n\n5. User Rights\n- You may request to view, modify, or delete your personal information\n- You may delete all data by deleting your account\n- Contact: miri.fortune.app@gmail.com\n\nThis service is provided for entertainment purposes only and does not replace professional advice for important decisions."
   },
   "terms": {
     "title": "Terms of Service",
-    "body": "MIRi Terms of Service\n\nLast updated: March 15, 2026\n\nArticle 1 (Purpose)\nThese terms set forth the conditions and procedures for using the mobile application services provided by MIRi (hereinafter \"Service\"), including Four Pillars of Destiny analysis, AI face reading, and compatibility analysis.\n\nArticle 2 (Definitions)\n1. \"Service\" refers to the content provided by MIRi, including fortune analysis, face reading, compatibility analysis, and daily horoscopes.\n2. \"User\" refers to a person who uses the Service in accordance with these terms.\n3. \"Guest User\" refers to a person who uses the Service without separate registration.\n\nArticle 3 (Effectiveness and Changes)\n1. These terms take effect by posting on the Service screen or by notifying users through other means.\n2. The Service may change the terms within the scope that does not violate relevant laws when there is a reasonable cause.\n\nArticle 4 (Service Content)\n1. Fortune Analysis: Traditional destiny analysis based on date and time of birth\n2. AI Face Reading: Face reading analysis using facial images\n3. Compatibility Analysis: Compatibility analysis comparing two people's fortunes\n4. Daily/Yearly Horoscope: Fortune information by date\n\nArticle 5 (Nature of Service)\n1. This Service is provided for entertainment purposes.\n2. Analysis results are for reference only and do not replace professional judgment in medical, legal, financial, or other fields.\n3. Users must make independent judgments regarding the Service's analysis results.\n\nArticle 6 (Paid Services)\n1. Basic analysis is provided free of charge; detailed analysis is provided for a fee.\n2. Prices for paid content are based on the amounts displayed in the app.\n3. Payments are processed through Apple App Store or Google Play Store.\n4. Due to the nature of digital content, refunds may be limited after content has been viewed.\n\nArticle 7 (User Obligations)\n1. Users must not use the Service by misappropriating others' personal information.\n2. Users must not use information obtained through the Service for unauthorized commercial purposes.\n\nArticle 8 (Disclaimers)\n1. The Service is not responsible for service interruptions due to force majeure such as natural disasters or system failures.\n2. The Service is not responsible for users' judgments and actions based on analysis results.\n\nArticle 9 (Dispute Resolution)\n1. Disputes between the Service and users shall be governed by the laws of the Republic of Korea.\n2. The competent court in case of dispute shall be the court having jurisdiction over the location of the Service provider.\n\nArticle 10 (Contact)\nService inquiries: support@miri-app.com"
+    "body": "MIRi Terms of Service\n\nLast updated: March 16, 2026\n\nArticle 1 (Service Purpose)\nMIRi is an entertainment service providing fortune telling, face reading, compatibility, and horoscope analysis.\n\nArticle 2 (Payment Policy)\n1. Detailed analysis is available at $0.99 per analysis.\n2. Refund policy follows Apple App Store and Google Play Store policies.\n\nArticle 3 (Disclaimer)\n1. This service is provided for entertainment purposes only.\n2. It does NOT constitute medical, legal, or financial advice.\n3. The service is not responsible for users' judgments and actions based on analysis results.\n\nArticle 4 (Account Deletion)\n1. You can delete your account in Settings > My Page > Delete Account.\n2. All data is deleted immediately upon account deletion.\n\nArticle 5 (Contact)\nService inquiries: miri.fortune.app@gmail.com"
   },
   "daily": {
     "tenGod": {
@@ -399,7 +430,43 @@
     "modeIntegrated": "Integrated Mode"
   },
   "loading": {
-    "sajuSteps": ["Reading heavenly stems and earthly branches", "Analyzing five elements flow", "Unraveling the threads of destiny"],
+    "sajuSteps": [
+      "Opening your Four Pillars",
+      "Reading heavenly stems and earthly branches",
+      "Analyzing five elements balance",
+      "Finding your guiding element",
+      "Tracing the flow of major fortune",
+      "Reading the hidden sides of your personality",
+      "Unraveling career and wealth patterns",
+      "Following the thread of your relationships",
+      "Piecing together your destiny puzzle"
+    ],
+    "sajuTips": [
+      "Your Four Pillars come from year, month, day, and hour of birth",
+      "The Day Master represents 'you' in your chart",
+      "Your guiding element is the energy your chart needs most",
+      "Even the same birthday gives different results by birth hour",
+      "Major fortune cycles change every 10 years",
+      "The key to fortune reading is five elements balance",
+      "Special stem combinations bring unique connections",
+      "The 'Peach Blossom' star means natural charm and attraction",
+      "The 'Traveling Horse' star means strong travel and relocation luck",
+      "Strong Indirect Wealth means entrepreneurial talent",
+      "The Day Branch represents your spouse's character",
+      "The Hour Pillar shows your children and later years",
+      "The Month Pillar reveals career and social fortune",
+      "The Year Pillar shows ancestry and childhood",
+      "Water-heavy charts tend to be emotional and intuitive",
+      "Fire-heavy charts are passionate but can be impatient",
+      "Earth-heavy charts are stable but can be stubborn",
+      "Metal-heavy charts are loyal and decisive",
+      "Wood-heavy charts have strong growth ambition",
+      "Strong Officer stars in women's charts indicate good spouse luck",
+      "Eating God star means love for food and strong expressiveness",
+      "Annual fortune changes every year based on the zodiac cycle",
+      "The Noble Person star means help arrives in difficult times",
+      "Many clashes in a chart mean a life full of changes"
+    ],
     "sajuFinal": "Interpreting your unique destiny",
     "faceSteps": ["Reading the energy in your face", "Analyzing facial features"],
     "faceFinal": "Revealing your unique face reading",
@@ -502,5 +569,35 @@
     "monthPillar": "Month",
     "yearPillar": "Year",
     "dayMaster": "Day Master"
+  },
+  "days": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  },
+  "hours": {
+    "zi": "Zi (23-01)",
+    "chou": "Chou (01-03)",
+    "yin": "Yin (03-05)",
+    "mao": "Mao (05-07)",
+    "chen": "Chen (07-09)",
+    "si": "Si (09-11)",
+    "wu": "Wu (11-13)",
+    "wei": "Wei (13-15)",
+    "shen": "Shen (15-17)",
+    "you": "You (17-19)",
+    "xu": "Xu (19-21)",
+    "hai": "Hai (21-23)"
   }
 }

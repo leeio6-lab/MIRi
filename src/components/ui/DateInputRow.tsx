@@ -27,13 +27,25 @@ export function DateInputRow({
   const dayRef = useRef<TextInput>(null);
 
   const handleYearText = (v: string) => {
-    onChangeYear(v);
-    if (v.length === 4) monthRef.current?.focus();
+    const num = v.replace(/[^0-9]/g, '');
+    onChangeYear(num);
+    if (num.length === 4) setTimeout(() => monthRef.current?.focus(), 50);
   };
 
   const handleMonthText = (v: string) => {
-    onChangeMonth(v);
-    if (v.length === 2) dayRef.current?.focus();
+    const num = v.replace(/[^0-9]/g, '');
+    onChangeMonth(num);
+    // 2~9 → single digit month, auto-advance immediately
+    if (num.length === 1 && parseInt(num) >= 2) {
+      setTimeout(() => dayRef.current?.focus(), 50);
+    } else if (num.length === 2) {
+      setTimeout(() => dayRef.current?.focus(), 50);
+    }
+  };
+
+  const handleDayText = (v: string) => {
+    const num = v.replace(/[^0-9]/g, '');
+    onChangeDay(num);
   };
 
   const isInline = variant === 'inline';
@@ -82,7 +94,7 @@ export function DateInputRow({
           ref={dayRef}
           style={[styles.input, isInline && styles.inputInline]}
           value={day}
-          onChangeText={onChangeDay}
+          onChangeText={handleDayText}
           placeholder="15"
           placeholderTextColor={theme.colors.text.tertiary}
           keyboardType="number-pad"
@@ -114,6 +126,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.glass.border,
     paddingVertical: 2,
     paddingHorizontal: 4,
+    marginBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
   },

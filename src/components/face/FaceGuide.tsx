@@ -3,13 +3,15 @@ import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
 
 // 고정 좌표 — 촬영 가이드 + 결과 오버레이 모두 이 좌표 사용
+// 1:1 셀피/인물 사진 기준 — 얼굴이 프레임의 약 60-70%를 차지한다고 가정
+// 실제 셀피에서 이마는 0.15~0.25, 눈은 0.32~0.38, 코끝 0.48, 입 0.57, 턱 0.68
 export const FACE_POINTS = {
-  forehead: { x: 0.5, y: 0.22, label: '천정' },
-  eyes:     { x: 0.5, y: 0.38, label: '감찰관' },
-  nose:     { x: 0.5, y: 0.50, label: '재백궁' },
-  mouth:    { x: 0.5, y: 0.62, label: '출납관' },
-  jawline:  { x: 0.5, y: 0.75, label: '지각' },
-  ears:     { x: 0.84, y: 0.38, label: '채청관' },
+  forehead: { x: 0.5,  y: 0.18, label: '천정' },
+  eyes:     { x: 0.5,  y: 0.35, label: '감찰관' },
+  nose:     { x: 0.5,  y: 0.47, label: '재백궁' },
+  mouth:    { x: 0.5,  y: 0.57, label: '출납관' },
+  jawline:  { x: 0.5,  y: 0.68, label: '지각' },
+  ears:     { x: 0.15, y: 0.35, label: '채청관' },
 } as const;
 
 interface FaceGuideProps {
@@ -41,12 +43,12 @@ export function FaceGuide({ size, showLabels = true }: FaceGuideProps) {
         );
       })}
 
-      {/* 귀 마커 */}
-      <View style={[styles.earMarker, { left: size * 0.12, top: FACE_POINTS.ears.y * size }]}>
+      {/* 귀 마커 — 양쪽 대칭 */}
+      <View style={[styles.earMarker, { left: size * 0.10, top: FACE_POINTS.ears.y * size }]}>
         <View style={styles.earDot} />
         {showLabels && <Text style={styles.earLabel}>채청</Text>}
       </View>
-      <View style={[styles.earMarker, { right: size * 0.12, top: FACE_POINTS.ears.y * size }]}>
+      <View style={[styles.earMarker, { right: size * 0.10, top: FACE_POINTS.ears.y * size }]}>
         <View style={styles.earDot} />
         {showLabels && <Text style={styles.earLabel}>채청</Text>}
       </View>

@@ -354,7 +354,7 @@ for (const tc of COMPAT_TEST_CASES) {
   try {
     const result = calculateLocalCompatibility(
       tc.p1.year, tc.p1.month, tc.p1.day, tc.p1.hour, tc.p1.gender,
-      tc.p2.year, tc.p2.month, tc.p2.day, tc.p2.gender,
+      tc.p2.year, tc.p2.month, tc.p2.day, 12, tc.p2.gender,
     );
 
     const prefix = `[궁합] ${tc.label}`;
@@ -377,7 +377,7 @@ for (const tc of COMPAT_TEST_CASES) {
     // 5. 역방향 궁합도 테스트 (p2를 기준으로)
     const reverseResult = calculateLocalCompatibility(
       tc.p2.year, tc.p2.month, tc.p2.day, 12, tc.p2.gender,
-      tc.p1.year, tc.p1.month, tc.p1.day, tc.p1.gender,
+      tc.p1.year, tc.p1.month, tc.p1.day, tc.p1.hour, tc.p1.gender,
     );
     assert(reverseResult.overallScore >= 35 && reverseResult.overallScore <= 92, `${prefix} 역방향 점수 범위 벗어남: ${reverseResult.overallScore}`);
 

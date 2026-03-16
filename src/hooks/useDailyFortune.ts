@@ -63,7 +63,7 @@ export function useDailyFortune() {
     if (currentFortune?.date === today && (currentFortune as any)?._cacheKey === cacheKey) return;
 
     // ─── 100% 로컬 계산 (API 호출 없음) ───
-    const pillars = calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour);
+    const pillars = calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar);
     const todaySaju = calculateTodaySaju(pillars.day.stemIdx);
 
     // 결정적 해시 (같은 날 + 같은 생년 → 항상 동일한 결과)

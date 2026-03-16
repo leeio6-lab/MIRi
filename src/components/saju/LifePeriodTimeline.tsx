@@ -42,7 +42,7 @@ const PERIOD_LABELS: Record<string, string> = {
   '말년운': '말년',
 };
 
-function ScoreCircle({ score, size = 44 }: { score: number; size?: number }) {
+function ScoreCircle({ score, size = 36 }: { score: number; size?: number }) {
   const r = (size - 4) / 2;
   const c = 2 * Math.PI * r;
   const progress = (score / 100) * c;
@@ -55,7 +55,7 @@ function ScoreCircle({ score, size = 44 }: { score: number; size?: number }) {
         <SvgCircle cx={size / 2} cy={size / 2} r={r}
           stroke={color} strokeWidth={3} fill="none"
           strokeDasharray={`${c}`} strokeDashoffset={c - progress}
-          strokeLinecap="round" rotation="-90" origin={`${size / 2}, ${size / 2}`} />
+          strokeLinecap="round" transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       </Svg>
       <Text style={{ fontSize: 13, fontWeight: '700', color }}>{score}</Text>
     </View>
@@ -139,7 +139,7 @@ export const LifePeriodTimeline = React.memo(function LifePeriodTimeline({ data 
 const s = StyleSheet.create({
   container: { marginTop: 4 },
 
-  itemWrap: { flexDirection: 'row', minHeight: 100 },
+  itemWrap: { flexDirection: 'row', minHeight: 80 },
 
   // Timeline rail
   rail: { width: 36, alignItems: 'center' },
@@ -154,9 +154,9 @@ const s = StyleSheet.create({
 
   // Card
   card: {
-    flex: 1, marginLeft: 8, marginBottom: 12,
+    flex: 1, marginLeft: 8, marginBottom: 8,
     backgroundColor: theme.colors.bg.secondary, borderRadius: theme.radius.md,
-    padding: 12, borderWidth: 1, borderColor: 'transparent',
+    padding: 10, borderWidth: 1, borderColor: 'transparent',
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardTitleArea: { flex: 1, gap: 2 },
@@ -165,12 +165,12 @@ const s = StyleSheet.create({
   bestBadge: { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 2 },
   bestText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
 
-  kwRow: { marginTop: 6, flexDirection: 'row' },
+  kwRow: { marginTop: 4, flexDirection: 'row' },
   kwChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   kwText: { fontSize: 11, fontWeight: '600' },
 
-  barTrack: { height: 5, backgroundColor: theme.colors.bg.tertiary, borderRadius: 3, overflow: 'hidden', marginTop: 8 },
+  barTrack: { height: 4, backgroundColor: theme.colors.bg.tertiary, borderRadius: 2, overflow: 'hidden', marginTop: 6 },
   barFill: { height: '100%', borderRadius: 3, minWidth: 4 },
 
-  summary: { fontSize: 12, color: theme.colors.text.secondary, lineHeight: 18, marginTop: 8 },
+  summary: { fontSize: 12, color: theme.colors.text.secondary, lineHeight: 17, marginTop: 6 },
 });

@@ -152,6 +152,22 @@ export interface SajuAcademic {
   advice: string;
 }
 
+// --- Overview (990사주 스타일 한 줄 캐치프레이즈) ---
+export interface SajuOverview {
+  poeticTitle: string;    // "호수 위에 뜬 태양, 병자일주"
+  hookQuestion: string;   // "말 한마디로 천 냥 빛 대신 원수를 갚나요?"
+  personality: string;    // 성격 한 줄
+  career: string;         // 직업운 한 줄
+  wealth: string;         // 재물운 한 줄
+  love: string;           // 연애운 한 줄
+  health: string;         // 건강운 한 줄
+  family: string;         // 가족 한 줄
+  social: string;         // 인간관계 한 줄
+  yearly: string;         // 올해운세 한 줄
+  lifePeak: string;       // 인생피크 한 줄
+  lifeDirection: string;  // 인생방향 한 줄
+}
+
 // --- SajuResult (free + paid union) ---
 
 export interface SajuResult {
@@ -169,6 +185,9 @@ export interface SajuResult {
   todayTip?: string;
   teaser?: string;
   elements?: ElementBalance;
+
+  // Overview (990사주 스타일)
+  overview?: SajuOverview;
 
   // Paid fields
   structure?: SajuStructure;
@@ -205,13 +224,14 @@ export interface SajuResult {
 // --- Face ---
 
 export interface FeatureScience { evidence: string; disclaimer: string; }
-export interface FaceFeatureScore { area: string; score: number; description: string; detail?: string; science?: FeatureScience; }
+export interface FaceFeatureScore { area: string; score: number; description: string; detail?: string; nickname?: string; science?: FeatureScience; position?: { x: number; y: number }; }
 export interface RadarScores { wealth: number; love: number; health: number; success: number; social: number; }
 export interface FaceResult {
   overallScore: number; summary: string; features: FaceFeatureScore[];
   faceType?: string; samjeong?: string;
   personality?: string; fortune?: string; advice?: string;
   radarScores?: RadarScores; highlight?: { area: string; message: string };
+  hookLine?: string; shareTitle?: string; celebrity?: string;
 }
 
 // Legacy

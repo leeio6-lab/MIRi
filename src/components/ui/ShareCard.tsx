@@ -1,76 +1,75 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, Share, Alert } from 'react-native';
-import ViewShot from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Dimensions, Platform, Share, Alert, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
 import { Button } from './Button';
 
 const { width } = Dimensions.get('window');
 
+const SHARE_BASE_URL = 'https://dist-drab-ten-14.vercel.app/share';
+
 interface ShareCardProps {
   type: 'saju' | 'face' | 'compatibility';
   score: number;
   summary: string;
-  extraInfo?: string;
+  title?: string;
+  items?: { label: string; value: string }[];
 }
 
-export function ShareCard({ type, score, summary, extraInfo }: ShareCardProps) {
+function buildShareUrl(props: ShareCardProps): string {
+  const params = new URLSearchParams();
+  params.set('type', props.type);
+  if (props.score > 0) params.set('score', String(props.score));
+  if (props.title) params.set('title', props.title);
+  if (props.summary) params.set('summary', props.summary);
+  if (props.items && props.items.length > 0) {
+    params.set('items', JSON.stringify(props.items.slice(0, 5)));
+  }
+  return `${SHARE_BASE_URL}?${params.toString()}`;
+}
+
+export function ShareCard({ type, score, summary, title, items }: ShareCardProps) {
   const { t } = useTranslation();
-  const viewShotRef = useRef<ViewShot>(null);
   const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const typeLabels = { saju: t('share.sajuType'), face: t('share.faceType'), compatibility: t('share.compatType') };
-  const typeChars = { saju: '命', face: '相', compatibility: '緣' };
 
-  const shareText = `[MIRi] ${typeLabels[type]}: ${score}/100\n${summary}\n\n${t('share.footerText')}`;
+  const shareUrl = buildShareUrl({ type, score, summary, title, items });
+  const shareText = `[MIRi] ${title || typeLabels[type]}${score > 0 ? ` ${score}점` : ''}\n\n${summary}\n\n${shareUrl}`;
 
   const handleShare = async () => {
     if (sharing) return;
     setSharing(true);
 
     try {
-      // 1. Try native image share (mobile)
-      if (Platform.OS !== 'web' && viewShotRef.current?.capture) {
-        const uri = await viewShotRef.current.capture();
-        const isAvailable = await Sharing.isAvailableAsync();
-        if (isAvailable) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/png',
-            dialogTitle: t('share.dialogTitle'),
-          });
-          setSharing(false);
-          return;
-        }
-      }
-
-      // 2. Try Web Share API (modern browsers + PWA)
+      // 1. Web Share API (URL 포함)
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
         await (navigator as any).share({
           title: `MIRi ${typeLabels[type]}`,
-          text: shareText,
+          text: `${title || typeLabels[type]}${score > 0 ? ` ${score}점` : ''}\n${summary}`,
+          url: shareUrl,
         });
-        setSharing(false);
         return;
       }
 
-      // 3. Try React Native Share (cross-platform text share)
+      // 2. React Native Share (모바일)
       if (Platform.OS !== 'web') {
         await Share.share({
           message: shareText,
           title: `MIRi ${typeLabels[type]}`,
+          url: shareUrl,
         });
-        setSharing(false);
         return;
       }
 
-      // 4. Fallback: copy to clipboard (web)
+      // 3. Fallback: 클립보드 복사
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText);
-        Alert.alert(t('common.copied'), t('common.copiedDesc'));
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
       }
     } catch (err: any) {
-      // User cancelled share — not an error
       if (err?.message?.includes('cancel') || err?.message?.includes('dismiss')) {
         // silently ignore
       } else {
@@ -81,126 +80,129 @@ export function ShareCard({ type, score, summary, extraInfo }: ShareCardProps) {
     }
   };
 
+  const handleCopyLink = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
   return (
-    <View>
-      <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
-        <View style={styles.card}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.appName}>MIRi</Text>
-            <Text style={styles.typeChar}>{typeChars[type]}</Text>
-          </View>
-
-          {/* Type label */}
+    <View style={styles.container}>
+      {/* Preview card */}
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <Text style={styles.appName}>MIRi</Text>
           <Text style={styles.typeLabel}>{typeLabels[type]}</Text>
-
-          {/* Score */}
-          <View style={styles.scoreContainer}>
-            <Text style={styles.score}>{score}</Text>
-            <Text style={styles.scoreMax}>/100</Text>
-          </View>
-
-          {/* Summary */}
-          <Text style={styles.summary} numberOfLines={4}>{summary}</Text>
-
-          {extraInfo && <Text style={styles.extra}>{extraInfo}</Text>}
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('share.footerText')}</Text>
-            <Text style={styles.disclaimer}>{t('share.entertainmentPurpose')}</Text>
-          </View>
         </View>
-      </ViewShot>
+        {title && <Text style={styles.title} numberOfLines={2}>{title}</Text>}
+        {score > 0 && (
+          <Text style={styles.score}>{score}<Text style={styles.scoreUnit}>점</Text></Text>
+        )}
+        <Text style={styles.summary} numberOfLines={3}>{summary}</Text>
+        <Text style={styles.cta}>터치해서 결과 보기 →</Text>
+      </View>
 
-      <Button
-        title={sharing ? t('common.shareInProgress') : t('common.share')}
-        onPress={handleShare}
-        variant="secondary"
-        style={styles.shareBtn}
-        loading={sharing}
-        disabled={sharing}
-      />
+      {/* Share buttons */}
+      <View style={styles.btnRow}>
+        <Button
+          title={sharing ? t('common.shareInProgress') : t('common.share')}
+          onPress={handleShare}
+          style={styles.shareBtn}
+          loading={sharing}
+          disabled={sharing}
+        />
+        <TouchableOpacity style={styles.copyBtn} onPress={handleCopyLink} activeOpacity={0.7}>
+          <Text style={styles.copyText}>{copied ? t('common.copied') : t('common.share') + ' URL'}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {},
   card: {
     width: width - 48,
     backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing.lg,
+    borderRadius: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
+    borderColor: 'rgba(181,149,48,0.15)',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   appName: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: theme.colors.gold.primary,
-    letterSpacing: 4,
-  },
-  typeChar: {
-    fontSize: 28,
-    color: theme.colors.gold.muted,
-    opacity: 0.5,
+    letterSpacing: 3,
   },
   typeLabel: {
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.gold.muted,
   },
-  scoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    marginVertical: theme.spacing.md,
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    lineHeight: 22,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   score: {
-    fontSize: 56,
-    fontWeight: '700',
+    fontSize: 48,
+    fontWeight: '800',
     color: theme.colors.gold.primary,
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  scoreMax: {
-    fontSize: 18,
+  scoreUnit: {
+    fontSize: 16,
+    fontWeight: '500',
     color: theme.colors.text.tertiary,
-    marginLeft: theme.spacing.xs,
   },
   summary: {
     fontSize: 14,
     color: theme.colors.text.secondary,
     lineHeight: 22,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
-  extra: {
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
+  cta: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.gold.primary,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
   },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.glass.border,
-    paddingTop: theme.spacing.md,
-    alignItems: 'center',
-    gap: 2,
-  },
-  footerText: {
-    fontSize: 12,
-    color: theme.colors.gold.muted,
-  },
-  disclaimer: {
-    fontSize: 9,
-    color: theme.colors.text.tertiary,
+  btnRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
   },
   shareBtn: {
-    marginTop: theme.spacing.md,
+    flex: 1,
+  },
+  copyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.gold.primary + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.gold.primary,
   },
 });

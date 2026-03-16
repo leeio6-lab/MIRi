@@ -44,12 +44,12 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
     const code = url.searchParams.get('code');
 
     if (code) {
-      console.log('[Auth] PKCE code found, exchanging...');
+      if (__DEV__) console.log('[Auth] PKCE code found, exchanging...');
       const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       if (exchangeError) throw exchangeError;
       const pt = sessionData.session?.provider_token;
       const userName = sessionData.session?.user?.user_metadata?.full_name ?? sessionData.session?.user?.user_metadata?.name;
-      console.log('[Auth] Exchange success — provider_token:', !!pt, '— user name:', userName);
+      if (__DEV__) console.log('[Auth] Exchange success — provider_token:', !!pt, '— user name:', userName);
       return { success: true, providerToken: pt ?? undefined };
     }
 
@@ -136,9 +136,11 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    console.log('[Auth] fetchGoogleProfile — session exists:', !!session);
-    console.log('[Auth] session.provider_token exists:', !!session?.provider_token);
-    console.log('[Auth] providerTokenOverride exists:', !!providerTokenOverride);
+    if (__DEV__) {
+      console.log('[Auth] fetchGoogleProfile — session exists:', !!session);
+      console.log('[Auth] session.provider_token exists:', !!session?.provider_token);
+      console.log('[Auth] providerTokenOverride exists:', !!providerTokenOverride);
+    }
 
     if (!session) {
       console.warn('[Auth] No session found after login');
@@ -146,7 +148,7 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
     }
 
     const meta = session.user?.user_metadata;
-    console.log('[Auth] user_metadata keys:', meta ? Object.keys(meta) : 'none');
+    if (__DEV__) console.log('[Auth] user_metadata keys:', meta ? Object.keys(meta) : 'none');
 
     // 이름: user_metadata에서 가져오기
     profile.name = meta?.full_name ?? meta?.name ?? undefined;
@@ -157,13 +159,13 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
     // Google People API: 이름(한국어) + 생년월일
     const providerToken = providerTokenOverride ?? session.provider_token;
     if (providerToken) {
-      console.log('[Auth] Calling People API with token...');
+      if (__DEV__) console.log('[Auth] Calling People API with token...');
       try {
         const res = await fetch(
           'https://people.googleapis.com/v1/people/me?personFields=names,birthdays',
           { headers: { Authorization: `Bearer ${providerToken}` } }
         );
-        console.log('[Auth] People API response status:', res.status);
+        if (__DEV__) console.log('[Auth] People API response status:', res.status);
         if (res.ok) {
           const data = await res.json();
 
@@ -177,12 +179,12 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
             const bestName = koName ?? primaryName;
             if (bestName?.displayName) {
               profile.name = bestName.displayName;
-              console.log('[Auth] Name from People API:', profile.name);
+              if (__DEV__) console.log('[Auth] Name from People API:', profile.name);
             }
           }
 
           // 생년월일
-          console.log('[Auth] People API birthdays count:', data.birthdays?.length ?? 0);
+          if (__DEV__) console.log('[Auth] People API birthdays count:', data.birthdays?.length ?? 0);
           const birthday = data.birthdays?.find(
             (b: any) => b.metadata?.source?.type === 'ACCOUNT'
           ) ?? data.birthdays?.[0];
@@ -191,7 +193,7 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
             if (birthday.date.year) profile.birthYear = birthday.date.year;
             if (birthday.date.month) profile.birthMonth = birthday.date.month;
             if (birthday.date.day) profile.birthDay = birthday.date.day;
-            console.log('[Auth] Birthday extracted:', birthday.date);
+            if (__DEV__) console.log('[Auth] Birthday extracted:', birthday.date);
           } else {
             console.warn('[Auth] No birthday.date in response');
           }
@@ -209,7 +211,7 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
     console.warn('[Auth] fetchGoogleProfile error:', e);
   }
 
-  console.log('[Auth] Final profile:', JSON.stringify(profile));
+  if (__DEV__) console.log('[Auth] Final profile:', JSON.stringify(profile));
   return profile;
 }
 

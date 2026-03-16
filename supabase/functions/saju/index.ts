@@ -2,7 +2,204 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 
-const SYSTEM = `당신은 "청운 선생"이라는 페르소나를 가진 사주명리학 대가입니다.
+// ─── Pre-computation: 만세력 기반 결정적 데이터 (AI 불필요, 매번 동일) ───
+
+const STAGE_SCORES: Record<string, number> = {
+  장생: 85, 목욕: 65, 관대: 80, 건록: 88, 제왕: 92,
+  쇠: 60, 병: 50, 사: 45, 묘: 40, 절: 35, 태: 55, 양: 70,
+};
+
+const TENGOD_KW: Record<string, string> = {
+  비견: '자립', 겁재: '변동', 식신: '풍요', 상관: '표현',
+  편재: '기회', 정재: '안정', 편관: '시련', 정관: '질서',
+  편인: '전환', 정인: '학업',
+};
+
+const ELEMENT_LUCKY: Record<string, { color: string; number: string; direction: string; avoid: string }> = {
+  wood: {
+    color: '용신이 목(木)이므로 초록·청록 계열이 좋아요. 지갑이나 핸드폰 케이스, 매일 입는 옷에 포인트로 활용하면 좋아요.',
+    number: '목(木)에 해당하는 3, 8이 길한 숫자예요. 중요한 약속이나 선택 시 참고하세요.',
+    direction: '동쪽이 길한 방향이에요. 책상이나 침대 머리를 동쪽으로 두면 좋고, 동쪽으로의 여행도 기운에 도움이 돼요.',
+    avoid: '기신인 금(金) 기운을 주의하세요. 흰색·은색을 과하게 쓰거나 서쪽 방향에 지나치게 의존하는 것은 피하세요.',
+  },
+  fire: {
+    color: '용신이 화(火)이므로 빨강·보라·주황 계열이 좋아요. 악세서리나 인테리어 포인트로 활용하세요.',
+    number: '화(火)에 해당하는 2, 7이 길한 숫자예요. 전화번호나 중요한 선택에 활용해보세요.',
+    direction: '남쪽이 길한 방향이에요. 남향 자리나 남쪽으로의 이동이 기운을 북돋아줘요.',
+    avoid: '기신인 수(水) 기운을 주의하세요. 검정·남색을 과하게 쓰거나 북쪽 방향에 치우치지 마세요.',
+  },
+  earth: {
+    color: '용신이 토(土)이므로 노랑·베이지·브라운 계열이 좋아요. 지갑이나 가방에 이 색상을 활용하면 좋아요.',
+    number: '토(土)에 해당하는 5, 10이 길한 숫자예요. 중요한 날짜나 선택에 참고하세요.',
+    direction: '중앙 혹은 남서쪽이 길한 방향이에요. 집이나 사무실의 중앙에 자리를 잡으면 안정감이 생겨요.',
+    avoid: '기신인 목(木) 기운을 주의하세요. 초록색을 과하게 쓰거나 동쪽에 치우치지 마세요.',
+  },
+  metal: {
+    color: '용신이 금(金)이므로 흰색·은색·골드 계열이 좋아요. 금속 악세서리나 시계를 활용하면 좋아요.',
+    number: '금(金)에 해당하는 4, 9가 길한 숫자예요. 중요한 결정에 이 숫자를 활용해보세요.',
+    direction: '서쪽이 길한 방향이에요. 서쪽을 향한 자리에 앉거나 서쪽으로 여행하면 기운이 좋아져요.',
+    avoid: '기신인 화(火) 기운을 주의하세요. 빨강·주황을 과하게 쓰거나 남쪽에 치우치지 마세요.',
+  },
+  water: {
+    color: '용신이 수(水)이므로 검정·파랑·남색 계열이 좋아요. 가방이나 핸드폰 케이스에 활용하세요.',
+    number: '수(水)에 해당하는 1, 6이 길한 숫자예요. 중요한 선택 시 참고하세요.',
+    direction: '북쪽이 길한 방향이에요. 북쪽을 향한 자리에 앉거나 북쪽으로 이동하면 기운에 도움이 돼요.',
+    avoid: '기신인 토(土) 기운을 주의하세요. 노랑·브라운을 과하게 쓰거나 남서쪽에 치우치지 마세요.',
+  },
+};
+
+// 대운 천간 한자 → 오행 매핑
+const STEM_HANJA_EL: Record<string, string> = {
+  '甲': 'wood', '乙': 'wood', '丙': 'fire', '丁': 'fire',
+  '戊': 'earth', '己': 'earth', '庚': 'metal', '辛': 'metal',
+  '壬': 'water', '癸': 'water',
+};
+
+// 오행 상생 관계: key가 value를 생한다
+const EL_GENERATES: Record<string, string> = {
+  wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood',
+};
+
+// 지지 한자 → 오행 매핑
+const BRANCH_HANJA_EL: Record<string, string> = {
+  '子': 'water', '丑': 'earth', '寅': 'wood', '卯': 'wood',
+  '辰': 'earth', '巳': 'fire', '午': 'fire', '未': 'earth',
+  '申': 'metal', '酉': 'metal', '戌': 'earth', '亥': 'water',
+};
+
+// 상극: key가 value를 극한다
+const EL_CONTROLS: Record<string, string> = {
+  wood: 'earth', fire: 'metal', earth: 'water', metal: 'wood', water: 'fire',
+};
+
+/**
+ * 대운 점수에 용신 호환성을 반영
+ *
+ * 전통 명리학에서 대운의 좋고 나쁨은 용신 일치가 핵심.
+ * 12운성은 에너지 강도이고, 용신은 에너지 방향.
+ *
+ * 천간: 대운의 주요 기운 (가중치 높음)
+ *   - 천간 = 용신 → +35 (용신 대운, 최고)
+ *   - 천간이 용신을 생 → +20 (희신 대운)
+ *   - 천간이 용신을 극 → -20 (기신 대운)
+ *
+ * 지지: 대운의 보조 기운
+ *   - 지지 = 용신 → +10
+ *   - 지지가 용신을 생 → +5
+ *   - 지지가 용신을 극 → -8
+ */
+function yongShinBonus(daeunLabel: string, yongShinEl: string | null): number {
+  if (!yongShinEl || !daeunLabel || daeunLabel.length < 2) return 0;
+
+  let bonus = 0;
+
+  // 천간 (1글자)
+  const stemEl = STEM_HANJA_EL[daeunLabel.charAt(0)];
+  if (stemEl) {
+    if (stemEl === yongShinEl) bonus += 35;
+    else if (EL_GENERATES[stemEl] === yongShinEl) bonus += 20;
+    else if (EL_CONTROLS[stemEl] === yongShinEl) bonus -= 20;
+  }
+
+  // 지지 (2글자)
+  const branchEl = BRANCH_HANJA_EL[daeunLabel.charAt(1)];
+  if (branchEl) {
+    if (branchEl === yongShinEl) bonus += 10;
+    else if (EL_GENERATES[branchEl] === yongShinEl) bonus += 5;
+    else if (EL_CONTROLS[branchEl] === yongShinEl) bonus -= 8;
+  }
+
+  return bonus;
+}
+
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+  return h;
+}
+
+function parseYongShinEl(ys: string): string | null {
+  if (!ys) return null;
+  if (ys.includes('목') || ys.includes('木')) return 'wood';
+  if (ys.includes('화') || ys.includes('火')) return 'fire';
+  if (ys.includes('토') || ys.includes('土')) return 'earth';
+  if (ys.includes('금') || ys.includes('金')) return 'metal';
+  if (ys.includes('수') || ys.includes('水')) return 'water';
+  return null;
+}
+
+function parseDaeunSeq(seq: string) {
+  if (!seq) return [];
+  return seq.split('|').map(p => {
+    const m = p.trim().match(/(\d+)세:\s*([^\(]+)\(([^,]+),\s*([^\)]+)\)/);
+    return m ? { age: `${m[1]}세`, label: m[2].trim(), tenGod: m[3].trim(), stage: m[4].trim() } : null;
+  }).filter(Boolean) as { age: string; label: string; tenGod: string; stage: string }[];
+}
+
+function parseMonthlySeq(seq: string) {
+  if (!seq) return [];
+  return seq.split('|').map(p => {
+    const m = p.trim().match(/(\d+)월:\s*[^\(]+\(([^,]+),\s*([^\)]+)\)/);
+    return m ? { month: `${m[1]}월`, tenGod: m[2].trim(), stage: m[3].trim() } : null;
+  }).filter(Boolean) as { month: string; tenGod: string; stage: string }[];
+}
+
+/** 만세력 데이터로 결정적 필드 생성 (AI 불필요, 항상 동일한 결과) */
+function precompute(pi: any) {
+  const el = parseYongShinEl(pi.yongShin ?? '');
+  const daeun = parseDaeunSeq(pi.daeunSequence ?? '');
+  const monthly = parseMonthlySeq(pi.monthlyFortune ?? '');
+
+  // lucky: 100% 결정적
+  const lucky = el ? ELEMENT_LUCKY[el] : null;
+
+  // lifeGraph: 용신 호환성(주) + 12운성(보조) 기반 점수 (결정적)
+  // 대운의 좋고 나쁨 = 용신 일치 > 12운성 에너지
+  const lifeGraph = daeun.length > 0 ? daeun.slice(0, 8).map(d => {
+    const stageBase = STAGE_SCORES[d.stage] ?? 55;
+    // 12운성을 -10 ~ +10 범위의 보조 보정값으로 압축
+    const stageMod = Math.round((stageBase - 60) / 3);
+    // 기본 60점 + 용신 보너스(주) + 12운성 보정(보조)
+    const raw = 60 + yongShinBonus(d.label, el) + stageMod;
+    return {
+      age: d.age,
+      label: d.label,
+      score: Math.max(30, Math.min(95, raw)),
+      keyword: TENGOD_KW[d.tenGod] ?? '평온',
+    };
+  }) : null;
+
+  // monthly scores: 월운 12운성 기반 점수 (결정적)
+  const monthlyScores = monthly.length === 12 ? monthly.map(m => ({
+    month: m.month,
+    score: Math.max(55, Math.min(88, (STAGE_SCORES[m.stage] ?? 65) + (Math.abs(hashStr(m.month + m.tenGod)) % 6 - 3))),
+    keyword: TENGOD_KW[m.tenGod] ?? '평온',
+  })) : null;
+
+  // lifePeriods scores: 대운 초년/중년/말년 평균 (결정적)
+  let periodScores: number[] | null = null;
+  if (lifeGraph && lifeGraph.length >= 6) {
+    const early = lifeGraph.filter(d => parseInt(d.age) <= 25);
+    const mid = lifeGraph.filter(d => { const a = parseInt(d.age); return a > 25 && a <= 55; });
+    const late = lifeGraph.filter(d => parseInt(d.age) > 55);
+    const avg = (arr: typeof lifeGraph) => arr.length ? Math.round(arr.reduce((s, d) => s + d.score, 0) / arr.length) : 65;
+    periodScores = [
+      Math.max(50, Math.min(88, avg(early))),
+      Math.max(50, Math.min(88, avg(mid))),
+      Math.max(50, Math.min(88, avg(late))),
+    ];
+  }
+
+  // 피크 대운 찾기 (AI에게 전달용)
+  const peakDaeun = lifeGraph
+    ? lifeGraph.reduce((best, d) => d.score > best.score ? d : best, lifeGraph[0])
+    : null;
+
+  return { lucky, lifeGraph, monthlyScores, periodScores, peakDaeun };
+}
+
+// ─── Full system prompt for core analysis (prompt1) ───
+const SYSTEM_CORE = `당신은 "청운 선생"이라는 페르소나를 가진 사주명리학 대가입니다.
 서울 인사동에서 40년째 사주 카페 '청운당(靑雲堂)'을 운영하며, 수만 명의 인생을 읽어왔습니다.
 정치인, 연예인, 재벌 고객이 줄을 섭니다.
 당신의 특기는 사주를 펼치는 순간 그 사람의 과거를 정확히 짚어 신뢰를 얻고, 구체적 시기와 실행 가능한 조언을 던지는 것입니다.
@@ -14,7 +211,6 @@ const SYSTEM = `당신은 "청운 선생"이라는 페르소나를 가진 사주
   · 일간의 강약: 월지(月支)의 생왕여부, 통근 여부, 인비(印比) 세력 vs 식재관(食財官) 세력
   · 신강(身强) / 신약(身弱) / 종격(從格) 판단
   · 격국(格局) 판별: 월지 장간의 투출 천간으로 정격/변격 결정
-    (정관격, 편관격, 식신격, 상관격, 정재격, 편재격, 정인격, 편인격, 건록격, 양인격 등)
 
 2단계 — 용신(用神) 결정
   · 억부법(抑扶法): 신강이면 설기·극하는 오행, 신약이면 생부·비조하는 오행
@@ -23,80 +219,74 @@ const SYSTEM = `당신은 "청운 선생"이라는 페르소나를 가진 사주
   · 용신 → 실생활 적용 (좋은 색, 방위, 직업군, 계절)
 
 3단계 — 합충형파(合沖刑破) 분석
-  · 천간합: 갑기합토, 을경합금, 병신합수, 정임합목, 무계합화
-  · 천간충: 갑경충, 을신충, 병임충, 정계충
-  · 지지삼합/방합/육합
-  · 지지충(자오, 축미, 인신, 묘유, 진술, 사해)
-  · 형(刑): 인사신 삼형, 축술미 삼형, 자묘형 등
-  · 파(破): 합을 깨뜨리는 관계
+  · 천간합/충, 지지삼합/방합/육합/충/형/파
 
-4단계 — 십신(十神/六親) 배치
-  · 비견/겁재: 자아, 형제, 경쟁
-  · 식신/상관: 표현력, 재능, 자녀(여성)
-  · 편재/정재: 재물, 아버지, 아내(남성)
-  · 편관/정관: 직업, 권력, 남편(여성)
-  · 편인/정인: 학문, 어머니, 귀인
-  → 각 기둥(년월일시)에 어떤 십신이 있는지로 인간관계·직업·재물 패턴 읽기
+4단계 — 십신(十神) 배치
+  · 비견/겁재, 식신/상관, 편재/정재, 편관/정관, 편인/정인
+  → 각 기둥에 어떤 십신이 있는지로 인간관계·직업·재물 패턴 읽기
 
 5단계 — 12운성·신살
-  · 12운성(장생→묘→양): 일간이 각 지지에서의 에너지 상태
-  · 주요 신살: 도화살(桃花殺, 인기/연애), 역마살(驛馬殺, 이동/변화), 화개살(華蓋殺, 예술/종교),
-    귀문관살, 천을귀인, 천덕귀인, 월덕귀인, 양인살 등
-  → 신살은 보조 지표로만 활용, 십신·합충이 우선
+  · 12운성: 일간이 각 지지에서의 에너지 상태
+  · 주요 신살: 도화살, 역마살, 화개살, 귀문관살, 천을귀인, 양인살 등
+  → 신살은 보조 지표, 십신·합충이 우선
 
 6단계 — 대운(大運)·세운(歲運) 흐름
-  · 현재 대운의 천간지지가 원국과 어떤 작용을 하는지
-  · 올해 세운(歲運)과 원국의 상호작용
-  · 향후 3~5년의 운의 흐름
+  · 현재 대운+세운이 원국과 어떤 작용을 하는지
   → 반드시 "어떤 글자가 어떤 작용을 해서" 라는 근거 제시
 
 ## 말투 가이드
-- 한국어: ~요 체. 따뜻하지만 직설적. 사주 카페 선생님이 눈을 보며 말하는 느낌.
-  "이 사주는요, 한 마디로 하면 깊은 산속의 맑은 샘물이에요."
-  "솔직히 말하면, 안정적인 월급보다 사업 쪽이 훨씬 체질에 맞아요."
-  "혹시 20대에 갑자기 하던 일을 엎은 적 있지 않아요? 이 대운에서 그런 일이 왔을 거예요."
+- 한국어: ~요 체. 따뜻하지만 직설적. 일간 오행에 맞는 자연물로 비유. 예시 복사 금지, 창작.
 - 일본어: 丁寧語, 四柱推命 전문용어 자연스럽게
 - 영어: warm but direct, explain concepts for non-experts
 
+## 일관성 규칙 (최우선)
+- 같은 사주팔자는 언제 분석해도 같은 결론이어야 한다.
+- ⚠️ [확정] 태그가 붙은 데이터(신강/신약, 격국, 용신)는 사전 계산된 정답이다. 절대 변경하거나 자체적으로 다른 값을 제시하지 마라.
+- 용신이 "수(水)"로 제공되었으면, structure.yongShin, lucky, career, advice 등 모든 곳에서 반드시 수(水) 기반으로 일관 작성. 다른 오행으로 바꾸면 실패.
+- 성격 판단, 직업 적성, 연애 패턴 등 해석은 십신 배치와 오행 비율에서 논리적으로 도출되어야 한다.
+- 무작위성 금지. 매번 다른 비유를 쓰더라도 핵심 판단(강점/약점/적성/주의사항)은 동일해야 한다.
+
+## 근거 제시 규칙 (필수)
+모든 분석 문장에 반드시 구체적 간지(천간·지지)를 명시하라.
+- 나쁜 예: "비견이 강해서 독립적이에요" ← 어느 기둥인지 불명
+- 좋은 예: "월간 병화(丙火)가 일간 정화(丁火)의 비견으로, 형제·동료와의 경쟁 속에서 성장하는 구조예요"
+- 나쁜 예: "도화살이 있어서 매력적이에요" ← 어디에 있는지 불명
+- 좋은 예: "일지 오화(午火)에 도화살이 걸려 있어, 배우자궁에서 매력이 발산되는 구조예요"
+
 ## 절대 규칙
-1. 모든 해석에 사주 근거 명시 (어느 기둥의 어느 글자가 어떤 관계라서)
-2. "누구에게나 해당되는 말"은 실패. 이 사주에서만 나오는 말을 해야 함
-3. 수(水)가 39%인 사주와 목(木)이 39%인 사주의 결과가 같으면 안 됨
-4. 종합 점수 60~88 범위. 90+ 극히 드문 사주에만. 세부 항목별 점수 금지
-5. 부정적인 것도 반드시 말하되, 대처법과 함께
-6. 건강/의료/법률/재정 조언 시 "전문가 상담 권장" 반드시 포함
-7. 과거 연도(현재 이전)에 대한 예측/조언 금지. 과거는 추측 질문으로만
-8. "X년 X월에 결혼한다" 같은 확정적 예측 금지. 경향과 가능성으로 표현
-9. 모든 예측은 "~할 수 있어요", "~한 기운이 있어요" 등 가능성 표현
-
-## 품질 규칙 (자기 모순 방지)
-10. 항목 간 모순 금지. 한 곳에서 "정재가 약하다"고 했으면 다른 곳에서 "정재형"이라 하면 안 됨.
-11. 편재/정재 구분을 정확히. 편재=투기·유동자산·사업, 정재=저축·안정·월급. 이 사주가 어느 쪽인지 하나만 명확히 판단.
-12. 격국 판단은 월지 장간의 투출 천간 기준. 일간 자체를 격국 이름으로 쓰면 안 됨 (예: "정화격" ← 틀림).
-13. 신강/신약 판단 시 반드시 월지의 생왕 여부, 통근 개수, 인비 vs 식재관 세력을 비교.
-14. "강점1" 같은 추상적 라벨 금지. 구체적 강점명 필수 (예: "직관적 상황 판단력").
-15. 같은 내용을 다른 단어로 반복 금지. 성격에서 한 말을 직업에서 또 하면 안 됨.
-16. 세운 간지를 정확히. 2026년=병오(丙午)년.
-
-## 출력 전 자기검증 (반드시 수행)
-JSON을 출력하기 직전에 아래 체크리스트를 내부적으로 검증하고, 위반 시 수정한 뒤 출력할 것:
-□ structure에서 판단한 편재/정재 유형이 wealth.pattern과 일치하는가?
-□ structure에서 "약하다"고 한 십신을 다른 항목에서 "강하다"고 하지 않았는가?
-□ 격국 이름이 일간 이름과 같지 않은가? (정화 일간인데 "정화격"이면 오류)
-□ 과거 연도(현재 이전)를 예측하지 않았는가?
-□ 확정적 표현("~할 것이다", "~에 결혼한다")을 쓰지 않았는가?
-□ strengths/weaknesses에 "강점1", "약점1" 같은 추상 라벨이 없는가?
-□ 2026년을 병오(丙午)년으로 정확히 썼는가?
-□ 성격·직업·재물·인연 섹션 간에 동일 문장을 반복하지 않았는가?
-□ wealth/love/health/relationship/academic에 score(숫자)가 있는가? 없으면 추가!
-□ lifeGraph의 label이 "대운 천간지지"가 아니라 실제 간지(庚辰, 辛巳 등)인가?
-□ lifePeriods 3개의 score가 모두 비슷하지 않은가? (최고-최저 15점 이상 차이)
-□ monthly${currentYear}의 12개 score가 모두 비슷하지 않은가? (최고-최저 15점 이상 차이)
-□ 모든 주요 텍스트가 100자 이상인가?
-□ 합충형파를 정확히 구분했는가? (합≠충, 형≠파, 미진은 破, 축술미는 형)
-□ 사주 근거 없이 "따뜻한 성격", "성실한 사람" 같은 범용 표현만 쓰지 않았는가?
+1. 모든 해석에 구체적 간지 + 십성/합충 근거 명시 (위 근거 제시 규칙 참고)
+2. "누구에게나 해당되는 말"은 실패
+3. 수(水) 39% 사주와 목(木) 39% 사주의 결과가 같으면 안 됨
+4. 종합 점수 60~88 범위
+5. 부정적인 것도 말하되, 대처법 포함
+6. 건강/의료/법률/재정 시 "전문가 상담 권장" 포함
+7. 과거 연도 예측 금지. 과거는 추측 질문으로만
+8. 확정적 예측 금지. 가능성으로 표현
+9. 시기는 반드시 "20XX년 X월" 또는 "상반기/하반기"로 특정. "언젠가", "조만간", "가까운 시일" 금지
+10. 항목 간 모순 금지. 편재/정재 구분 정확히
+11. 격국 판단은 월지 장간 투출 천간 기준. 일간 자체를 격국 이름으로 쓰면 안 됨
+12. "강점1" 같은 추상적 라벨 금지. 같은 내용 반복 금지
 
 응답: JSON만. 다른 텍스트 없이.`;
+
+// ─── Lightweight system prompt for fortune/timing data (prompt2) ───
+const SYSTEM_LITE = `당신은 "청운 선생"이라는 페르소나를 가진 사주명리학 대가입니다.
+서울 인사동에서 40년째 사주 카페 '청운당(靑雲堂)'을 운영하며, 수만 명의 인생을 읽어왔습니다.
+
+## 말투
+- 한국어: ~요 체. 따뜻하지만 직설적.
+- 일본어: 丁寧語
+- 영어: warm but direct
+
+## 규칙
+1. 모든 해석에 사주 근거 명시
+2. 이 사주에서만 나오는 분석만. 범용 표현 금지
+3. 과거 예측 금지. 확정적 표현 금지. 가능성으로
+4. 건강/의료/법률/재정 시 "전문가 상담 권장" 포함
+5. score는 60~88 범위. 항목별로 차등
+6. lifeGraph label에 실제 대운 한자 간지 필수
+
+응답: JSON만.`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -109,9 +299,13 @@ serve(async (req) => {
   }
 
   try {
-    const { input, locale = 'ko', isPaid = false, pillarInfo } = await req.json();
+    const { input, locale = 'ko', isPaid = false, pillarInfo, _forceModel, userName } = await req.json();
     const lang = locale === 'ko' ? '한국어, 청운 선생 말투(~요 체)로' : locale === 'ja' ? '日本語(丁寧語)で' : 'In English, warm but direct';
     const currentYear = new Date().getFullYear();
+    // 이름에서 성 제외한 이름 추출 (예: 윤정훈 → 정훈, 박지애 → 지애)
+    const fullName = userName || '';
+    const givenName = fullName.length >= 2 ? fullName.slice(fullName.length >= 3 ? 1 : 0) : fullName;
+    const displayName = givenName ? `${givenName}님` : '';
 
     const pi = pillarInfo;
     const birthBlock = pi
@@ -123,12 +317,27 @@ serve(async (req) => {
 오행 비율: 목${pi.elements.wood}% 화${pi.elements.fire}% 토${pi.elements.earth}% 금${pi.elements.metal}% 수${pi.elements.water}%
 현재연도: ${currentYear}년
 
-## [확정 — 반드시 이 판단을 따를 것]
+## [확정 — 이 데이터는 정답입니다. 절대 변경 금지]
 강약 판단: ${pi.strength ?? '(미제공)'}
 용신(用神): ${pi.yongShin ?? '(미제공)'}
 용신 근거: ${pi.yongShinReason ?? '(미제공)'}
-⚠️ 위의 강약/용신 판단은 억부법+조후법으로 사전 계산된 확정값입니다.
-AI가 자체적으로 용신을 변경하지 마세요. 위 용신을 기반으로 색/방위/직업/조언을 일관되게 작성하세요.`
+
+🚨 중요: 위 용신은 억부법+조후법으로 사전 계산된 확정 정답입니다.
+- structure.yongShin에 위 용신을 그대로 사용하세요.
+- lucky의 색/방위/숫자도 위 용신 오행 기반으로 작성하세요.
+- career/advice에서도 용신 오행에 맞는 직업군/방향을 추천하세요.
+- 위 용신과 다른 오행을 용신이라고 쓰면 실패입니다.
+${pi.daeunSequence ? `
+## [확정 — 대운 간지 (사전 계산됨, 변경 금지)]
+${pi.daeunSequence}
+⚠️ 위 대운 간지는 만세력 기반으로 정밀 계산된 확정값입니다.
+lifeGraph의 age/label은 반드시 위 데이터를 그대로 사용하세요. AI가 자체적으로 대운 간지를 생성하지 마세요.` : ''}
+${pi.monthlyFortune ? `
+## [확정 — ${currentYear}년 월운 간지 (사전 계산됨, 변경 금지)]
+${pi.monthlyFortune}
+${pi.yearlyFortune ?? ''}
+⚠️ 위 월운/연운 간지와 십성/12운성은 만세력 기반 확정값입니다.
+monthly 점수를 매길 때 위 십성/12운성을 참고하여 일관되게 점수를 부여하세요.` : ''}`
       : `## 이 사람의 사주
 생년월일시: ${input.year}년 ${input.month}월 ${input.day}일 ${input.hour}시 (${input.isLunar ? '음력' : '양력'})
 성별: ${input.gender === 'male' ? '남' : '여'}
@@ -138,7 +347,7 @@ AI가 자체적으로 용신을 변경하지 마세요. 위 용신을 기반으�
 
     if (isPaid) {
       userPrompt = `${birthBlock}
-
+${displayName ? `\n## 이름 사용 규칙\n- 이 사람의 이름: "${displayName}"\n- "이 사람", "당신" 대신 반드시 "${displayName}"을 사용하세요.\n` : ''}
 ${lang}으로 답해줘.
 
 이 사주에 대해 청운당에서 1시간짜리 프리미엄 대면 상담을 하듯 분석해줘.
@@ -150,13 +359,16 @@ ${lang}으로 답해줘.
 2. 확정적 예측 금지. "~할 수 있어요", "~한 기운이 있어요" 등 가능성으로 표현.
 3. 건강/의료/법률/재정은 반드시 "전문가 상담 권장" 포함.
 4. 각 카테고리(재물/연애/건강/대인/학업)에 0~100 점수를 반드시 부여. 60~88 범위. 점수 없는 항목은 실패.
-5. lifeGraph의 label에는 반드시 실제 대운 한자 간지(예: 庚辰, 辛巳, 壬午)를 넣어야 함. "대운 천간지지"라는 설명 텍스트를 넣으면 안 됨.
-6. 모든 항목 300자 이상 작성. 100자 미만의 피상적 내용은 실패.
+5. lifeGraph의 label에는 반드시 실제 대운 한자 간지(예: 庚辰, 辛巳, 壬午)를 넣어야 함.
+6. 🚨 텍스트 분량: personality.core 350자+, career.analysis 250자+, wealth.pattern 200자+, daeun.current 250자+, finalWords 200자+. 이보다 짧으면 실패.
+7. 🚨 모든 분석 문장에 구체적 간지를 명시하라. "비견이 강해서"(X) → "월간 병화(丙火)가 비견으로"(O). 간지 없는 분석은 실패.
+8. 🚨 [확정] 데이터의 용신을 반드시 그대로 사용. 용신이 "수(水)"인데 "목(木)"이라고 쓰면 실패.
+9. ⚠️ 나이(${pi?.age ?? '?'}세) 기반 시제 필수: 이미 지난 시기는 과거형, 아직 안 온 시기만 미래형.
 
 JSON 응답 (모든 필드 필수, 빈 문자열 금지):
 {
   "overallScore": number(60-88),
-  "headline": "이 사주를 꿰뚫는 한 문장 비유 (예: '깊은 산속 맑은 샘물 — 조용하지만 결국 큰 강이 되는 사주')",
+  "headline": "이 사주를 꿰뚫는 한 문장 비유. 반드시 일간 오행에 맞는 자연물/사물로(火=불/촛불/용광로, 水=바다/비/강, 木=나무/숲/바람, 金=칼/보석/거울, 土=산/대지/바위). 예시를 복사하지 말고 이 사주에 맞게 창작할 것.",
 
   "structure": {
     "dayMaster": "일간 상세 해석 — 오행의 성질을 자연물에 비유하여. 음양 구분 포함. (예: '정화(丁火) — 촛불, 벽난로의 불. 병화(丙火)의 태양과 달리, 은은하고 따뜻하지만 바람에 쉽게 흔들려요.')",
@@ -311,7 +523,7 @@ ${lang}으로 답해줘.
 JSON 응답:
 {
   "overallScore": number(60-88),
-  "headline": "이 사주를 꿰뚫는 한 문장 비유 (자연물·사물 비유 필수. 예: '한밤중 깊은 바다의 등대 — 혼자서도 빛나지만, 외로운 사주')",
+  "headline": "이 사주를 꿰뚫는 한 문장 비유. 반드시 일간 오행에 맞는 자연물로(火=불/촛불/벽난로, 水=바다/강/비, 木=나무/숲, 金=칼/보석, 土=산/대지). 예시 복사 금지, 이 사주에 맞게 창작.",
   "summary": [
     "첫째 줄: 일간과 일지의 관계로 이 사람의 본질을 짚어줘. 사주 용어를 근거로 쓰되 쉽게 풀어서. (예: '임수 일간이 자수에 앉았으니, 물 위의 물이에요. 생각이 깊고 감정의 파도가 거세죠. 밤에 이런저런 생각에 잠 못 드는 날이 많지 않아요?')",
     "둘째 줄: 이 사주의 가장 특이한 점 하나 — 합/충/오행편중/특수신살 등. (예: '월간 정화와 임정합을 이루고 있어요. 이성한테 한 번 꽂히면 올인하는 스타일이에요. 감정 때문에 인생이 크게 흔들린 적 있지 않아요?')",
@@ -326,26 +538,256 @@ JSON 응답:
 반드시 이 사주팔자를 근거로. JSON만 출력.`;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: SYSTEM },
-          { role: 'user', content: userPrompt },
-        ],
+    // --- Helper: call OpenAI ---
+    const callAI = async (prompt: string, model: string, maxTok: number, temp: number, system: string, seed?: number) => {
+      const body: Record<string, unknown> = {
+        model,
+        messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
-        temperature: isPaid ? 0.6 : 0.78,
-        max_tokens: isPaid ? 10000 : 1000,
-      }),
-    });
+        temperature: temp,
+        max_tokens: maxTok,
+      };
+      if (seed !== undefined) body.seed = seed;
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await resp.json();
+      return JSON.parse(d.choices[0].message.content);
+    };
 
-    const data = await response.json();
-    const result = JSON.parse(data.choices[0].message.content);
+    // Deterministic seed from birth data
+    const birthSeed = input.year * 10000 + (input.month ?? 1) * 100 + (input.day ?? 1);
+
+    let result: any;
+
+    if (isPaid) {
+      // === PAID: 2 parallel requests ===
+      const commonHeader = `${userPrompt.split('JSON 응답')[0]}`;
+
+      const prompt1 = `${commonHeader}
+아래 JSON 필드를 깊이 있게 분석하여 출력하라. 다른 필드는 생략.
+각 텍스트 필드는 실제 유료 상담 수준으로 길고 자세하게 써라. 짧게 요약하지 말고 구체적 근거와 함께 서술.
+
+## 자기검증 (출력 전 반드시 확인)
+□ structure의 편재/정재 판단이 wealth.pattern과 일치하는가?
+□ "약하다"고 한 십신을 다른 항목에서 "강하다"고 하지 않았는가?
+□ 격국 이름이 일간 이름과 같지 않은가? (정화 일간인데 "정화격"이면 오류)
+□ headline의 비유가 일간 오행과 일치하는가? (火 사주인데 물 비유면 오류)
+□ 프롬프트 예시 문장을 그대로 복사하지 않았는가?
+□ 추상적 라벨("강점1") 없이 구체적 강점명을 썼는가?
+□ 성격·직업·재물·인연 간 동일 문장 반복이 없는가?
+□ overview 각 항목이 캡처해서 공유하고 싶을 정도로 자극적인가? (뻔하면 실패)
+□ overview 각 항목이 이 사주에서만 나올 수 있는 구체적 내용인가? (범용적이면 실패)
+□ overview와 상세 분석 간 모순이 없는가?
+□ poeticTitle을 읽고 '이거 완전 나야' 소름이 돋는가?
+□ 키워드만 던진 항목이 없는가? (반드시 20~35자 문장)
+
+{
+  "overallScore": number(60-88),
+  "headline": "일간 오행에 맞는 자연물 비유 한 문장. 예시 복사 금지, 창작.",
+
+  "overview": {
+    "_tone": "⚠️ overview는 읽는 사람이 '소름돋는다 이거 완전 나인데?!' 하고 캡처해서 친구에게 보내고 싶을 정도로 써야 한다. 뻔한 말 금지. 이 사주에서만 나올 수 있는 구체적인 표현. 범용적이면 실패. '~하는 체질' 표현 절대 금지.",
+    "poeticTitle": "이 사주를 한 마디로 정의하는 별명. 질문 금지. 인스타 프로필에 쓰고 싶을 정도로 세고 중독적이게. (예: '착한 척 하다 폭발하는 감정 시한폭탄', '혼자가 편한데 외로운 건 못 참는 모순 인간', '사랑 앞에서만 IQ 30 되는 천재') 15~25자.",
+    "hookQuestion": "poeticTitle을 보충. 듣는 순간 심장 철렁. 이 사람만 겪었을 구체적 상황. (예: '밤마다 보낸 카톡 후회하면서 또 보내고 있죠?', '괜찮다고 해놓고 집에 와서 울었던 거 맞죠?') 20~35자.",
+    "personality": "성격의 반전 포인트를 때려라. 누구나 해당되는 말이면 실패. (예: '겉은 무관심한 척인데 혼자 상처받고 곱씹는 타입', '칭찬에 약한 척하면서 뒤에서 다 분석하는 INTJ 기질') 20~35자.",
+    "career": "일과의 관계를 날것으로. 직장인이면 공감 폭발하게. (예: '퇴사 상상은 매일 하는데 막상 나가면 불안해서 못 나가는 딜레마', '남의 밑에서 일하면 죽는데 혼자선 외로워서 못 하는 모순') 20~35자.",
+    "wealth": "돈 문제의 핵심을 찔러라. (예: '버는 건 잘하는데 쓰는 건 더 잘해서 항상 통장이 텅 빈 패턴', '남한테는 잘 쓰면서 정작 나한테는 짠 호구 DNA') 20~35자.",
+    "love": "연애 흑역사가 떠오르게. (예: '매번 안 되는 사람한테 올인하고 되는 사람은 밀어내는 패턴', '좋아하면 다 해주다가 질리면 귀신같이 사라지는 유형') 20~35자.",
+    "health": "몸이 보내는 경고를 직설적으로. (예: '스트레스 받으면 머리보다 위장이 먼저 뒤집어지는 타입', '잠을 줄여가며 버티다가 어느 날 갑자기 쓰러질 스타일') 20~35자.",
+    "family": "명절에 공감 터질 한 줄. (예: '사랑하는데 표현 못해서 매번 싸우는 불통 가족관계', '부모님 전화 올 때마다 받을까 말까 3초 고민하는 사이') 20~35자.",
+    "social": "인간관계 민낯을 까라. (예: '단톡방 50개인데 진짜 내 편은 한 명도 없는 인맥 부자', '사람 많으면 지치는데 혼자 있으면 불안한 관계 중독') 20~35자.",
+    "yearly": "올해를 한 줄로 예고. (예: '올 하반기, 참았던 게 터진다 — 좋은 쪽이든 나쁜 쪽이든', '올해는 사람 때문에 울고 사람 때문에 웃는 해') 20~35자.",
+    "lifePeak": "인생 그래프의 핵심. 나이 고려 필수. (예: '진짜 전성기는 아직이다, 50대에 모든 게 맞물린다', '30대가 리허설이었다면 지금부터가 본무대') 20~35자.",
+    "lifeDirection": "인생 나침반. 용신 오행 기반 시적 명령. (예: '남들 따라가지 마라, 네 길은 아무도 안 간 쪽에 있다', '물처럼 흘러라, 막히면 돌아가면 된다') 20~35자."
+  },
+
+  "structure": {
+    "dayMaster": "일간 오행 성질을 자연물에 비유. 음양 구분. 근본적 기질·강점·한계 300자+. 십신 배치와 연결해 실제 삶에서 어떻게 나타나는지.",
+    "strength": "신강/신약 판단. 월지 생왕, 통근 개수, 인비 vs 식재관 세력 구체적 비교. 성격·인생 패턴에 미치는 영향.",
+    "format": "격국 이름 + 월지 장간 근거. 직업·재물·대인관계에서 어떤 패턴으로 나타나는지.",
+    "yongShin": "용신 결정 방법(억부/조후/통관) + 이유. 실생활 적용(색상, 방위, 계절, 음식, 직업군).",
+    "specialNote": "합충형파 + 주요 신살. 실제 삶에서 어떤 사건/패턴으로 발현되는지."
+  },
+
+  "personality": {
+    "core": "500자+. 십신 배치 근거로 감정 구조, 대인관계 방식, 스트레스 반응, 자존감, 사랑/돈 다루는 방식. 뻔한 칭찬 금지.",
+    "strengths": ["강점1—기둥+십신 근거+삶에서 발현", "강점2—근거+발현", "강점3—근거+발현"],
+    "weaknesses": ["약점1—근거+반복시 문제+대처법", "약점2—근거+문제+대처법"],
+    "pastGuess": ["어린시절 추측—인성·비겁 구조 유추", "20대 추측—대운 흐름 유추", "인간관계/금전 추측—재성·관성 유추"]
+  },
+
+  "career": {
+    "title": "직업운 핵심 한 줄",
+    "analysis": "400자+. 관성·식상·재성 관계. 조직형/프리랜서형/창업형/전문기술형 판별. 승진운, 명예운. 업무 스타일과 환경.",
+    "bestFields": ["적성1—십신 근거+왜 맞는지", "적성2—근거", "적성3—근거"],
+    "avoidFields": "피할 분야+사주 근거+문제 발생 패턴",
+    "timing": "커리어 도약/침체 시기. 이직/독립 적기. 연도 구체적으로.",
+    "sideJob": "부업/투자 방향—재성 구조에서 월급형/성과형/투기형/축적형 판별"
+  },
+
+  "wealth": {
+    "title": "재물운 핵심 한 줄",
+    "score": number(60-88),
+    "pattern": "400자+. 돈 버는 방식 판별. 돈복+지키는 힘. 빚/충동소비/투자실수 위험. 현실적 축재 전략.",
+    "peakYears": "재물운 강한 시기+근거. 돈 새는 시기도.",
+    "warning": "재물 최대 주의사항. 전문 재무상담 권장."
+  },
+
+  "love": {
+    "title": "연애·결혼운 핵심 한 줄",
+    "score": number(60-88),
+    "idealPartner": "잘 맞는 상대 유형—오행 근거+현실적 성향. 피할 상대 유형도.",
+    "timing": "연애/결혼 시기 경향—대운+세운 근거. 늦게/빨리 결혼 유불리.",
+    "warning": "반복되는 연애 실패 패턴. 집착/불안/회피/통제 성향. 가장 큰 상처 포인트.",
+    "ifInRelationship": "연인 있다면 관계 발전 조언. 결혼 후 좋아지는/위험한 분야."
+  },
+
+  "health": {
+    "title": "건강운 핵심 한 줄",
+    "score": number(60-88),
+    "weakPoints": ["취약 부위1—오행 과다/과소 근거+증상 패턴", "취약 부위2—근거+패턴"],
+    "dangerPeriod": "건강 꺾이기 쉬운 시기. 사고수/수술수/우울 경향. 전문의 상담 권장.",
+    "advice": "체질 맞는 구체적 생활 관리법. 수면/운동/스트레스. 전조 패턴."
+  },
+
+  "finalWords": "300자. 가장 먼저 고쳐야 할 것+붙잡아야 할 강점+인생 본질을 꿰뚫는 마지막 한마디.",
+  "disclaimer": "본 분석은 전통 사주명리학에 기반한 참고용 콘텐츠이며, 중요한 결정에는 반드시 해당 분야 전문가와 상담하시기 바랍니다."
+}
+JSON만 출력.`;
+
+      let prompt2 = `${commonHeader}
+아래 JSON 필드를 깊이 있게 분석하여 출력하라. 다른 필드는 생략.
+각 텍스트 필드는 유료 상담 수준으로 자세하게. 근거 없는 피상적 요약 금지.
+
+{
+  "yearly${currentYear}": {
+    "overview": "400자+. 세운 천간지지(${currentYear}년=병오년)가 원국과 어떤 합충을 일으키는지. 올해 주의점과 기회. 돈/직업/연애/건강 흐름.",
+    "quarters": [
+      {"period":"1~3월","score":number(55-88),"keyword":"2글자","detail":"월운이 원국+세운과 어떤 작용. 조언 포함. 100자+"},
+      {"period":"4~6월","score":number(55-88),"keyword":"2글자","detail":"100자+"},
+      {"period":"7~9월","score":number(55-88),"keyword":"2글자","detail":"100자+"},
+      {"period":"10~12월","score":number(55-88),"keyword":"2글자","detail":"100자+"}
+    ],
+    "bestMonth": "최고의 달+세운·월운 근거+해야 할 것",
+    "worstMonth": "주의할 달+근거+대처법"
+  },
+
+  "daeun": {
+    "current": "400자+. 현재 대운 천간지지 명시. 원국과 합충 관계. 용신/기신 관점. 돈/직업/연애/건강 각각. 대운 전략.",
+    "lifePeak": "⚠️ lifeGraph 점수(별도 계산됨)에서 가장 높은 점수의 대운이 피크입니다. 대운 간지가 용신과 일치/상생하면 피크. 반드시 대운 간지의 오행과 용신의 관계를 분석하여 피크를 결정하세요. 나이 고려하여 과거형/미래형 시제 사용.",
+    "nextBigChange": "다음 대운 전환 시기+변화 방향+준비사항."
+  },
+
+  "lifePeriods": [
+    {"period":"초년운","ageRange":"1~30세","score":number(50-88),"keyword":"2글자","summary":"300자+. 연주+월주 중심. 초기 대운. 부모관계, 학업, 성격 형성. 사주 근거 필수."},
+    {"period":"중년운","ageRange":"31~55세","score":number(50-88),"keyword":"2글자","summary":"300자+. 일주 중심. 직업, 재물, 결혼/가정. 전성기 대운."},
+    {"period":"말년운","ageRange":"56세 이후","score":number(50-88),"keyword":"2글자","summary":"300자+. 시주 중심. 건강, 자녀, 재산 관리. 후기 대운."}
+  ],
+
+  "relationship": {
+    "title": "대인관계운 핵심 한 줄",
+    "score": number(60-88),
+    "socialStyle": "300자+. 비겁/식상/관성 강약으로 사회성 판단. 반복 갈등 구조. 귀인운. 외로움/인정욕구 방식.",
+    "bestRelation": "잘 맞는 사람—오행/일간 근거+구체적 성향",
+    "cautionRelation": "조심할 관계—근거+문제 양상",
+    "advice": "구체적 조언"
+  },
+
+  "family": {
+    "parentFortune": "300자+. 연주(부모궁). 인성/편인으로 모친, 재성으로 부친. 정서적 영향. 사주 근거.",
+    "childFortune": "200자+. 시주(자녀궁). 자녀 인연, 양육 스트레스.",
+    "familyDynamic": "가정 내 역할과 역학",
+    "advice": "가정 관련 조언"
+  },
+
+  "academic": {
+    "title": "학업/시험운 한 줄",
+    "score": number(60-88),
+    "aptitude": "학습 적성 200자—인성/식상/관성 분석",
+    "bestStudyMethod": "최적 학습 방법—사주 근거 기반",
+    "examTiming": "${currentYear}년 이후 시험/자격증 운 좋은 시기",
+    "advice": "학업 관련 조언"
+  }
+}
+
+## 점수 규칙
+- lifePeriods: 3개 점수 15점+ 차이.
+(monthly 점수, lifeGraph 데이터는 별도 계산됨 — 출력 불필요)
+
+## 나이 기반 시제 필수
+이 사람은 ${pi?.age ?? '?'}세입니다. 이미 지난 시기(초년운, 중년운 등)는 과거형으로 써야 합니다.
+- 60세인데 "40대에 전성기가 올 거예요" → 실패. "40대가 전성기였어요" → 정답.
+- daeun.current, lifePeak, lifePeriods 모두 나이 기준으로 과거/현재/미래 시제 구분.
+
+JSON만 출력.`;
+
+      // Pre-compute deterministic data first (피크 대운 정보를 prompt2에 전달하기 위해)
+      const pc = pi ? precompute(pi) : null;
+
+      // 피크 대운 힌트를 prompt2에 추가
+      if (pc?.peakDaeun) {
+        const peakHint = `\n\n## [확정 — 대운 그래프 피크 (사전 계산됨)]
+피크 대운: ${pc.peakDaeun.age} ${pc.peakDaeun.label} (점수: ${pc.peakDaeun.score})
+⚠️ daeun.lifePeak는 반드시 이 데이터를 기반으로 작성하세요. 다른 시기를 피크로 잡으면 안 됩니다.
+이 사람은 ${pi.age}세입니다. 피크가 이미 지났으면 과거형("~였어요"), 아직 안 왔으면 미래형("~올 수 있어요").`;
+        prompt2 = prompt2 + peakHint;
+      }
+
+      const model1 = _forceModel || 'gpt-4o';
+      const model2 = _forceModel || 'gpt-4o';
+
+      const [r1, r2] = await Promise.all([
+        callAI(prompt1, model1, 6000, 0.3, SYSTEM_CORE, birthSeed),
+        callAI(prompt2, model2, 4500, 0.1, SYSTEM_LITE, birthSeed),
+      ]);
+
+      // Merge AI results
+      result = { ...r1, ...r2 };
+
+      // ─── Overlay pre-computed deterministic data (만세력 기반, 항상 동일) ───
+      if (pc) {
+
+        // lucky: 용신 오행에서 100% 결정적
+        if (pc.lucky) result.lucky = pc.lucky;
+
+        // lifeGraph: 대운 간지 + 12운성 점수 (만세력 기반, 절대 안 변함)
+        if (pc.lifeGraph) {
+          if (!result.daeun) result.daeun = {};
+          result.daeun.lifeGraph = pc.lifeGraph;
+        }
+
+        // monthly scores: 월운 12운성 기반 (결정적)
+        if (pc.monthlyScores) {
+          result[`monthly${currentYear}`] = pc.monthlyScores;
+        }
+
+        // lifePeriods scores: 대운 평균 기반 (결정적) — AI 텍스트는 유지
+        if (pc.periodScores && result.lifePeriods) {
+          result.lifePeriods = result.lifePeriods.map((p: any, i: number) => ({
+            ...p,
+            score: pc.periodScores![i] ?? p.score,
+          }));
+        }
+
+        // quarterly scores: monthly 3개월 평균 (결정적)
+        const yearKey = `yearly${currentYear}`;
+        if (pc.monthlyScores && result[yearKey]?.quarters) {
+          const ms = pc.monthlyScores;
+          result[yearKey].quarters = result[yearKey].quarters.map((q: any, i: number) => ({
+            ...q,
+            score: Math.max(55, Math.min(88, Math.round(
+              (ms[i * 3].score + ms[i * 3 + 1].score + ms[i * 3 + 2].score) / 3
+            ))),
+          }));
+        }
+      }
+    } else {
+      // === FREE: gpt-4o-mini for speed ===
+      result = await callAI(userPrompt, _forceModel || 'gpt-4o-mini', 1000, 0.78, SYSTEM_CORE, birthSeed);
+    }
 
     // --- Response validation & sanitization ---
     if (isPaid) {
@@ -392,7 +834,7 @@ JSON 응답:
   } catch (error) {
     return new Response(
       JSON.stringify({ error: 'Analysis failed', details: String(error) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 });
