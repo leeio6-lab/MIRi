@@ -25,6 +25,7 @@ import { FaceGuide } from '../../src/components/face/FaceGuide';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { usePurchaseStore } from '../../src/stores/purchaseStore';
 import { useFace } from '../../src/hooks/useFace';
+import { detectFaceLocal } from '../../src/utils/face-detect';
 
 const { width } = Dimensions.get('window');
 
@@ -177,9 +178,21 @@ export default function FaceScreen() {
     }
   };
 
-  // ─── Analysis ───
+  // ─── Analysis (클라이언트 얼굴 사전검증 포함) ───
   const startAnalysis = async () => {
     if (!imageUri) return;
+
+    // 1단계: 클라이언트 사이드 얼굴 검증 (무료, 즉시)
+    const faceCheck = await detectFaceLocal(imageUri);
+    if (!faceCheck.hasFace && faceCheck.confidence !== 'skip') {
+      Alert.alert(
+        t('face.noFaceTitle') || '얼굴을 찾을 수 없어요',
+        t('face.noFaceLocal') || '사람 얼굴이 포함된 정면 사진을 선택해주세요.',
+      );
+      return;
+    }
+
+    // 2단계: 서버 API 호출
     const faceRes = await analyze(imageUri);
     if (faceRes) {
       useFaceTicket();
