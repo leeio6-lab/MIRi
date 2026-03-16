@@ -417,20 +417,6 @@ export default function HomeScreen() {
         </Animated.View>
       )}
 
-      {/* ── 연속 출석 배지 ── */}
-      {streakCount > 0 && (
-        <Animated.View entering={FadeInDown.delay(120).duration(500)}>
-          <TouchableOpacity
-            style={styles.streakRow}
-            onPress={() => setShowStreakModal(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.streakIcon}>{'\uD83D\uDD25'}</Text>
-            <Text style={styles.streakCount}>{streakCount}</Text>
-            <Text style={styles.streakLabel}>{t('home.streakBadge', { count: streakCount })}</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
 
       {/* ── 일간 + 주 오행 ── */}
       {pillars && (
