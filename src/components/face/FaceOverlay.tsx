@@ -40,10 +40,10 @@ interface FaceOverlayProps {
 
 const LABEL_META: Record<string, { label: string; side: 'left' | 'right' }> = {
   forehead: { label: '천정(天庭)', side: 'right' },
-  eyes:     { label: '감찰관(監察)', side: 'left' },
+  eyes:     { label: '감찰관(監察)', side: 'right' },
   nose:     { label: '재백궁(財帛)', side: 'right' },
-  mouth:    { label: '출납관(出納)', side: 'left' },
-  jawline:  { label: '지각(地閣)', side: 'right' },
+  mouth:    { label: '출납관(出納)', side: 'right' },
+  jawline:  { label: '지각(地閣)', side: 'left' },
   ears:     { label: '채청관(採聽)', side: 'right' },
 };
 
@@ -255,17 +255,31 @@ export function FaceOverlay({
   const centerY = imageSize / 2;
   const LINE_LEN = imageSize * 0.18;
 
-  // Resolve position: API 반환 좌표 우선 사용, 없으면 static fallback
+  // 관상화 전용 좌표 — gpt-image-1이 생성하는 초상화의 일관된 구도에 맞춤
+  // (얼굴이 프레임 70% 차지, 약간 좌측 3/4 앵글)
+  const PAINTING_POINTS: Record<string, { x: number; y: number }> = {
+    forehead: { x: 0.52, y: 0.14 },
+    eyes:     { x: 0.48, y: 0.32 },
+    nose:     { x: 0.50, y: 0.45 },
+    mouth:    { x: 0.50, y: 0.56 },
+    jawline:  { x: 0.50, y: 0.70 },
+    ears:     { x: 0.22, y: 0.34 },
+  };
+
   const getPoint = useCallback(
     (f: FeatureData) => {
-      // API가 반환한 실제 위치가 있으면 항상 우선 사용
-      if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number') {
+      if (isTransformed) {
+        // 관상화: 구도가 일정하므로 보정된 고정 좌표 사용
+        return PAINTING_POINTS[f.area] ?? FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
+      }
+      // 원본 셀피: API 좌표 우선, 없으면 fallback
+      if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number'
+          && f.position.x > 0.01 && f.position.x < 0.99 && f.position.y > 0.01 && f.position.y < 0.99) {
         return f.position;
       }
-      // Fallback: static points
       return FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
     },
-    [],
+    [isTransformed],
   );
 
   const handleSelect = useCallback(

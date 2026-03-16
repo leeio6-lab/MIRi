@@ -310,21 +310,27 @@ async function transformToOrientalPainting(
   formData.append('image', file);
   formData.append('prompt',
     'Convert this face photo into a beautiful traditional East Asian ink brush portrait (수묵 초상화). ' +
-    'THE #1 PRIORITY: The person in the output MUST be CLEARLY RECOGNIZABLE as the same person in the input photo. ' +
+    '\n\n★ COMPOSITION (매우 중요): ' +
+    '- The face must FILL about 70% of the frame — CLOSE-UP portrait, head and upper shoulders only. ' +
+    '- Slight 3/4 angle view — the face should be turned about 10-15 degrees to one side, NOT perfectly frontal. ' +
+    'This gives the portrait more artistic depth and elegance, like a classical painted portrait. ' +
+    '- Face centered horizontally, forehead starting around 15% from the top of the frame. ' +
+    '- Chin ending around 72% from the top. ' +
+    '\n\n★ IDENTITY (최우선): ' +
+    'The person MUST be CLEARLY RECOGNIZABLE as the same person in the input photo. ' +
     'Their unique facial structure (face shape, eye shape, nose shape, lip shape, jawline) must be preserved EXACTLY. ' +
-    'Someone who knows this person should immediately say "oh that\'s them!" when seeing the portrait. ' +
-    '\n\nSTYLE RULES: ' +
-    '1. PURE WHITE background — clean, bright, no gradients or scenery. ' +
-    '2. Black ink (墨) brush strokes — elegant East Asian calligraphy style. ' +
-    '3. EXPRESSION: Warm, gentle, SLIGHTLY SMILING. Not sad, not gloomy. ' +
-    'If the original expression is neutral or serious, add a subtle pleasant smile — like someone who just heard good news. ' +
-    'The portrait should make the person look their best version — slightly more attractive, approachable, and radiant. ' +
-    '4. SUBTLE BEAUTIFICATION ALLOWED: Slightly smoother skin, slightly brighter eyes, slightly more defined features. ' +
-    'But do NOT change the fundamental face structure. Think "good lighting on a good day", not "plastic surgery". ' +
-    '5. Varied ink density: bold confident strokes for hair outline, fine delicate lines for facial contours, light wash for cheeks and soft areas. ' +
-    '6. Overall feel: bright, warm, elegant, FLATTERING — a portrait you would proudly set as your profile picture. ' +
-    '7. Neck and shoulders with minimal loose strokes, fading naturally into white. ' +
-    '\nABSOLUTELY NO: text, stamps, seals, signatures, borders, frames, background objects, color, gloomy atmosphere, different person.'
+    'Someone who knows this person should immediately say "that\'s them!" when seeing the portrait. ' +
+    '\n\n★ EXPRESSION & BEAUTIFICATION: ' +
+    '- Warm, gentle, SLIGHTLY SMILING — like someone who just heard good news. NOT sad or gloomy. ' +
+    '- Subtle beautification OK: smoother skin, brighter eyes, more defined features. ' +
+    'Think "good lighting on a good day", NOT "plastic surgery". Do NOT change fundamental face structure. ' +
+    '\n\n★ INK BRUSH STYLE: ' +
+    '- PURE WHITE background — clean, bright, no gradients or scenery. ' +
+    '- Black ink (墨) brush strokes — elegant East Asian calligraphy style. ' +
+    '- Bold confident strokes for hair, fine delicate lines for facial contours, light wash for cheeks. ' +
+    '- Neck and shoulders with minimal loose strokes, fading naturally into white. ' +
+    '- Overall: bright, warm, elegant, FLATTERING — a portrait to proudly use as a profile picture. ' +
+    '\n\nABSOLUTELY NO: text, stamps, seals, signatures, borders, frames, background objects, color, gloomy atmosphere, different person.'
   );
   formData.append('size', '1024x1024');
 
