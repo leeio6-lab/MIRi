@@ -197,7 +197,9 @@ export default function FaceScreen() {
     if (faceRes) {
       useFaceTicket();
       setAnalyzed(true);
-      saveAndRecord('face', true, faceRes);
+      // 관상화 이미지도 함께 저장 (기록에서 다시 볼 수 있도록)
+      const img = useFortuneStore.getState().transformedImageBase64;
+      saveAndRecord('face', true, faceRes, img ? { imageBase64: img } : undefined);
     }
   };
 
@@ -261,6 +263,16 @@ export default function FaceScreen() {
         contentContainerStyle={rs.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* ─── 0. BRAND ─── */}
+        <View style={rs.navBar}>
+          <View style={rs.navSpacer} />
+          <View style={rs.navBrand}>
+            <Text style={rs.navLogo}>MIRi</Text>
+            <Text style={rs.navTagline}>관상 풀이</Text>
+          </View>
+          <View style={rs.navSpacer} />
+        </View>
+
         {/* ─── 1. PORTRAIT (얼굴이 젤 먼저) ─── */}
         <Animated.View entering={FadeIn.delay(100).duration(500)}>
           {transformedUri && (
@@ -298,7 +310,7 @@ export default function FaceScreen() {
           )}
 
           <TouchableOpacity style={rs.shareBtn} onPress={handleShare} activeOpacity={0.8}>
-            <Text style={rs.shareBtnText}>친구에게 공유하기</Text>
+            <Text style={rs.shareBtnText}>{t('common.share')}</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -321,7 +333,7 @@ export default function FaceScreen() {
         {faceResult.radarScores && (
           <Animated.View entering={FadeInDown.delay(550).springify()}>
             <View style={rs.radarCard}>
-              <Text style={rs.radarTitle}>운명 레이더</Text>
+              <Text style={rs.radarTitle}>{t('face.radarSection')}</Text>
               {(['wealth', 'love', 'health', 'success', 'social'] as const).map((key) => {
                 const meta = RADAR_LABELS[key];
                 const val = faceResult.radarScores![key];
@@ -344,7 +356,7 @@ export default function FaceScreen() {
         <Animated.View entering={FadeInDown.delay(650).springify()}>
           <View style={rs.sectionHeader}>
             <View style={rs.sectionLine} />
-            <Text style={rs.sectionTitle}>부위별 상세 분석</Text>
+            <Text style={rs.sectionTitle}>{t('face.detailSection')}</Text>
             <View style={rs.sectionLine} />
           </View>
 
@@ -402,7 +414,7 @@ export default function FaceScreen() {
         {/* ─── 7. BOTTOM ─── */}
         <View style={rs.bottomActions}>
           <TouchableOpacity style={rs.shareBtn} onPress={handleShare} activeOpacity={0.8}>
-            <Text style={rs.shareBtnText}>공유하기</Text>
+            <Text style={rs.shareBtnText}>{t('common.share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={rs.newBtn} onPress={resetAnalysis} activeOpacity={0.8}>
             <Text style={rs.newBtnText}>{t('face.newAnalysis')}</Text>
@@ -424,69 +436,81 @@ export default function FaceScreen() {
       contentContainerStyle={cs.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={cs.title}>{t('face.title')}</Text>
-
-      <Animated.View entering={FadeIn.delay(200)}>
-        {/* Photo preview / placeholder */}
-        <View style={[cs.captureArea, { width: portraitSize, height: portraitSize }]}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={cs.previewImage} />
-          ) : (
-            <View style={cs.placeholderContainer}>
-              <Text style={cs.placeholderIcon}>相</Text>
-              <Text style={cs.guideText}>{t('face.guide')}</Text>
-            </View>
-          )}
-          <FaceGuide size={portraitSize} />
+      {/* ── Header ── */}
+      <Animated.View entering={FadeIn.delay(100).duration(400)}>
+        <View style={cs.hero}>
+          <Text style={cs.heroChar}>相</Text>
+          <Text style={cs.heroTitle}>{t('face.title')}</Text>
+          <Text style={cs.heroSub}>{'얼굴에 새겨진 운명의 지도를\nAI가 읽어드려요'}</Text>
         </View>
-
-        {/* No face detected */}
-        {noFaceDetected && (
-          <Animated.View entering={FadeInDown.springify()} style={cs.noFaceCard}>
-            <Text style={cs.noFaceEmoji}>{'\uD83D\uDE45'}</Text>
-            <Text style={cs.noFaceTitle}>{t('face.noFaceTitle')}</Text>
-            <Text style={cs.noFaceDesc}>{noFaceReason}</Text>
-            <View style={cs.noFaceTips}>
-              <Text style={cs.noFaceTipItem}>{'\u2022'} 사람 얼굴이 정면으로 보이는 사진</Text>
-              <Text style={cs.noFaceTipItem}>{'\u2022'} 밝은 조명에서 촬영한 사진</Text>
-              <Text style={cs.noFaceTipItem}>{'\u2022'} 얼굴이 가려지지 않은 사진</Text>
-            </View>
-            <Text style={cs.noFaceReassure}>{t('face.ticketPreserved')}</Text>
-            <Button title={t('common.retryOther')} onPress={() => { clearNoFace(); setImageUri(null); }} style={cs.retryBtn} />
-          </Animated.View>
-        )}
-
-        {/* Error */}
-        {error && !noFaceDetected && (
-          <Animated.View entering={FadeInDown.springify()} style={cs.errorCard}>
-            <Text style={cs.errorTitle}>{t('face.analysisFailed')}</Text>
-            <Text style={cs.errorDesc}>{error}</Text>
-            <Text style={cs.tipText}>{t('face.ticketPreserved')}</Text>
-            <Button title={t('common.retryAgain')} onPress={handleRetry} style={cs.retryBtn} />
-          </Animated.View>
-        )}
-
-        {/* Buttons */}
-        {!error && !noFaceDetected && (
-          <View style={cs.buttonGroup}>
-            <View style={cs.captureButtons}>
-              <Button title={t('face.takePhoto')} onPress={() => pickImage(true)} variant="secondary" style={cs.captureBtn} />
-              <Button title={t('face.choosePhoto')} onPress={() => pickImage(false)} variant="secondary" style={cs.captureBtn} />
-            </View>
-            {imageUri && (
-              <Animated.View entering={FadeInDown.delay(200).springify()}>
-                <Button
-                  title={hasFaceTicket() ? t('face.startAnalysis') : t('face.startAnalysisFree')}
-                  onPress={handleAnalyzePress}
-                  style={cs.analyzeBtn}
-                />
-                {!hasFaceTicket() && <Text style={cs.priceHint}>{t('face.purchaseHint')}</Text>}
-                {hasFaceTicket() && <Text style={cs.ticketHint}>{t('face.ticketHint')}</Text>}
-              </Animated.View>
-            )}
-          </View>
-        )}
       </Animated.View>
+
+      {/* ── Photo Area ── */}
+      <Animated.View entering={FadeIn.delay(200).duration(500)}>
+        <View style={[cs.captureArea, { width: portraitSize, height: portraitSize }]}>
+          <FaceGuide size={portraitSize} hasImage={!!imageUri} />
+        </View>
+      </Animated.View>
+
+      {/* ── No Face / Error ── */}
+      {noFaceDetected && (
+        <Animated.View entering={FadeInDown.springify()} style={cs.noFaceCard}>
+          <Text style={cs.noFaceEmoji}>{'\uD83D\uDE45'}</Text>
+          <Text style={cs.noFaceTitle}>{t('face.noFaceTitle')}</Text>
+          <Text style={cs.noFaceDesc}>{noFaceReason}</Text>
+          <View style={cs.noFaceTips}>
+            <Text style={cs.noFaceTipItem}>{'\u2022'} 정면을 바라보는 얼굴 사진</Text>
+            <Text style={cs.noFaceTipItem}>{'\u2022'} 밝은 조명, 가림 없는 사진</Text>
+          </View>
+          <Text style={cs.noFaceReassure}>{t('face.ticketPreserved')}</Text>
+          <TouchableOpacity style={cs.retryActionBtn} onPress={() => { clearNoFace(); setImageUri(null); }}>
+            <Text style={cs.retryActionText}>다른 사진 선택</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {error && !noFaceDetected && (
+        <Animated.View entering={FadeInDown.springify()} style={cs.errorCard}>
+          <Text style={cs.errorTitle}>{t('face.analysisFailed')}</Text>
+          <Text style={cs.errorDesc}>{error}</Text>
+          <Text style={cs.tipText}>{t('face.ticketPreserved')}</Text>
+          <TouchableOpacity style={cs.retryActionBtn} onPress={handleRetry}>
+            <Text style={cs.retryActionText}>{t('common.retryAgain')}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* ── Action Buttons ── */}
+      {!error && !noFaceDetected && (
+        <Animated.View entering={FadeInUp.delay(300).duration(400)}>
+          <View style={cs.actionGroup}>
+            <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(true)} activeOpacity={0.7}>
+              <View style={cs.actionIcon}><Text style={cs.actionIconText}>{'📷'}</Text></View>
+              <Text style={cs.actionLabel}>{t('face.takePhoto')}</Text>
+            </TouchableOpacity>
+
+            <View style={cs.actionDivider} />
+
+            <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(false)} activeOpacity={0.7}>
+              <View style={cs.actionIcon}><Text style={cs.actionIconText}>{'🖼'}</Text></View>
+              <Text style={cs.actionLabel}>{t('face.choosePhoto')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {imageUri && (
+            <Animated.View entering={FadeInDown.delay(150).springify()}>
+              <TouchableOpacity style={cs.analyzeBtn} onPress={handleAnalyzePress} activeOpacity={0.8}>
+                <Text style={cs.analyzeBtnText}>
+                  {hasFaceTicket() ? t('face.startAnalysis') : t('face.startAnalysisFree')}
+                </Text>
+              </TouchableOpacity>
+              <Text style={cs.statusHint}>
+                {hasFaceTicket() ? t('face.ticketHint') : t('face.purchaseHint')}
+              </Text>
+            </Animated.View>
+          )}
+        </Animated.View>
+      )}
 
       <Text style={cs.disclaimer}>{t('common.disclaimer')}</Text>
 
@@ -506,7 +530,34 @@ export default function FaceScreen() {
 
 const rs = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: theme.spacing.screenPadding, paddingTop: 60, paddingBottom: 120 },
+  content: { padding: theme.spacing.screenPadding, paddingTop: 48, paddingBottom: 120 },
+
+  // ── 0. NavBar ──
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  navBrand: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navLogo: {
+    fontSize: 15,
+    fontWeight: '200',
+    color: theme.colors.text.primary,
+    letterSpacing: 4,
+  },
+  navTagline: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: theme.colors.text.tertiary,
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+  navSpacer: {
+    width: 34,
+  },
 
   // ── 1. Portrait ──
   inkLabel: {
@@ -869,47 +920,146 @@ const rs = StyleSheet.create({
 // ════════════════════════════════════════════════════════════════════════════
 
 const cs = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: theme.spacing.screenPadding, paddingTop: 60, paddingBottom: 120 },
-  title: {
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  content: { paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 62 : 52, paddingBottom: 120 },
+
+  // Header
+  hero: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  heroChar: {
+    fontSize: 64,
+    fontWeight: '200',
+    color: theme.colors.gold.primary,
+    marginBottom: theme.spacing.md,
+  },
+  heroTitle: {
     fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    letterSpacing: 2,
+    marginBottom: theme.spacing.sm,
+  },
+  heroSub: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  title: {
+    fontSize: 28,
     fontWeight: '200',
     color: theme.colors.text.primary,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-    letterSpacing: 4,
+    letterSpacing: 8,
+    marginBottom: 4,
   },
+  subtitle: {
+    fontSize: 13,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    marginBottom: 24,
+    letterSpacing: 1,
+  },
+
+  // Photo area
   captureArea: {
     alignSelf: 'center',
-    backgroundColor: theme.colors.bg.secondary,
-    borderRadius: theme.radius.lg,
+    backgroundColor: '#F4F2EF',
+    borderRadius: 20,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.glass.border,
   },
   previewImage: { width: '100%', height: '100%' },
-  placeholderContainer: { alignItems: 'center', gap: theme.spacing.md },
-  placeholderIcon: { fontSize: 60, color: theme.colors.gold.primary, opacity: 0.6 },
-  guideText: { fontSize: 14, color: theme.colors.text.tertiary, textAlign: 'center', paddingHorizontal: theme.spacing.xl },
-  buttonGroup: { marginTop: theme.spacing.lg },
-  captureButtons: { flexDirection: 'row', gap: theme.spacing.sm },
-  captureBtn: { flex: 1 },
-  analyzeBtn: { marginTop: theme.spacing.md },
-  priceHint: { fontSize: 12, color: theme.colors.text.tertiary, textAlign: 'center', marginTop: theme.spacing.xs },
-  ticketHint: { fontSize: 12, color: theme.colors.gold.primary, textAlign: 'center', marginTop: theme.spacing.xs, fontWeight: '600' },
-  noFaceCard: { backgroundColor: '#FFF8F0', borderRadius: theme.radius.lg, padding: 20, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8D5B8', alignItems: 'center' },
-  noFaceEmoji: { fontSize: 36, marginBottom: 8 },
+
+  // Action buttons
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginTop: 20,
+    paddingVertical: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 1px 6px rgba(0,0,0,0.06)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+    }),
+  } as any,
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+  },
+  actionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIconText: {
+    fontSize: 16,
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+  },
+  actionDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+
+  // Analyze button
+  analyzeBtn: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  analyzeBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    letterSpacing: 0.5,
+  },
+  statusHint: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+
+  // No face / Error
+  noFaceCard: { backgroundColor: '#FFF8F0', borderRadius: 16, padding: 24, marginTop: 16, alignItems: 'center' },
+  noFaceEmoji: { fontSize: 36, marginBottom: 10 },
   noFaceTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 6, textAlign: 'center' },
   noFaceDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 14, textAlign: 'center', lineHeight: 20 },
   noFaceTips: { alignSelf: 'stretch', backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 12, marginBottom: 12, gap: 4 },
   noFaceTipItem: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 20 },
   noFaceReassure: { fontSize: 12, color: theme.colors.gold.primary, fontWeight: '600', marginBottom: 12 },
+  retryActionBtn: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+  },
+  retryActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.gold.primary,
+  },
   tipText: { fontSize: 12, color: theme.colors.text.tertiary, lineHeight: 20 },
-  errorCard: { backgroundColor: '#FFF0F0', borderRadius: theme.radius.md, padding: theme.spacing.md, marginTop: theme.spacing.md, borderWidth: 1, borderColor: '#E8B8B8' },
-  errorTitle: { fontSize: 15, fontWeight: '700', color: '#C44', marginBottom: theme.spacing.xs },
-  errorDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
-  retryBtn: { marginTop: theme.spacing.md },
-  disclaimer: { fontSize: 10, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 14, marginTop: theme.spacing.xl },
+  errorCard: { backgroundColor: '#FFF0F0', borderRadius: 16, padding: 20, marginTop: 16 },
+  errorTitle: { fontSize: 15, fontWeight: '700', color: '#C44', marginBottom: 4 },
+  errorDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 8 },
+  disclaimer: { fontSize: 10, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 14, marginTop: 32 },
 });
