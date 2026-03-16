@@ -96,33 +96,34 @@ function FeatureExpandCard({
       onPress={onToggle}
       style={[rs.featureCard, isActive && rs.featureCardActive]}
     >
-      {/* Header row */}
+      {/* Top row: icon + label + score */}
       <View style={rs.featureHeader}>
-        <View style={rs.featureLeft}>
-          <View style={rs.featureIconBox}>
-            <Text style={rs.featureIcon}>{icon}</Text>
-          </View>
-          <View>
-            <View style={rs.featureNameRow}>
-              <Text style={rs.featureLabel}>{label}</Text>
-              {feature.nickname && (
-                <View style={rs.nicknameBadge}>
-                  <Text style={rs.nicknameText}>{feature.nickname}</Text>
-                </View>
-              )}
+        <View style={rs.featureIconBox}>
+          <Text style={rs.featureIcon}>{icon}</Text>
+        </View>
+        <View style={rs.featureTitleWrap}>
+          <Text style={rs.featureLabel}>{label}</Text>
+          {feature.nickname && (
+            <View style={rs.nicknameBadge}>
+              <Text style={rs.nicknameText}>{feature.nickname}</Text>
             </View>
-            <Text style={rs.featureDesc} numberOfLines={isActive ? undefined : 1}>
-              {feature.description}
-            </Text>
-          </View>
+          )}
         </View>
         <View style={rs.featureScoreBox}>
           <Text style={[rs.featureScore, { color: scoreColor }]}>{feature.score}</Text>
-          <View style={rs.featureBarTrack}>
-            <View style={[rs.featureBarFill, { width: `${feature.score}%`, backgroundColor: scoreColor }]} />
-          </View>
         </View>
+        <Text style={rs.expandArrow}>{isActive ? '\u25B2' : '\u25BC'}</Text>
       </View>
+
+      {/* Score bar */}
+      <View style={rs.featureBarTrack}>
+        <View style={[rs.featureBarFill, { width: `${feature.score}%`, backgroundColor: scoreColor }]} />
+      </View>
+
+      {/* Description — always below header */}
+      <Text style={rs.featureDesc} numberOfLines={isActive ? undefined : 2}>
+        {feature.description}
+      </Text>
 
       {/* Expanded detail */}
       {isActive && feature.detail && (
@@ -131,9 +132,6 @@ function FeatureExpandCard({
           <Text style={rs.featureDetail}>{feature.detail}</Text>
         </Animated.View>
       )}
-
-      {/* Expand indicator */}
-      <Text style={rs.expandArrow}>{isActive ? '\u25B2' : '\u25BC'}</Text>
     </TouchableOpacity>
   );
 }
@@ -505,9 +503,7 @@ const rs = StyleSheet.create({
   portraitFrame: {
     alignSelf: 'center',
     borderRadius: theme.radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.glass.border,
+    overflow: 'visible',
     ...theme.shadow.card,
   },
   tapHint: {
@@ -709,29 +705,24 @@ const rs = StyleSheet.create({
   featureHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 10,
-  },
-  featureLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
+    marginBottom: 8,
   },
   featureIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(181,149,48,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   featureIcon: {
-    fontSize: 16,
+    fontSize: 15,
     color: theme.colors.gold.primary,
     fontWeight: '300',
   },
-  featureNameRow: {
+  featureTitleWrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -754,26 +745,18 @@ const rs = StyleSheet.create({
     color: theme.colors.gold.dark,
     letterSpacing: 0.3,
   },
-  featureDesc: {
-    ...theme.typo.caption,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-    marginTop: 2,
-  },
   featureScoreBox: {
     alignItems: 'flex-end',
-    width: 52,
   },
   featureScore: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 4,
   },
   featureBarTrack: {
-    width: 52,
     height: 3,
     backgroundColor: theme.colors.bg.tertiary,
     borderRadius: 1.5,
+    marginBottom: 8,
     overflow: 'hidden',
   },
   featureBarFill: {
@@ -792,12 +775,15 @@ const rs = StyleSheet.create({
     ...theme.typo.body,
     fontSize: 13,
   },
+  featureDesc: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+  },
   expandArrow: {
-    position: 'absolute',
-    bottom: 4,
-    right: 14,
-    fontSize: 8,
+    fontSize: 9,
     color: theme.colors.text.tertiary,
+    marginLeft: 4,
   },
 
   // ── 6. Analysis Cards (uses GlassCard) ──

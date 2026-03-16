@@ -40,11 +40,11 @@ interface FaceOverlayProps {
 
 const LABEL_META: Record<string, { label: string; side: 'left' | 'right' }> = {
   forehead: { label: '천정(天庭)', side: 'right' },
-  eyes:     { label: '감찰관(監察)', side: 'right' },
+  eyes:     { label: '감찰관(監察)', side: 'left' },
   nose:     { label: '재백궁(財帛)', side: 'right' },
-  mouth:    { label: '출납관(出納)', side: 'right' },
+  mouth:    { label: '출납관(出納)', side: 'left' },
   jawline:  { label: '지각(地閣)', side: 'right' },
-  ears:     { label: '채청관(採聽)', side: 'left' },
+  ears:     { label: '채청관(採聽)', side: 'right' },
 };
 
 // ---------------------------------------------------------------------------
@@ -255,20 +255,17 @@ export function FaceOverlay({
   const centerY = imageSize / 2;
   const LINE_LEN = imageSize * 0.18;
 
-  // Resolve position: transformed image uses static FACE_POINTS (selfie coords don't match painting)
+  // Resolve position: API 반환 좌표 우선 사용, 없으면 static fallback
   const getPoint = useCallback(
     (f: FeatureData) => {
-      // Transformed painting has different composition — always use static points
-      if (isTransformed) {
-        return FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
-      }
-      // Original selfie — use API-returned position if available
+      // API가 반환한 실제 위치가 있으면 항상 우선 사용
       if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number') {
         return f.position;
       }
+      // Fallback: static points
       return FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
     },
-    [isTransformed],
+    [],
   );
 
   const handleSelect = useCallback(
@@ -332,22 +329,24 @@ export function FaceOverlay({
       {/* Zoomable content layer */}
       <Animated.View
         style={[
-          { width: imageSize, height: imageSize, position: 'relative' },
+          { width: imageSize, height: imageSize, position: 'relative', overflow: 'visible' },
           zoomStyle,
         ]}
       >
         {/* Image */}
-        <Image
-          source={{ uri: imageUri }}
-          style={[
-            styles.image,
-            { width: imageSize, height: imageSize },
-            // @ts-ignore — web-only filter
-            !isTransformed && {
-              filter: 'sepia(25%) saturate(0.6) contrast(1.1) brightness(1.02)',
-            },
-          ]}
-        />
+        <View style={{ width: imageSize, height: imageSize, borderRadius: theme.radius.lg, overflow: 'hidden' }}>
+          <Image
+            source={{ uri: imageUri }}
+            style={[
+              styles.image,
+              { width: imageSize, height: imageSize },
+              // @ts-ignore — web-only filter
+              !isTransformed && {
+                filter: 'sepia(25%) saturate(0.6) contrast(1.1) brightness(1.02)',
+              },
+            ]}
+          />
+        </View>
 
         {/* Paper overlay for non-transformed images */}
         {!isTransformed && (
@@ -364,8 +363,23 @@ export function FaceOverlay({
 
           const px = pt.x * imageSize;
           const py = pt.y * imageSize;
-          const isLeft = meta.side === 'left';
           const isActive = selected === f.area;
+
+          // 라벨 방향 자동 결정: 점이 왼쪽 절반이면 오른쪽으로, 아니면 왼쪽으로
+          // 단, LABEL_META에 명시된 side를 기본값으로 하되, 화면 밖으로 나갈 때 반전
+          const LABEL_W = 100; // 라벨 예상 폭
+          const preferLeft = meta.side === 'left';
+          const spaceLeft = px;
+          const spaceRight = imageSize - px;
+          const isLeft = preferLeft && spaceLeft > LINE_LEN + LABEL_W * 0.3
+            ? true
+            : !preferLeft && spaceRight > LINE_LEN + LABEL_W * 0.3
+            ? false
+            : spaceLeft > spaceRight; // 공간이 넉넉한 쪽으로
+
+          // 라인 길이: 화면 밖 안 나가게 클램핑
+          const maxLineLen = isLeft ? Math.max(spaceLeft - 8, 20) : Math.max(spaceRight - 8, 20);
+          const lineLen = Math.min(LINE_LEN, maxLineLen);
 
           return (
             <React.Fragment key={f.area}>
@@ -374,34 +388,15 @@ export function FaceOverlay({
                 style={[
                   styles.lineContainer,
                   {
-                    left: isLeft ? px - LINE_LEN : px,
+                    left: isLeft ? px - lineLen : px,
                     top: py - 1,
-                    width: LINE_LEN,
+                    width: lineLen,
                   },
                 ]}
               >
-                {/* Main line — thin brush stroke */}
-                <View
-                  style={[
-                    styles.lineMain,
-                    isActive && styles.lineMainActive,
-                  ]}
-                />
-                {/* Subtle shadow line underneath for depth */}
-                <View
-                  style={[
-                    styles.lineShadow,
-                    isActive && styles.lineShadowActive,
-                  ]}
-                />
-                {/* Tapered end — brush stroke feel */}
-                <View
-                  style={[
-                    styles.lineTaper,
-                    isLeft ? { left: 0 } : { right: 0 },
-                    isActive && styles.lineTaperActive,
-                  ]}
-                />
+                <View style={[styles.lineMain, isActive && styles.lineMainActive]} />
+                <View style={[styles.lineShadow, isActive && styles.lineShadowActive]} />
+                <View style={[styles.lineTaper, isLeft ? { left: 0 } : { right: 0 }, isActive && styles.lineTaperActive]} />
               </View>
 
               {/* Pulsing dot */}
@@ -419,28 +414,18 @@ export function FaceOverlay({
                 style={[
                   styles.labelBox,
                   isLeft
-                    ? { right: imageSize - px + LINE_LEN - 4, top: py - 13 }
-                    : { left: px + LINE_LEN - 4, top: py - 13 },
+                    ? { right: imageSize - px + lineLen - 4, top: py - 13 }
+                    : { left: px + lineLen - 4, top: py - 13 },
                   isActive && styles.labelBoxActive,
                 ]}
                 onPress={() => handleSelect(isActive ? null : f.area)}
               >
                 <View style={styles.labelInner}>
-                  <Text
-                    style={[
-                      styles.labelText,
-                      isActive && styles.labelTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.labelText, isActive && styles.labelTextActive]}>
                     {meta.label}
                   </Text>
                   <View style={[styles.scoreBadge, isActive && styles.scoreBadgeActive]}>
-                    <Text
-                      style={[
-                        styles.labelScore,
-                        isActive && styles.labelScoreActive,
-                      ]}
-                    >
+                    <Text style={[styles.labelScore, isActive && styles.labelScoreActive]}>
                       {f.score}
                     </Text>
                   </View>
@@ -474,7 +459,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     borderRadius: theme.radius.lg,
-    overflow: 'hidden',
+    overflow: 'visible',
     backgroundColor: '#0E0D0B',
   },
 
@@ -615,6 +600,8 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.lg,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    borderBottomLeftRadius: theme.radius.lg,
+    borderBottomRightRadius: theme.radius.lg,
     zIndex: 30,
   },
   panelTopEdge: {

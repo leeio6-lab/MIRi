@@ -6,12 +6,12 @@ import { theme } from '../../constants/theme';
 // 1:1 셀피/인물 사진 기준 — 얼굴이 프레임의 약 60-70%를 차지한다고 가정
 // 실제 셀피에서 이마는 0.15~0.25, 눈은 0.32~0.38, 코끝 0.48, 입 0.57, 턱 0.68
 export const FACE_POINTS = {
-  forehead: { x: 0.5,  y: 0.18, label: '천정' },
-  eyes:     { x: 0.5,  y: 0.35, label: '감찰관' },
-  nose:     { x: 0.5,  y: 0.47, label: '재백궁' },
-  mouth:    { x: 0.5,  y: 0.57, label: '출납관' },
-  jawline:  { x: 0.5,  y: 0.68, label: '지각' },
-  ears:     { x: 0.15, y: 0.35, label: '채청관' },
+  forehead: { x: 0.50, y: 0.18, label: '천정' },
+  eyes:     { x: 0.38, y: 0.36, label: '감찰관' },  // 왼쪽 눈 근처
+  nose:     { x: 0.50, y: 0.48, label: '재백궁' },
+  mouth:    { x: 0.50, y: 0.58, label: '출납관' },
+  jawline:  { x: 0.42, y: 0.70, label: '지각' },    // 약간 좌측
+  ears:     { x: 0.18, y: 0.38, label: '채청관' },
 } as const;
 
 interface FaceGuideProps {
