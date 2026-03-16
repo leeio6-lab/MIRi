@@ -556,7 +556,10 @@ export default function HomeScreen() {
       {/* ── 헤더 ── */}
       <Animated.View entering={FadeInDown.delay(50).duration(500)}>
         <View style={styles.header}>
-          <Text style={styles.appName}>MIRi</Text>
+          <View style={styles.logoWrap}>
+            <View style={styles.logoCircle} />
+            <Text style={styles.appName}>MIRi</Text>
+          </View>
           <Text style={styles.appSub}>{t('common.appName')}</Text>
         </View>
       </Animated.View>
@@ -1023,11 +1026,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  logoWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  logoCircle: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#1C1C1E',
+    opacity: 0.06,
+  },
   appName: {
     fontSize: 52,
     fontWeight: '200',
     color: theme.colors.text.primary,
-    letterSpacing: 16,
+    letterSpacing: 6,
   },
   appSub: {
     fontSize: 14,
