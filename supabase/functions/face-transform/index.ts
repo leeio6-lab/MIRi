@@ -109,19 +109,19 @@ serve(async (req) => {
     // 이미지 MIME 타입 자동 감지
     const mimeType = imageBase64.startsWith('iVBOR') ? 'image/png' : 'image/jpeg';
 
-    // ─── 1단계: 관상 분석 먼저 (저렴: GPT-4o-mini ~$0.001) ───
-    // 얼굴 없으면 여기서 즉시 반환 → 비싼 gpt-image-1 호출 차단
-    let analysisData: Record<string, unknown> | null = null;
-    let analysisError: string | null = null;
+    // ─── 병렬 실행: 관상 분석 + 동양화 변환 (클라이언트에서 얼굴 사전검증 완료) ───
+    const [analysisRaw, transformResult] = await Promise.allSettled([
+      analyzePhysiognomy(imageBase64, lang, mimeType),
+      transformToOrientalPainting(imageBase64, mimeType),
+    ]);
 
-    try {
-      analysisData = await analyzePhysiognomy(imageBase64, lang, mimeType);
-    } catch (err) {
-      analysisError = String(err);
-      console.error('[face-transform] Analysis failed:', analysisError);
-    }
+    const analysisData = analysisRaw.status === 'fulfilled' ? analysisRaw.value : null;
+    const analysisError = analysisRaw.status === 'rejected' ? String(analysisRaw.reason) : null;
 
-    // 얼굴 미감지 → 관상화 생성 없이 즉시 반환 (비용 절약)
+    if (analysisError) console.error('[face-transform] Analysis failed:', analysisError);
+    if (transformResult.status === 'rejected') console.error('[face-transform] Transform failed:', String(transformResult.reason));
+
+    // 얼굴 미감지
     if (analysisData?.noFace) {
       return new Response(JSON.stringify({
         transformedImage: null,
@@ -135,17 +135,8 @@ serve(async (req) => {
     }
 
     const analysis = analysisData ? normalizeAnalysis(analysisData) : null;
-
-    // ─── 2단계: 얼굴 확인됨 → 동양화 변환 (비쌈: gpt-image-1) ───
-    let transformedImage: string | null = null;
-    let transformError: string | null = null;
-
-    try {
-      transformedImage = await transformToOrientalPainting(imageBase64, mimeType);
-    } catch (err) {
-      transformError = String(err);
-      console.error('[face-transform] Transform failed:', transformError);
-    }
+    const transformedImage = transformResult.status === 'fulfilled' ? transformResult.value : null;
+    const transformError = transformResult.status === 'rejected' ? String(transformResult.reason) : null;
 
     return new Response(JSON.stringify({
       analysis,

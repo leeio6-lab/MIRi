@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
-const MAX_DIMENSION = 1024;
-const JPEG_QUALITY = 0.8;
+const MAX_DIMENSION = 768;
+const JPEG_QUALITY = 0.7;
 
 export async function compressImageToBase64(uri: string): Promise<string> {
   if (Platform.OS === 'web') {

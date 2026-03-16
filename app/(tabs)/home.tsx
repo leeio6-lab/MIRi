@@ -556,12 +556,7 @@ export default function HomeScreen() {
       {/* ── 헤더 ── */}
       <Animated.View entering={FadeInDown.delay(50).duration(500)}>
         <View style={styles.header}>
-          <View style={styles.logoWrap}>
-            <View style={[styles.logoCircle, styles.logoCircle1]} />
-            <View style={[styles.logoCircle, styles.logoCircle2]} />
-            <View style={[styles.logoCircle, styles.logoCircle3]} />
-            <Text style={styles.appName}>MIRi</Text>
-          </View>
+          <Text style={styles.appName}>MIRi</Text>
           <Text style={styles.appSub}>{t('common.appName')}</Text>
         </View>
       </Animated.View>
@@ -1028,43 +1023,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  logoWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    height: 70,
-  },
-  logoCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: '#1C1C1E',
-  },
-  logoCircle1: {
-    width: 72,
-    height: 72,
-    opacity: 0.04,
-    left: '50%',
-    marginLeft: -48,
-    top: -6,
-  },
-  logoCircle2: {
-    width: 52,
-    height: 52,
-    opacity: 0.06,
-    left: '50%',
-    marginLeft: 2,
-    top: 4,
-  },
-  logoCircle3: {
-    width: 36,
-    height: 36,
-    opacity: 0.03,
-    left: '50%',
-    marginLeft: -14,
-    top: 28,
-  },
   appName: {
-    fontSize: 52,
+    fontSize: 38,
     fontWeight: '200',
     color: theme.colors.text.primary,
     letterSpacing: 6,

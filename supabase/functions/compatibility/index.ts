@@ -217,14 +217,14 @@ JSON 응답:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: isPaid ? 'gpt-4o' : 'gpt-4o-mini',
         messages: [
           { role: 'system', content: COMPATIBILITY_SYSTEM },
           { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
         temperature: isPaid ? 0.6 : 0.75,
-        max_tokens: isPaid ? 8000 : 500,
+        max_tokens: isPaid ? 8000 : 1500,
       }),
     });
 
