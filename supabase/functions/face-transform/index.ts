@@ -309,28 +309,24 @@ async function transformToOrientalPainting(
   formData.append('model', 'gpt-image-1');
   formData.append('image', file);
   formData.append('prompt',
-    'Convert this face photo into a beautiful traditional East Asian ink brush portrait (수묵 초상화). ' +
-    '\n\n★ COMPOSITION (매우 중요): ' +
-    '- The face must FILL about 70% of the frame — CLOSE-UP portrait, head and upper shoulders only. ' +
-    '- Slight 3/4 angle view — the face should be turned about 10-15 degrees to one side, NOT perfectly frontal. ' +
-    'This gives the portrait more artistic depth and elegance, like a classical painted portrait. ' +
-    '- Face centered horizontally, forehead starting around 15% from the top of the frame. ' +
-    '- Chin ending around 72% from the top. ' +
-    '\n\n★ IDENTITY (최우선): ' +
-    'The person MUST be CLEARLY RECOGNIZABLE as the same person in the input photo. ' +
-    'Their unique facial structure (face shape, eye shape, nose shape, lip shape, jawline) must be preserved EXACTLY. ' +
-    'Someone who knows this person should immediately say "that\'s them!" when seeing the portrait. ' +
-    '\n\n★ EXPRESSION & BEAUTIFICATION: ' +
-    '- Warm, gentle, SLIGHTLY SMILING — like someone who just heard good news. NOT sad or gloomy. ' +
-    '- Subtle beautification OK: smoother skin, brighter eyes, more defined features. ' +
-    'Think "good lighting on a good day", NOT "plastic surgery". Do NOT change fundamental face structure. ' +
-    '\n\n★ INK BRUSH STYLE: ' +
-    '- PURE WHITE background — clean, bright, no gradients or scenery. ' +
-    '- Black ink (墨) brush strokes — elegant East Asian calligraphy style. ' +
-    '- Bold confident strokes for hair, fine delicate lines for facial contours, light wash for cheeks. ' +
-    '- Neck and shoulders with minimal loose strokes, fading naturally into white. ' +
-    '- Overall: bright, warm, elegant, FLATTERING — a portrait to proudly use as a profile picture. ' +
-    '\n\nABSOLUTELY NO: text, stamps, seals, signatures, borders, frames, background objects, color, gloomy atmosphere, different person.'
+    'Transform this photo into an East Asian ink brush portrait (수묵 초상화). ' +
+    '\n\n★★★ IDENTITY — THE #1 RULE ★★★ ' +
+    'You MUST preserve this person\'s EXACT unique features with high fidelity: ' +
+    '- EXACT eye shape (monolid/double lid, size, spacing, angle) ' +
+    '- EXACT nose shape (bridge width, tip shape, nostril size) ' +
+    '- EXACT lip shape (thickness, cupid\'s bow, width) ' +
+    '- EXACT face outline (round/oval/square/heart, jaw angle, chin shape) ' +
+    '- EXACT eyebrow shape (arch, thickness, length) ' +
+    '- Distinctive marks: moles, dimples, asymmetry — keep them ALL. ' +
+    'The ink style is just a FILTER over the real face. Do NOT generalize or idealize the features. ' +
+    'A friend must instantly recognize this person. If the result looks generic, you have FAILED. ' +
+    '\n\n★ STYLE: ' +
+    '- Pure white background. Black ink with subtle gray wash. ' +
+    '- Use DETAILED fine lines for facial features — every contour of the eyes, nose, lips must be precisely drawn to match the photo. ' +
+    '- Hair: bold ink strokes. Face contours: medium precise lines. Skin texture: light wash shading. ' +
+    '- Expression: warm, gentle, slight smile. Bright and flattering overall. ' +
+    '- Head and upper shoulders only, face filling ~65% of frame. ' +
+    '\n\nNO: text, stamps, seals, color, background objects, gloomy mood, generic anime/cartoon face.'
   );
   formData.append('size', '1024x1024');
 
