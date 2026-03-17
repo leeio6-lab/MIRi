@@ -175,42 +175,23 @@ serve(async (req) => {
     const transformedImage = transformResult.status === 'fulfilled' ? transformResult.value : null;
     const transformError = transformResult.status === 'rejected' ? String(transformResult.reason) : null;
 
-    // ─── 생성된 관상화에서 실제 이목구비 좌표 추출 (2회 시도) ───
+    // ─── 관상화 좌표 추출: 분석 좌표(셀피 기반)를 기본으로 유지 + 관상화 감지로 업그레이드 시도 ───
     if (transformedImage && analysis && Array.isArray(analysis.features)) {
-      // 먼저 분석 프롬프트가 셀피 기준으로 넣은 좌표를 제거 (관상화와 안 맞으므로)
-      for (const feat of analysis.features as any[]) {
-        delete feat.position;
-      }
-
-      let coords: Record<string, { x: number; y: number }> | null = null;
-
-      // 1차 시도
+      // 분석 프롬프트가 셀피 기준으로 넣은 좌표를 기본값으로 보존 (관상화와 구도가 유사하므로)
       try {
-        coords = await detectFeaturePositions(transformedImage);
-        console.log('[face-transform] Coord detection 1st attempt:', coords ? 'OK' : 'null');
-      } catch (e) {
-        console.warn('[face-transform] Coord detection 1st attempt failed:', e);
-      }
-
-      // 실패 시 2차 시도
-      if (!coords) {
-        try {
-          coords = await detectFeaturePositions(transformedImage);
-          console.log('[face-transform] Coord detection 2nd attempt:', coords ? 'OK' : 'null');
-        } catch (e) {
-          console.warn('[face-transform] Coord detection 2nd attempt failed:', e);
-        }
-      }
-
-      // 성공한 좌표만 적용
-      if (coords) {
-        for (const feat of analysis.features as any[]) {
-          if (coords[feat.area]) {
-            feat.position = coords[feat.area];
+        const coords = await detectFeaturePositions(transformedImage);
+        if (coords) {
+          console.log('[face-transform] Painting coord detection: OK — upgrading positions');
+          for (const feat of analysis.features as any[]) {
+            if (coords[feat.area]) {
+              feat.position = coords[feat.area];
+            }
           }
+        } else {
+          console.log('[face-transform] Painting coord detection: null — keeping analysis positions');
         }
-      } else {
-        console.warn('[face-transform] All coord detection attempts failed — features will have no position');
+      } catch (e) {
+        console.warn('[face-transform] Painting coord detection failed — keeping analysis positions:', e);
       }
     }
 
@@ -540,7 +521,7 @@ async function tryImagesGenerations(selfieBase64: string, mimeType: string): Pro
   return b64;
 }
 
-// ─── 생성된 관상화에서 이목구비 좌표 추출 — GPT-4o-mini Vision (20초 타임아웃) ───
+// ─── 생성된 관상화에서 이목구비 좌표 추출 — GPT-4o Vision (30초 타임아웃) ───
 async function detectFeaturePositions(
   portraitBase64: string,
 ): Promise<Record<string, { x: number; y: number }> | null> {
@@ -551,38 +532,31 @@ async function detectFeaturePositions(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `This is an ink brush portrait on white background. I need PRECISE facial feature positions for placing 관상 analysis dots.
+              text: `Look at this portrait and return the EXACT position of each facial feature.
 
-Return the exact center coordinates of each facial feature as ratios (0.0-1.0), where (0,0) is top-left corner and (1,1) is bottom-right corner of the image.
+Coordinates are ratios (0.0 to 1.0). (0,0)=top-left, (1,1)=bottom-right.
 
-CRITICAL: Do NOT guess generic center positions. Actually LOOK at this specific portrait and find where each feature is drawn.
+Return JSON only:
+{"forehead":{"x":0.5,"y":...},"eyes":{"x":0.5,"y":...},"nose":{"x":0.5,"y":...},"mouth":{"x":0.5,"y":...},"jawline":{"x":0.5,"y":...},"ears":{"x":...,"y":...}}
 
-Return ONLY this JSON:
-{"forehead":{"x":...,"y":...},"eyes":{"x":...,"y":...},"nose":{"x":...,"y":...},"mouth":{"x":...,"y":...},"jawline":{"x":...,"y":...},"ears":{"x":...,"y":...}}
-
-Precise targeting:
-- forehead: center of the forehead area, between hairline and eyebrows
-- eyes: exact midpoint between the two eyes (between the inner corners)
-- nose: the tip/bottom of the nose
-- mouth: center point of the lips
-- jawline: bottom center of the chin
-- ears: center of the LEFT ear (or left edge of face if ear not visible)
-
-Validation:
-- y order MUST be: forehead < eyes < nose < mouth < jawline
-- ears x MUST be less than eyes x (ears are to the left)
-- All values 0.0-1.0`,
+Where to point:
+- forehead = center between hairline and eyebrows
+- eyes = midpoint between both eyes
+- nose = tip of nose
+- mouth = center of lips
+- jawline = bottom of chin
+- ears = left ear center`,
             },
             {
               type: 'image_url',
-              image_url: { url: `data:image/png;base64,${portraitBase64}`, detail: 'auto' },
+              image_url: { url: `data:image/png;base64,${portraitBase64}`, detail: 'low' },
             },
           ],
         },
@@ -591,7 +565,7 @@ Validation:
       temperature: 0.1,
       max_tokens: 200,
     }),
-  }, 20_000); // 20초 타임아웃
+  }, 30_000);
 
   if (!response.ok) {
     console.warn('[face-transform] Coord detection API error:', response.status);
@@ -605,17 +579,39 @@ Validation:
   try {
     const coords = JSON.parse(content);
     const areas = ['forehead', 'eyes', 'nose', 'mouth', 'jawline'];
+
+    // 기본 필드 존재 여부만 체크
     for (const area of areas) {
-      if (!coords[area] || typeof coords[area].x !== 'number' || typeof coords[area].y !== 'number') return null;
-      if (coords[area].x < 0 || coords[area].x > 1 || coords[area].y < 0 || coords[area].y > 1) return null;
+      if (!coords[area] || typeof coords[area].x !== 'number' || typeof coords[area].y !== 'number') {
+        console.warn(`[face-transform] Coords missing field: ${area}`);
+        return null;
+      }
+      // 범위 클램핑 (0.02~0.98)
+      coords[area].x = Math.max(0.02, Math.min(0.98, coords[area].x));
+      coords[area].y = Math.max(0.02, Math.min(0.98, coords[area].y));
     }
-    if (coords.forehead.y >= coords.eyes.y || coords.eyes.y >= coords.nose.y ||
-        coords.nose.y >= coords.mouth.y || coords.mouth.y >= coords.jawline.y) {
-      console.warn('[face-transform] Coords failed y-order check, discarding');
-      return null;
+
+    // y순서 보정 — 폐기하지 않고 강제로 올바른 순서로 재배치
+    const yOrder = ['forehead', 'eyes', 'nose', 'mouth', 'jawline'];
+    for (let i = 1; i < yOrder.length; i++) {
+      if (coords[yOrder[i]].y <= coords[yOrder[i - 1]].y) {
+        // 이전 부위보다 아래에 있도록 최소 0.04 간격 보장
+        coords[yOrder[i]].y = coords[yOrder[i - 1]].y + 0.04;
+        console.warn(`[face-transform] Coords y-order fixed: ${yOrder[i]} pushed to ${coords[yOrder[i]].y.toFixed(3)}`);
+      }
     }
+
+    // ears 보정 (없으면 기본값)
+    if (!coords.ears || typeof coords.ears.x !== 'number') {
+      coords.ears = { x: 0.20, y: coords.eyes?.y ?? 0.36 };
+    }
+    coords.ears.x = Math.max(0.02, Math.min(0.98, coords.ears.x));
+    coords.ears.y = Math.max(0.02, Math.min(0.98, coords.ears.y));
+
+    console.log('[face-transform] Coords OK:', JSON.stringify(coords));
     return coords;
-  } catch {
+  } catch (e) {
+    console.warn('[face-transform] Coord JSON parse failed:', e);
     return null;
   }
 }
