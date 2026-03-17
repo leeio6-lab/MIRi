@@ -55,12 +55,13 @@ const BAR_MIN_H = 28;
 const BAR_MAX_H = 72;
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-function WeeklyBarChart({ weeklyData, selectedIdx, onSelect, t, lang }: {
+function WeeklyBarChart({ weeklyData, selectedIdx, onSelect, t, lang, accent }: {
   weeklyData: { days: any[]; today: number; bestDay: any; worstDay: any };
   selectedIdx: number;
   onSelect: (i: number) => void;
   t: any;
   lang: string;
+  accent: string;
 }) {
   const days = weeklyData.days;
   const scores = days.map((d: any) => d.score);
@@ -78,16 +79,16 @@ function WeeklyBarChart({ weeklyData, selectedIdx, onSelect, t, lang }: {
         const isSelected = i === selectedIdx;
         const barH = BAR_MIN_H + ((d.score - minS) / range) * (BAR_MAX_H - BAR_MIN_H);
 
-        // 색감 분리: 오늘=진골드, 베스트=밝은골드, 선택=중골드, 워스트=연회색, 기본=연골드
+        // 색감: 사용자 오행색 기반
         const barColor = isToday
-          ? theme.colors.gold.primary
+          ? accent
           : isBest
-            ? '#D4A84B'
+            ? accent + 'CC'
             : isWorst
               ? '#E0DDD6'
               : isSelected
-                ? 'rgba(212,168,75,0.45)'
-                : 'rgba(212,168,75,0.2)';
+                ? accent + '73'
+                : accent + '33';
 
         return (
           <TouchableOpacity
@@ -101,22 +102,22 @@ function WeeklyBarChart({ weeklyData, selectedIdx, onSelect, t, lang }: {
               <View style={bk.bestBadge}>
                 <Svg width={8} height={8} viewBox="0 0 10 10">
                   <Path d="M5 0.5 L6.2 3.5 L9.5 3.8 L7 6 L7.8 9.3 L5 7.5 L2.2 9.3 L3 6 L0.5 3.8 L3.8 3.5 Z"
-                    fill={theme.colors.gold.primary} />
+                    fill={accent} />
                 </Svg>
               </View>
             )}
 
             {/* Score */}
-            <Text style={[bk.score, isToday && bk.scoreToday, isSelected && bk.scoreSelected]}>{d.score}</Text>
+            <Text style={[bk.score, isToday && { fontWeight: '700', color: accent }, isSelected && bk.scoreSelected]}>{d.score}</Text>
 
             {/* Bar */}
             <View style={[bk.bar, { height: barH, backgroundColor: barColor }]} />
 
             {/* Today dot */}
-            {isToday && <View style={bk.todayDot} />}
+            {isToday && <View style={[bk.todayDot, { backgroundColor: accent }]} />}
 
             {/* Day label */}
-            <Text style={[bk.dayLabel, isToday && bk.dayLabelToday, isSelected && bk.dayLabelSelected]}>
+            <Text style={[bk.dayLabel, isToday && { fontWeight: '700', color: accent }, isSelected && bk.dayLabelSelected]}>
               {t(`days.${DAY_KEYS[d.dayOfWeek]}`)}
             </Text>
           </TouchableOpacity>
@@ -127,11 +128,12 @@ function WeeklyBarChart({ weeklyData, selectedIdx, onSelect, t, lang }: {
 }
 
 // ─── Day Detail Card ───
-function DayDetailCard({ day, weeklyData, lang, onPurchase }: {
+function DayDetailCard({ day, weeklyData, lang, onPurchase, accent }: {
   day: any;
   weeklyData: { days: any[]; today: number; bestDay: any; worstDay: any };
   lang: 'ko' | 'en' | 'ja';
   onPurchase: () => void;
+  accent: string;
 }) {
   const detail = DAILY_DETAILS[day.tenStar];
   if (!detail) return null;
@@ -176,9 +178,9 @@ function DayDetailCard({ day, weeklyData, lang, onPurchase }: {
 
       {/* Divider */}
       <View style={dk.divider}>
-        <View style={dk.divLine} />
-        <View style={dk.divDot} />
-        <View style={dk.divLine} />
+        <View style={[dk.divLine, { backgroundColor: accent + '20' }]} />
+        <View style={[dk.divDot, { backgroundColor: accent }]} />
+        <View style={[dk.divLine, { backgroundColor: accent + '20' }]} />
       </View>
 
       {/* Message */}
@@ -187,15 +189,15 @@ function DayDetailCard({ day, weeklyData, lang, onPurchase }: {
       {/* Advice items */}
       {adviceItems.map((item, i) => (
         <View key={i} style={dk.adviceRow}>
-          <View style={dk.adviceBar} />
-          <Text style={dk.adviceLabel}>{item.label}</Text>
+          <View style={[dk.adviceBar, { backgroundColor: accent, opacity: 0.5 }]} />
+          <Text style={[dk.adviceLabel, { color: accent }]}>{item.label}</Text>
           <Text style={dk.adviceText}>{item.text}</Text>
         </View>
       ))}
 
       {/* Lucky hour */}
-      <View style={dk.luckyRow}>
-        <Text style={dk.luckyLabel}>{lang === 'ko' ? '행운시간' : lang === 'ja' ? '幸運時間' : 'Lucky hour'}</Text>
+      <View style={[dk.luckyRow, { backgroundColor: accent + '0A' }]}>
+        <Text style={[dk.luckyLabel, { color: accent }]}>{lang === 'ko' ? '행운시간' : lang === 'ja' ? '幸運時間' : 'Lucky hour'}</Text>
         <Text style={dk.luckyValue}>{detail.luckyHour[lang]}</Text>
       </View>
 
@@ -689,10 +691,7 @@ export default function HomeScreen() {
               <Text style={styles.manseryeokCardTitle}>{t('home.manseryeok')}</Text>
               <Text style={styles.manseryeokCardSub}>사주 원국 · 대운 · 세운</Text>
             </View>
-            <View style={styles.manseryeokCta}>
-              <Text style={styles.manseryeokCtaText}>내 만세력 보기</Text>
-              <Text style={styles.manseryeokCtaArrow}>›</Text>
-            </View>
+            <Text style={styles.manseryeokLink}>내 만세력 보기 ›</Text>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -747,6 +746,7 @@ export default function HomeScreen() {
               onSelect={setSelectedDayIdx}
               t={t}
               lang={i18n.language}
+              accent={elementColor}
             />
 
             {/* Layer 3 + 4: Detail Card + CTA */}
@@ -756,6 +756,7 @@ export default function HomeScreen() {
                 weeklyData={weeklyData}
                 lang={(i18n.language || 'ko') as 'ko' | 'en' | 'ja'}
                 onPurchase={() => setShowPaywall(true)}
+                accent={elementColor}
               />
             )}
           </GlassCard>
@@ -1649,27 +1650,10 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
     marginTop: 2,
   },
-  manseryeokCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: theme.colors.gold.primary + '10',
-    borderRadius: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.gold.primary + '20',
-  },
-  manseryeokCtaText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: theme.colors.gold.dark,
-    letterSpacing: 0.3,
-  },
-  manseryeokCtaArrow: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.gold.dark,
+  manseryeokLink: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.text.tertiary,
   },
 
   /* ── 만세력 버튼 (레거시) ── */

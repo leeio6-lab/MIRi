@@ -6,7 +6,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'expo-router';
 import { TAROT_POOL } from '../../constants/tarotData';
 import { BriefcaseIcon, CoinIcon, HeartIcon } from '../icons/AnalysisIcons';
 import { PremiumButton } from '../ui/PremiumButton';
@@ -18,7 +17,7 @@ import { EarthIllust } from '../icons/tarot/EarthIllust';
 import { MetalIcon, WoodIcon, WaterIcon, FireIcon, EarthIcon } from '../icons/ElementIcons';
 
 const CARD_W = 96;
-const CARD_H = 140;
+const CARD_H = 156;
 const G = '#D4A84B';
 const ELEMENTS = ['metal', 'wood', 'water', 'fire', 'earth'] as const;
 type Element = typeof ELEMENTS[number];
@@ -123,7 +122,6 @@ function CardBack() {
     <View style={[$.cardBack, { backgroundColor: '#1A150A' }]}>
       <View style={$.outerBorder}>
         <View style={$.innerFrame}>
-          <Text style={$.backLabelTop}>MIRi</Text>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <Mandala />
           </View>
@@ -270,12 +268,11 @@ function AnalysisItemAnimated({ Icon, title, text, color, delay }: {
 }
 
 /* ─── Analysis Content ─── */
-function AnalysisContent({ element, variant, dayStemIdx, lang }: {
-  element: string; variant: number; dayStemIdx: number; lang: 'ko' | 'en' | 'ja';
+function AnalysisContent({ element, variant, dayStemIdx, lang, onPurchase }: {
+  element: string; variant: number; dayStemIdx: number; lang: 'ko' | 'en' | 'ja'; onPurchase: () => void;
 }) {
   const info = EINFO[element] || EINFO.earth;
   const data = TAROT_POOL[element]?.[variant];
-  const router = useRouter();
   if (!data) return null;
 
   const weakest = STEM_WEAK[dayStemIdx % 10] || 'earth';
@@ -290,7 +287,7 @@ function AnalysisContent({ element, variant, dayStemIdx, lang }: {
 
   return (
     <View style={$.analysisWrap}>
-      {isMatch ? (
+      {isMatch && (
         <View style={$.matchBadge}>
           <Text style={$.matchBadgeText}>{'✦ '}{lang === 'en' ? 'Intuition hit!' : lang === 'ja' ? '直感的中！' : '직감 적중!'} {matchPct}%</Text>
           <Text style={$.matchSub}>
@@ -299,12 +296,6 @@ function AnalysisContent({ element, variant, dayStemIdx, lang }: {
              `You intuitively picked ${info.label.en}, which your chart lacks`}
           </Text>
         </View>
-      ) : (
-        <Text style={$.missText}>
-          {lang === 'ko' ? `선택: ${info.hanja} → 실제 부족: ${EINFO[weakest]?.hanja}` :
-           lang === 'ja' ? `選択: ${info.hanja} → 実際の不足: ${EINFO[weakest]?.hanja}` :
-           `Picked: ${info.hanja} → Actually lacking: ${EINFO[weakest]?.hanja}`}
-        </Text>
       )}
       <Text style={[$.analysisMainTitle, { color: info.primary }]}>
         {lang === 'en' ? `Today's ${info.hanja} Energy` : lang === 'ja' ? `今日の${info.hanja}の気` : `오늘의 ${info.hanja} 기운`}
@@ -320,7 +311,7 @@ function AnalysisContent({ element, variant, dayStemIdx, lang }: {
       <Text style={$.ctaQ}>
         {lang === 'ko' ? '내 사주에 맞는 정확한 분석은?' : lang === 'ja' ? '私の四柱に合った正確な分析は？' : 'Want analysis tailored to your birth chart?'}
       </Text>
-      <PremiumButton title={lang === 'ko' ? '내 사주 상세 분석' : lang === 'ja' ? '四柱詳細分析' : 'Detailed Saju Analysis'} price="₩770" onPress={() => router.push('/(tabs)/saju' as any)} variant="shimmer" style={{ marginTop: 12 }} />
+      <PremiumButton title={lang === 'ko' ? '내 사주 상세 분석 · ₩770' : lang === 'ja' ? '四柱詳細分析 · ¥770' : 'Detailed Saju Analysis · $0.99'} onPress={onPurchase} variant="shimmer" style={{ marginTop: 12 }} />
     </View>
   );
 }
@@ -351,14 +342,14 @@ function AnimCard({ element, isMe, isOther, phase, onPress, resetKey, centerOffs
       if (phase === 'selected') {
         liftY.value = withTiming(-14, { duration: 200, easing: Easing.out(Easing.cubic) });
       } else if (phase === 'centering') {
-        liftY.value = withTiming(0, { duration: 400 });
-        moveX.value = withTiming(centerOffsetX, { duration: 500, easing: Easing.inOut(Easing.cubic) });
-        moveY.value = withTiming(centerOffsetY, { duration: 500, easing: Easing.inOut(Easing.cubic) });
-        scale.value = withTiming(2.2, { duration: 500, easing: Easing.inOut(Easing.cubic) });
+        liftY.value = withTiming(0, { duration: 500, easing: Easing.out(Easing.cubic) });
+        moveX.value = withTiming(centerOffsetX, { duration: 600, easing: Easing.inOut(Easing.cubic) });
+        moveY.value = withTiming(centerOffsetY, { duration: 600, easing: Easing.inOut(Easing.cubic) });
+        scale.value = withTiming(2.3, { duration: 600, easing: Easing.inOut(Easing.cubic) });
       } else if (phase === 'flipping') {
-        flipProg.value = withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) });
+        flipProg.value = withTiming(1, { duration: 900, easing: Easing.inOut(Easing.cubic) });
       } else if (phase === 'landed') {
-        scale.value = withSpring(2.0, { damping: 18, stiffness: 120 });
+        scale.value = withSpring(2.15, { damping: 22, stiffness: 100 });
         try { const H = require('expo-haptics'); H.impactAsync(H.ImpactFeedbackStyle.Light); } catch {}
       }
     }
@@ -431,7 +422,7 @@ function AnimCard({ element, isMe, isOther, phase, onPress, resetKey, centerOffs
 /* ═══ MAIN ═══ */
 type Phase = 'pick' | 'selected' | 'fading' | 'centering' | 'flipping' | 'landed' | 'analysis';
 
-export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number; onCardSelect?: () => void }) {
+export function ElementTarot({ dayStemIdx, onCardSelect, onPurchase }: { dayStemIdx: number; onCardSelect?: () => void; onPurchase?: () => void }) {
   const { i18n } = useTranslation();
   const lang = (i18n.language || 'ko') as 'ko' | 'en' | 'ja';
 
@@ -466,14 +457,14 @@ export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number;
 
     setPhase('selected');
     onCardSelect?.();
-    setTimeout(() => setPhase('fading'), 150);
-    setTimeout(() => setPhase('centering'), 400);
-    setTimeout(() => setPhase('flipping'), 800);
-    setTimeout(() => setPhase('landed'), 1300);
+    setTimeout(() => setPhase('fading'), 200);
+    setTimeout(() => setPhase('centering'), 500);
+    setTimeout(() => setPhase('flipping'), 1100);
+    setTimeout(() => setPhase('landed'), 1900);
     setTimeout(() => {
       pendingResult.current = null;
       setPhase('analysis');
-    }, 1600);
+    }, 2200);
   }, [phase, shuffled, onCardSelect]);
 
   const handleReset = useCallback(() => {
@@ -524,12 +515,12 @@ export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number;
 
       {/* Spacer for scaled card */}
       {phase !== 'pick' && phase !== 'selected' && phase !== 'fading' && (
-        <View style={{ height: CARD_H * 0.15 }} />
+        <View style={{ height: 4 }} />
       )}
 
       {/* Analysis */}
       {phase === 'analysis' && result && variantData && (
-        <AnalysisContent element={result.element} variant={result.variant} dayStemIdx={dayStemIdx} lang={lang} />
+        <AnalysisContent element={result.element} variant={result.variant} dayStemIdx={dayStemIdx} lang={lang} onPurchase={() => onPurchase?.()} />
       )}
       {phase === 'analysis' && (
         <TouchableOpacity onPress={handleReset} style={$.redrawBtn} activeOpacity={0.7}>
@@ -550,21 +541,20 @@ const $ = StyleSheet.create({
 
   // Card back
   cardBack: {
-    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden',
-    borderWidth: 2, borderColor: G,
+    width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1.2, borderColor: G + 'AA',
     ...Platform.select({
-      web: { boxShadow: '0 4px 14px rgba(139,117,48,0.3)' },
-      default: { shadowColor: '#8B7530', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 14, elevation: 6 },
+      web: { boxShadow: '0 6px 20px rgba(139,117,48,0.25)' },
+      default: { shadowColor: '#8B7530', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 8 },
     }),
   } as any,
-  outerBorder: { flex: 1, margin: 4, borderRadius: 8, borderWidth: 0.5, borderColor: G + '50', overflow: 'hidden' },
-  innerFrame: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4 },
-  backLabelTop: { fontSize: 8, color: G, opacity: 0.4, letterSpacing: 4, fontWeight: '300' },
-  backLabel: { fontSize: 12, color: G, opacity: 0.6, letterSpacing: 4, fontWeight: '200', marginTop: 4 },
+  outerBorder: { flex: 1, margin: 5, borderRadius: 10, borderWidth: 0.4, borderColor: G + '40', overflow: 'hidden' },
+  innerFrame: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 6 },
+  backLabel: { fontSize: 11, color: G, opacity: 0.45, letterSpacing: 6, fontWeight: '300', marginTop: 6 },
 
   // Card front (premium)
   cardFront: {
-    width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden',
+    width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(212,168,75,0.15)',
     ...Platform.select({
       web: { boxShadow: '0 6px 20px rgba(212,168,75,0.35)' },
       default: { shadowColor: '#D4A84B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 8 },
