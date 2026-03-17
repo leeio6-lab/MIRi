@@ -16,60 +16,13 @@ import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { useAuthStore } from '../../src/stores/authStore';
 import { calculateFourPillars } from '../../src/utils/saju-calc';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+import { DayMasterAnim } from '../../src/components/icons/DayMasterAnim';
 
-// ── 스크롤 반응 아이콘 애니메이션 ──
-// 각 오행별 다른 모션: 목=흔들림, 화=펄스, 토=바운스, 금=회전, 수=물결
-const STEM_ANIM: Record<string, 'sway' | 'pulse' | 'bounce' | 'spin' | 'wave'> = {
-  '갑': 'sway', '을': 'sway', '병': 'pulse', '정': 'pulse', '무': 'bounce',
-  '기': 'bounce', '경': 'spin', '신': 'spin', '임': 'wave', '계': 'wave',
+// ── 한글→한자 매핑 (DayMasterAnim용) ──
+const STEM_KO_TO_HANJA: Record<string, string> = {
+  '갑': '甲', '을': '乙', '병': '丙', '정': '丁', '무': '戊',
+  '기': '己', '경': '庚', '신': '辛', '임': '壬', '계': '癸',
 };
-
-function AnimatedIcon({ stem, size, scrollY }: { stem: string; size: number; scrollY: SharedValue<number> }) {
-  const anim = STEM_ANIM[stem] ?? 'pulse';
-
-  const animStyle = useAnimatedStyle(() => {
-    'worklet';
-    // scrollY를 기반으로 사인/코사인 파형 생성 — 스크롤할수록 반응
-    const y = scrollY.value;
-    switch (anim) {
-      case 'sway': {
-        // 목: 스크롤 방향에 따라 나무가 휘어짐
-        const angle = Math.sin(y * 0.02) * 12;
-        return { transform: [{ rotate: `${angle}deg` }] };
-      }
-      case 'pulse': {
-        // 화: 스크롤 속도에 따라 불꽃이 커졌다 작아짐
-        const s = 1 + Math.sin(y * 0.03) * 0.12;
-        const o = 0.85 + Math.abs(Math.sin(y * 0.03)) * 0.15;
-        return { transform: [{ scale: s }], opacity: o };
-      }
-      case 'bounce': {
-        // 토: 스크롤에 따라 위아래로 묵직하게
-        const ty = Math.sin(y * 0.015) * 5;
-        return { transform: [{ translateY: ty }] };
-      }
-      case 'spin': {
-        // 금: 스크롤에 따라 좌우 회전 — 빛이 반사되듯
-        const r = Math.sin(y * 0.025) * 15;
-        return { transform: [{ rotate: `${r}deg` }] };
-      }
-      case 'wave': {
-        // 수: 스크롤에 따라 좌우로 출렁 + 기울기
-        const tx = Math.sin(y * 0.02) * 6;
-        const tr = Math.cos(y * 0.02) * 5;
-        return { transform: [{ translateX: tx }, { rotate: `${tr}deg` }] };
-      }
-      default:
-        return {};
-    }
-  });
-
-  return (
-    <Animated.View style={[{ width: size, height: size }, animStyle]}>
-      <DayMasterIcon stem={stem} size={size} />
-    </Animated.View>
-  );
-}
 
 // ── 오행별 하이라이트 색상 ──
 const EL_COLORS: Record<string, string> = {
@@ -275,7 +228,7 @@ export default function SajuResultScreen() {
           <Animated.View entering={FadeInDown.delay(nd()).springify()}>
             <View style={$.identityCard}>
               <View style={$.identityIconWrap}>
-                <AnimatedIcon stem={pillars.day.stem} size={40} scrollY={scrollY} />
+                <DayMasterAnim dayStem={STEM_KO_TO_HANJA[pillars.day.stem] ?? '甲'} size={44} />
               </View>
               <View style={$.identityBody}>
                 <View style={$.identityNameRow}>
@@ -302,6 +255,7 @@ export default function SajuResultScreen() {
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { overviewY.current = e.nativeEvent.layout.y; }}>
           <SajuOverviewCard
             overview={ov}
+            accentColor={pillars ? EL_COLORS[STEM_EL[pillars.day.stem] ?? 'earth'] : undefined}
             onItemPress={(key) => {
               const y = sectionY.current[key];
               if (y != null) scrollRef.current?.scrollTo({ y: y - 20, animated: true });

@@ -68,11 +68,13 @@ const ITEMS: { key: keyof Omit<SajuOverview, 'poeticTitle' | 'hookQuestion'>; la
 
 interface Props {
   overview: SajuOverview;
+  accentColor?: string;
   onItemPress: (section: string) => void;
 }
 
-export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview, onItemPress }: Props) {
+export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview, accentColor, onItemPress }: Props) {
   const { t } = useTranslation();
+  const accent = accentColor ?? G;
 
   // AI가 지정한 핵심 항목, 없으면 가장 긴 항목으로 fallback
   const hotKey = React.useMemo(() => {
@@ -97,18 +99,22 @@ export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview,
         return (
           <Animated.View key={item.key} entering={FadeInDown.delay(40 + idx * 25).springify()}>
             <TouchableOpacity
-              style={[styles.row, isHot && styles.hotRow]}
+              style={[styles.row, isHot && [styles.hotRow, { backgroundColor: accent + '0C' }]]}
               onPress={() => onItemPress(item.section)}
               activeOpacity={0.5}
             >
-              <View style={[styles.iconWrap, isHot && styles.hotIconWrap]}>
+              <View style={[
+                styles.iconWrap,
+                { backgroundColor: accent + '0C' },
+                isHot && { backgroundColor: accent + '1A', borderWidth: 1, borderColor: accent + '30' },
+              ]}>
                 {Icon && <Icon />}
               </View>
               <View style={styles.textWrap}>
                 <Text style={[styles.value, isHot && styles.hotValue]} numberOfLines={2}>{value}</Text>
               </View>
-              {isHot && <Text style={styles.hotDot}>●</Text>}
-              <Text style={styles.arrow}>›</Text>
+              {isHot && <Text style={[styles.hotDot, { color: accent }]}>●</Text>}
+              <Text style={[styles.arrow, { color: accent }]}>›</Text>
             </TouchableOpacity>
             {idx < ITEMS.length - 1 && <View style={styles.divider} />}
           </Animated.View>
