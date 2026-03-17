@@ -35,16 +35,16 @@ interface FaceOverlayProps {
 }
 
 // ---------------------------------------------------------------------------
-// Label metadata — traditional 관상 terms with Hanja
+// Label metadata
 // ---------------------------------------------------------------------------
 
-const LABEL_META: Record<string, { label: string; side: 'left' | 'right' }> = {
-  forehead: { label: '천정(天庭)', side: 'right' },
-  eyes:     { label: '감찰관(監察)', side: 'right' },
-  nose:     { label: '재백궁(財帛)', side: 'right' },
-  mouth:    { label: '출납관(出納)', side: 'right' },
-  jawline:  { label: '지각(地閣)', side: 'left' },
-  ears:     { label: '채청관(採聽)', side: 'right' },
+const LABEL_META: Record<string, { label: string; shortLabel: string; side: 'left' | 'right' }> = {
+  forehead: { label: '천정(天庭)', shortLabel: '天庭', side: 'right' },
+  eyes:     { label: '감찰관(監察)', shortLabel: '監察', side: 'left' },
+  nose:     { label: '재백궁(財帛)', shortLabel: '財帛', side: 'right' },
+  mouth:    { label: '출납관(出納)', shortLabel: '出納', side: 'left' },
+  jawline:  { label: '지각(地閣)', shortLabel: '地閣', side: 'right' },
+  ears:     { label: '채청관(採聽)', shortLabel: '採聽', side: 'left' },
 };
 
 // ---------------------------------------------------------------------------
@@ -54,30 +54,35 @@ const LABEL_META: Record<string, { label: string; side: 'left' | 'right' }> = {
 const ZOOM_SCALE = 1.8;
 const ZOOM_DURATION = 400;
 const PULSE_DURATION = 1800;
-const PANEL_HEIGHT = 200;
 
 // ---------------------------------------------------------------------------
-// Pulsing dot component
+// Pulsing dot + label line
 // ---------------------------------------------------------------------------
 
-function PulsingDot({
+function FeaturePoint({
   px,
   py,
   isActive,
   index,
+  area,
+  score,
+  imageSize,
   onPress,
 }: {
   px: number;
   py: number;
   isActive: boolean;
   index: number;
+  area: string;
+  score: number;
+  imageSize: number;
   onPress: () => void;
 }) {
-  // Outer glow pulse
+  const meta = LABEL_META[area];
+  const side = meta?.side ?? 'right';
   const glowScale = useSharedValue(0);
 
   useEffect(() => {
-    // Stagger the pulse start for each dot
     glowScale.value = withDelay(
       index * 200,
       withRepeat(
@@ -85,7 +90,7 @@ function PulsingDot({
           withTiming(1, { duration: PULSE_DURATION, easing: Easing.out(Easing.ease) }),
           withTiming(0, { duration: PULSE_DURATION, easing: Easing.in(Easing.ease) }),
         ),
-        -1, // infinite
+        -1,
         false,
       ),
     );
@@ -94,61 +99,85 @@ function PulsingDot({
   const glowStyle = useAnimatedStyle(() => {
     const scale = interpolate(glowScale.value, [0, 1], [1, 2.2]);
     const opacity = interpolate(glowScale.value, [0, 0.5, 1], [0.6, 0.3, 0]);
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
+    return { transform: [{ scale }], opacity };
   });
 
-  const dotSize = isActive ? 14 : 8;
+  const dotSize = isActive ? 12 : 7;
   const touchSize = 44;
 
+  // 라벨 연결선: 점에서 좌/우 가장자리로 선을 긋고 라벨+점수 표시
+  const lineLength = side === 'right'
+    ? imageSize - px - dotSize / 2 - 8
+    : px - dotSize / 2 - 8;
+
+  const showLabel = !isActive && meta; // 활성 상태면 하단 패널에 상세 표시
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      style={[
-        styles.pointTouch,
-        {
-          left: px - touchSize / 2,
-          top: py - touchSize / 2,
-          width: touchSize,
-          height: touchSize,
-        },
-      ]}
-      onPress={onPress}
-    >
-      {/* Glow ring */}
-      <Animated.View
+    <>
+      {/* 연결선 + 라벨 (얼굴 밖으로) */}
+      {showLabel && lineLength > 30 && (
+        <View
+          style={[
+            styles.labelLine,
+            {
+              top: py - 0.5,
+              ...(side === 'right'
+                ? { left: px + dotSize / 2 + 2 }
+                : { right: imageSize - px + dotSize / 2 + 2 }),
+              width: Math.min(lineLength, 80),
+              flexDirection: side === 'right' ? 'row' : 'row-reverse',
+            },
+          ]}
+        >
+          <View style={styles.lineSegment} />
+          <View style={[styles.labelTag, side === 'left' && { marginLeft: 0, marginRight: 4 }]}>
+            <Text style={styles.labelTagText}>{meta.shortLabel}</Text>
+            <Text style={styles.labelScore}>{score}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* 터치 영역 + 점 */}
+      <TouchableOpacity
+        activeOpacity={0.7}
         style={[
+          styles.pointTouch,
           {
-            position: 'absolute',
-            width: dotSize + 10,
-            height: dotSize + 10,
-            borderRadius: (dotSize + 10) / 2,
-            borderWidth: 1.5,
-            borderColor: isActive ? theme.colors.gold.primary : 'rgba(200,170,120,0.5)',
+            left: px - touchSize / 2,
+            top: py - touchSize / 2,
+            width: touchSize,
+            height: touchSize,
           },
-          glowStyle,
         ]}
-      />
-      {/* Core dot */}
-      <View
-        style={[
-          styles.dot,
-          {
-            width: dotSize,
-            height: dotSize,
-            borderRadius: dotSize / 2,
-          },
-          isActive && styles.dotActive,
-        ]}
-      />
-    </TouchableOpacity>
+        onPress={onPress}
+      >
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              width: dotSize + 10,
+              height: dotSize + 10,
+              borderRadius: (dotSize + 10) / 2,
+              borderWidth: 1.5,
+              borderColor: isActive ? theme.colors.gold.primary : 'rgba(200,170,120,0.5)',
+            },
+            glowStyle,
+          ]}
+        />
+        <View
+          style={[
+            styles.dot,
+            { width: dotSize, height: dotSize, borderRadius: dotSize / 2 },
+            isActive && styles.dotActive,
+          ]}
+        />
+      </TouchableOpacity>
+    </>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Detail panel component
+// Detail panel (bottom slide-up)
 // ---------------------------------------------------------------------------
 
 function DetailPanel({
@@ -160,81 +189,45 @@ function DetailPanel({
   label: string;
   onClose: () => void;
 }) {
-  const slideY = useSharedValue(PANEL_HEIGHT);
+  const slideY = useSharedValue(200);
   const barWidth = useSharedValue(0);
 
   useEffect(() => {
-    slideY.value = withTiming(0, {
-      duration: 350,
-      easing: Easing.out(Easing.bezierFn(0.25, 0.1, 0.25, 1)),
-    });
-    barWidth.value = withDelay(
-      150,
-      withTiming(data.score, {
-        duration: 600,
-        easing: Easing.out(Easing.bezierFn(0.25, 0.1, 0.25, 1)),
-      }),
-    );
+    slideY.value = withTiming(0, { duration: 350, easing: Easing.out(Easing.bezierFn(0.25, 0.1, 0.25, 1)) });
+    barWidth.value = withDelay(150, withTiming(data.score, { duration: 600, easing: Easing.out(Easing.bezierFn(0.25, 0.1, 0.25, 1)) }));
   }, [data.area, data.score]);
 
-  const panelStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: slideY.value }],
-  }));
-
-  const barStyle = useAnimatedStyle(() => ({
-    width: `${barWidth.value}%` as any,
-  }));
+  const panelStyle = useAnimatedStyle(() => ({ transform: [{ translateY: slideY.value }] }));
+  const barStyle = useAnimatedStyle(() => ({ width: `${barWidth.value}%` as any }));
 
   return (
     <Animated.View style={[styles.detailPanel, panelStyle]}>
-      {/* Glass effect top edge */}
       <View style={styles.panelTopEdge} />
-
-      {/* Close button */}
-      <TouchableOpacity
-        onPress={onClose}
-        style={styles.closeBtn}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Text style={styles.closeBtnText}>{'  \u2715  '}</Text>
+      <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <Text style={styles.closeBtnText}>{'\u2715'}</Text>
       </TouchableOpacity>
 
-      {/* Header: label + nickname */}
       <View style={styles.panelHeader}>
         <Text style={styles.panelTitle}>{label}</Text>
-        {data.nickname ? (
-          <Text style={styles.panelNickname}>{data.nickname}</Text>
-        ) : null}
+        {data.nickname && <Text style={styles.panelNickname}>{data.nickname}</Text>}
       </View>
 
-      {/* Score row */}
       <View style={styles.scoreRow}>
         <View style={styles.barTrack}>
           <Animated.View style={[styles.barFill, barStyle]} />
-          {/* Bar glow */}
-          <Animated.View style={[styles.barGlow, barStyle]} />
         </View>
         <Text style={styles.scoreValue}>{data.score}</Text>
         <Text style={styles.scoreUnit}>점</Text>
       </View>
 
-      {/* Description */}
-      <Text style={styles.panelDesc} numberOfLines={3}>
-        {data.description}
-      </Text>
-
-      {/* Detail */}
-      {data.detail ? (
-        <Text style={styles.panelDetail} numberOfLines={2}>
-          {data.detail}
-        </Text>
-      ) : null}
+      <Text style={styles.panelDesc} numberOfLines={3}>{data.description}</Text>
+      {data.detail && <Text style={styles.panelDetail} numberOfLines={2}>{data.detail}</Text>}
     </Animated.View>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main FaceOverlay component
+// Main FaceOverlay
 // ---------------------------------------------------------------------------
 
 export function FaceOverlay({
@@ -245,17 +238,12 @@ export function FaceOverlay({
   onFeatureSelect,
 }: FaceOverlayProps) {
   const [selected, setSelected] = useState<string | null>(null);
-
-  // Reanimated shared values for zoom
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-
   const centerX = imageSize / 2;
   const centerY = imageSize / 2;
 
-  // 관상화 전용 좌표 — gpt-image-1이 생성하는 초상화의 일관된 구도에 맞춤
-  // (얼굴이 프레임 70% 차지, 약간 좌측 3/4 앵글)
   const PAINTING_POINTS: Record<string, { x: number; y: number }> = {
     forehead: { x: 0.52, y: 0.14 },
     eyes:     { x: 0.48, y: 0.32 },
@@ -267,16 +255,13 @@ export function FaceOverlay({
 
   const getPoint = useCallback(
     (f: FeatureData) => {
-      // API가 반환한 좌표가 있으면 (관상화/원본 모두) 최우선 사용
       if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number'
           && f.position.x > 0.01 && f.position.x < 0.99 && f.position.y > 0.01 && f.position.y < 0.99) {
         return f.position;
       }
       if (isTransformed) {
-        // 관상화: API 좌표 없으면 고정 좌표 fallback
         return PAINTING_POINTS[f.area] ?? FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
       }
-      // 원본 셀피: fallback
       return FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
     },
     [isTransformed],
@@ -294,35 +279,14 @@ export function FaceOverlay({
           const px = pt.x * imageSize;
           const py = pt.y * imageSize;
           const s = ZOOM_SCALE;
-          const tx = (centerX - px) * (s - 1);
-          const ty = (centerY - py) * (s - 1);
-
-          scale.value = withTiming(s, {
-            duration: ZOOM_DURATION,
-            easing: Easing.bezierFn(0.25, 0.1, 0.25, 1),
-          });
-          translateX.value = withTiming(tx, {
-            duration: ZOOM_DURATION,
-            easing: Easing.bezierFn(0.25, 0.1, 0.25, 1),
-          });
-          translateY.value = withTiming(ty, {
-            duration: ZOOM_DURATION,
-            easing: Easing.bezierFn(0.25, 0.1, 0.25, 1),
-          });
+          scale.value = withTiming(s, { duration: ZOOM_DURATION, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) });
+          translateX.value = withTiming((centerX - px) * (s - 1), { duration: ZOOM_DURATION, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) });
+          translateY.value = withTiming((centerY - py) * (s - 1), { duration: ZOOM_DURATION, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) });
         }
       } else {
-        scale.value = withTiming(1, {
-          duration: ZOOM_DURATION,
-          easing: Easing.bezierFn(0.25, 0.1, 0.25, 1),
-        });
-        translateX.value = withTiming(0, {
-          duration: ZOOM_DURATION,
-          easing: Easing.bezierFn(0.25, 0.1, 0.25, 1),
-        });
-        translateY.value = withTiming(0, {
-          duration: ZOOM_DURATION,
-          easing: Easing.bezierFn(0.25, 0.1, 0.25, 1),
-        });
+        scale.value = withTiming(1, { duration: ZOOM_DURATION, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) });
+        translateX.value = withTiming(0, { duration: ZOOM_DURATION, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) });
+        translateY.value = withTiming(0, { duration: ZOOM_DURATION, easing: Easing.bezierFn(0.25, 0.1, 0.25, 1) });
       }
     },
     [imageSize, centerX, centerY, onFeatureSelect, features, getPoint],
@@ -340,58 +304,43 @@ export function FaceOverlay({
 
   return (
     <View style={[styles.container, { width: imageSize, height: imageSize }]}>
-      {/* Zoomable content layer */}
-      <Animated.View
-        style={[
-          { width: imageSize, height: imageSize, position: 'relative' },
-          zoomStyle,
-        ]}
-      >
-        {/* Image */}
+      <Animated.View style={[{ width: imageSize, height: imageSize, position: 'relative' }, zoomStyle]}>
         <View style={{ width: imageSize, height: imageSize, borderRadius: theme.radius.lg, overflow: 'hidden' }}>
           <Image
             source={{ uri: imageUri }}
             style={[
               styles.image,
               { width: imageSize, height: imageSize },
-              // @ts-ignore — web-only filter
-              !isTransformed && {
-                filter: 'sepia(25%) saturate(0.6) contrast(1.1) brightness(1.02)',
-              },
+              // @ts-ignore
+              !isTransformed && { filter: 'sepia(25%) saturate(0.6) contrast(1.1) brightness(1.02)' },
             ]}
           />
         </View>
 
-        {/* Paper overlay for non-transformed images */}
-        {!isTransformed && (
-          <View
-            style={[styles.paperOverlay, { width: imageSize, height: imageSize }]}
-          />
-        )}
+        {!isTransformed && <View style={[styles.paperOverlay, { width: imageSize, height: imageSize }]} />}
 
-        {/* Dots only — labels are shown in the card list below */}
         {features.map((f, index) => {
           const pt = getPoint(f);
           if (!pt) return null;
-
           const px = pt.x * imageSize;
           const py = pt.y * imageSize;
-          const isActive = selected === f.area;
 
           return (
-            <PulsingDot
+            <FeaturePoint
               key={f.area}
               px={px}
               py={py}
-              isActive={isActive}
+              isActive={selected === f.area}
               index={index}
-              onPress={() => handleSelect(isActive ? null : f.area)}
+              area={f.area}
+              score={f.score}
+              imageSize={imageSize}
+              onPress={() => handleSelect(selected === f.area ? null : f.area)}
             />
           );
         })}
       </Animated.View>
 
-      {/* Detail panel — outside zoom layer, slides up from bottom */}
       {selectedData && selected && LABEL_META[selected] && (
         <DetailPanel
           key={selected}
@@ -409,7 +358,6 @@ export function FaceOverlay({
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  // -- Container --
   container: {
     position: 'relative',
     alignSelf: 'center',
@@ -417,8 +365,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#0E0D0B',
   },
-
-  // -- Image --
   image: {
     borderRadius: theme.radius.lg,
   },
@@ -438,12 +384,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   dot: {
-    backgroundColor: 'rgba(200,170,120,0.8)',
+    backgroundColor: 'rgba(200,170,120,0.85)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: 'rgba(255,255,255,0.6)',
     shadowColor: '#B59530',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -453,6 +399,36 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     shadowOpacity: 0.8,
     shadowRadius: 8,
+  },
+
+  // -- Label line + tag --
+  labelLine: {
+    position: 'absolute',
+    height: 1,
+    alignItems: 'center',
+    zIndex: 9,
+  },
+  lineSegment: {
+    flex: 1,
+    height: 0.5,
+    backgroundColor: 'rgba(200,170,120,0.4)',
+  },
+  labelTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 4,
+  },
+  labelTagText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(200,170,120,0.7)',
+    letterSpacing: 0.5,
+  },
+  labelScore: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
   },
 
   // -- Detail panel --
@@ -537,14 +513,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: theme.colors.gold.primary,
     borderRadius: 2.5,
-  },
-  barGlow: {
-    position: 'absolute',
-    top: -1,
-    left: 0,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: 'rgba(181,149,48,0.2)',
   },
   scoreValue: {
     fontSize: 18,

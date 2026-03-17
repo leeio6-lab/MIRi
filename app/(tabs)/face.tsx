@@ -5,23 +5,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Alert,
   Dimensions,
   Platform,
 } from 'react-native';
-import Animated, { FadeInDown, FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
-import { Button } from '../../src/components/ui/Button';
 import { LoadingInk } from '../../src/components/ui/LoadingInk';
 import { PaywallModal } from '../../src/components/ui/PaywallModal';
-import { ShareCard } from '../../src/components/ui/ShareCard';
 import { FaceOverlay } from '../../src/components/face/FaceOverlay';
-import { FaceGuide } from '../../src/components/face/FaceGuide';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { usePurchaseStore } from '../../src/stores/purchaseStore';
 import { useFace } from '../../src/hooks/useFace';
@@ -89,7 +85,7 @@ function FeatureExpandCard({
 }) {
   const icon = AREA_ICONS[feature.area] ?? '相';
   const label = AREA_LABELS[feature.area] ?? feature.area;
-  const scoreColor = feature.score >= 85 ? '#D4B245' : feature.score >= 75 ? '#B59530' : '#8A7220';
+  const scoreColor = feature.score >= 85 ? theme.colors.gold.primary : feature.score >= 75 ? theme.colors.gold.dark : theme.colors.gold.muted;
 
   return (
     <TouchableOpacity
@@ -142,9 +138,8 @@ function FeatureExpandCard({
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function FaceScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
-  const { faceResult, transformedImageBase64, analyze, isLoading, error, clearError, noFaceDetected, noFaceReason, clearNoFace } = useFace();
+  const { faceResult, transformedImageBase64, analyze, isLoading, error, clearError, noFaceDetected, noFaceReason, clearNoFace, transformError } = useFace();
   const { setFaceResult, setTransformedImage, saveAndRecord } = useFortuneStore();
   const { hasFaceTicket, useFaceTicket } = usePurchaseStore();
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -268,17 +263,21 @@ export default function FaceScreen() {
           <View style={rs.navSpacer} />
           <View style={rs.navBrand}>
             <Text style={rs.navLogo}>MIRi</Text>
-            <Text style={rs.navTagline}>관상 풀이</Text>
+            <View style={rs.navDecoRow}>
+              <View style={rs.navDeco} />
+              <Text style={rs.navTagline}>面 相 풀 이</Text>
+              <View style={rs.navDeco} />
+            </View>
           </View>
           <View style={rs.navSpacer} />
         </View>
 
-        {/* ─── 1. PORTRAIT (얼굴이 젤 먼저) ─── */}
+        {/* ─── 1. PORTRAIT ─── */}
         <Animated.View entering={FadeIn.delay(100).duration(500)}>
           {transformedUri ? (
             <Text style={rs.inkLabel}>水墨 관상화</Text>
           ) : (
-            <Text style={rs.inkLabelFallback}>관상 분석 (수묵화 생성 실패)</Text>
+            <Text style={rs.inkLabelFallback}>관상 분석</Text>
           )}
           <View style={rs.portraitFrame}>
             <FaceOverlay
@@ -292,37 +291,42 @@ export default function FaceScreen() {
           <Text style={rs.tapHint}>{t('face.tapHint')}</Text>
         </Animated.View>
 
-        {/* ─── 2. HOOK + SCORE + SHARE (자극적 → 바로 공유) ─── */}
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
-          {faceResult.shareTitle && (
-            <View style={rs.tagRow}>
-              <View style={rs.tag}>
-                <Text style={rs.tagText}>{faceResult.shareTitle}</Text>
+        {/* ─── 2. 메인 카드 (검정, 사진 바로 아래) ─── */}
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
+          <View style={rs.mainCard}>
+            {faceResult.shareTitle && (
+              <View style={rs.mainTagRow}>
+                <View style={rs.mainTag}>
+                  <Text style={rs.mainTagText}>{faceResult.shareTitle}</Text>
+                </View>
               </View>
-              <Text style={rs.scoreText}>{faceResult.overallScore}<Text style={rs.scoreUnit}>점</Text></Text>
+            )}
+            <View style={rs.mainScoreRow}>
+              <Text style={rs.mainScoreNum}>{faceResult.overallScore}</Text>
+              <Text style={rs.mainScoreUnit}>점</Text>
             </View>
-          )}
-
-          <Text style={rs.hookLine}>
-            {faceResult.hookLine ?? faceResult.summary}
-          </Text>
-
-          {faceResult.celebrity && (
-            <Text style={rs.celebrityText}>{'\u2605'} {faceResult.celebrity}</Text>
-          )}
-
-          <TouchableOpacity style={rs.shareBtn} onPress={handleShare} activeOpacity={0.8}>
-            <Text style={rs.shareBtnText}>{t('common.share')}</Text>
-          </TouchableOpacity>
+            <View style={rs.mainDivider} />
+            <Text style={rs.mainHookLine}>
+              {faceResult.hookLine ?? faceResult.summary}
+            </Text>
+            {faceResult.celebrity && (
+              <Text style={rs.mainCelebrity}>{faceResult.celebrity}</Text>
+            )}
+            <TouchableOpacity style={rs.mainShareBtn} onPress={handleShare} activeOpacity={0.8}>
+              <Text style={rs.mainShareText}>{t('common.share')}</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
-        {/* ─── 3. BEST POINT ─── */}
+        {/* ─── 3. BEST POINT (다크 카드) ─── */}
         {faceResult.highlight && (
           <Animated.View entering={FadeInDown.delay(450).springify()}>
             <View style={rs.bestCard}>
-              <View style={rs.bestBadge}>
-                <Text style={rs.bestBadgeText}>BEST</Text>
-              </View>
+              <Text style={rs.bestLabel}>가장 빛나는 부위</Text>
+              <View style={rs.bestDivider} />
+              <Text style={rs.bestHanja}>
+                {AREA_ICONS[faceResult.highlight.area] ?? '相'}
+              </Text>
               <Text style={rs.bestArea}>
                 {AREA_LABELS[faceResult.highlight.area] ?? faceResult.highlight.area}
               </Text>
@@ -331,11 +335,15 @@ export default function FaceScreen() {
           </Animated.View>
         )}
 
-        {/* ─── 4. RADAR ─── */}
+        {/* ─── 4. RADAR (운세 바) ─── */}
         {faceResult.radarScores && (
           <Animated.View entering={FadeInDown.delay(550).springify()}>
-            <View style={rs.radarCard}>
-              <Text style={rs.radarTitle}>{t('face.radarSection')}</Text>
+            <GlassCard style={rs.radarCard}>
+              <View style={rs.radarTitleRow}>
+                <View style={rs.radarTitleLine} />
+                <Text style={rs.radarTitle}>{t('face.radarSection')}</Text>
+                <View style={rs.radarTitleLine} />
+              </View>
               {(['wealth', 'love', 'health', 'success', 'social'] as const).map((key) => {
                 const meta = RADAR_LABELS[key];
                 const val = faceResult.radarScores![key];
@@ -350,7 +358,7 @@ export default function FaceScreen() {
                   </View>
                 );
               })}
-            </View>
+            </GlassCard>
           </Animated.View>
         )}
 
@@ -424,8 +432,8 @@ export default function FaceScreen() {
 
         {/* ─── 7. BOTTOM ─── */}
         <View style={rs.bottomActions}>
-          <TouchableOpacity style={rs.shareBtn} onPress={handleShare} activeOpacity={0.8}>
-            <Text style={rs.shareBtnText}>{t('common.share')}</Text>
+          <TouchableOpacity style={rs.bottomShareBtn} onPress={handleShare} activeOpacity={0.8}>
+            <Text style={rs.bottomShareText}>{t('common.share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={rs.newBtn} onPress={resetAnalysis} activeOpacity={0.8}>
             <Text style={rs.newBtnText}>{t('face.newAnalysis')}</Text>
@@ -438,7 +446,7 @@ export default function FaceScreen() {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  //  CAPTURE VIEW (Phase 1)
+  //  CAPTURE VIEW (Phase 1) — 간소화
   // ════════════════════════════════════════════════════════════════════════════
 
   return (
@@ -450,23 +458,78 @@ export default function FaceScreen() {
       {/* ── Header ── */}
       <Animated.View entering={FadeIn.delay(100).duration(400)}>
         <View style={cs.hero}>
-          <Text style={cs.heroChar}>相</Text>
+          <View style={cs.heroDecoRow}>
+            <View style={cs.heroDot} />
+            <View style={cs.heroDeco} />
+            <Text style={cs.heroChar}>面相</Text>
+            <View style={cs.heroDeco} />
+            <View style={cs.heroDot} />
+          </View>
           <Text style={cs.heroTitle}>{t('face.title')}</Text>
-          <Text style={cs.heroSub}>{'얼굴에 새겨진 운명의 지도를\nAI가 읽어드려요'}</Text>
+          <Text style={cs.heroSub}>{'셀카 한 장으로 관상을 풀어드려요'}</Text>
         </View>
       </Animated.View>
 
-      {/* ── Photo Area ── */}
-      <Animated.View entering={FadeIn.delay(200).duration(500)}>
-        <View style={[cs.captureArea, { width: portraitSize, height: portraitSize }]}>
-          <FaceGuide size={portraitSize} hasImage={!!imageUri} />
+      {/* ── 분석 안내 알림 ── */}
+      <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+        <View style={cs.infoNotice}>
+          <Text style={cs.infoChar}>相</Text>
+          <View style={cs.infoTextWrap}>
+            <Text style={cs.infoTitle}>이런 분석을 해드려요</Text>
+            <Text style={cs.infoDesc}>
+              {'종합 관상 점수 · 부위별 운세 · 성격 분석\n재물운 · 연애운 · 건강운 · 수묵 관상화'}
+            </Text>
+          </View>
         </View>
       </Animated.View>
+
+      {/* ── 사진 선택 버튼 ── */}
+      {!error && !noFaceDetected && !imageUri && (
+        <Animated.View entering={FadeInDown.delay(300).duration(400)}>
+          <View style={cs.actionRow}>
+            <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(true)} activeOpacity={0.7}>
+              <Text style={cs.actionHanja}>攝</Text>
+              <Text style={cs.actionLabel}>{t('face.takePhoto')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(false)} activeOpacity={0.7}>
+              <Text style={cs.actionHanja}>冊</Text>
+              <Text style={cs.actionLabel}>{t('face.choosePhoto')}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={cs.guideHint}>{t('face.guide')}</Text>
+        </Animated.View>
+      )}
+
+      {/* ── 사진 선택 완료 + 진행 버튼 ── */}
+      {!error && !noFaceDetected && imageUri && (
+        <Animated.View entering={FadeInDown.delay(150).springify()}>
+          <View style={cs.readyCard}>
+            <Text style={cs.readyChar}>面</Text>
+            <Text style={cs.readyTitle}>사진이 준비되었습니다</Text>
+            <Text style={cs.readyDesc}>아래 버튼을 눌러 관상 분석을 시작하세요</Text>
+            <TouchableOpacity style={cs.changePhotoBtn} onPress={() => setImageUri(null)} activeOpacity={0.7}>
+              <Text style={cs.changePhotoText}>다른 사진 선택</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={cs.analyzeBtn} onPress={handleAnalyzePress} activeOpacity={0.8}>
+            <Text style={cs.analyzeBtnText}>
+              {hasFaceTicket() ? t('face.startAnalysis') : '관상 분석하기'}
+            </Text>
+            {!hasFaceTicket() && (
+              <Text style={cs.analyzeBtnPrice}>{t('paywall.facePrice')}</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={cs.statusHint}>
+            {hasFaceTicket() ? t('face.ticketHint') : '분석권 구매 후 관상을 풀어드려요'}
+          </Text>
+        </Animated.View>
+      )}
 
       {/* ── No Face / Error ── */}
       {noFaceDetected && (
         <Animated.View entering={FadeInDown.springify()} style={cs.noFaceCard}>
-          <Text style={cs.noFaceEmoji}>{'\uD83D\uDE45'}</Text>
+          <Text style={cs.noFaceChar}>面</Text>
           <Text style={cs.noFaceTitle}>{t('face.noFaceTitle')}</Text>
           <Text style={cs.noFaceDesc}>{noFaceReason}</Text>
           <View style={cs.noFaceTips}>
@@ -488,41 +551,6 @@ export default function FaceScreen() {
           <TouchableOpacity style={cs.retryActionBtn} onPress={handleRetry}>
             <Text style={cs.retryActionText}>{t('common.retryAgain')}</Text>
           </TouchableOpacity>
-        </Animated.View>
-      )}
-
-      {/* ── Action Buttons ── */}
-      {!error && !noFaceDetected && (
-        <Animated.View entering={FadeInUp.delay(300).duration(400)}>
-          <View style={cs.actionGroup}>
-            <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(true)} activeOpacity={0.7}>
-              <View style={cs.actionIcon}><Text style={cs.actionIconText}>{'📷'}</Text></View>
-              <Text style={cs.actionLabel}>{t('face.takePhoto')}</Text>
-            </TouchableOpacity>
-
-            <View style={cs.actionDivider} />
-
-            <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(false)} activeOpacity={0.7}>
-              <View style={cs.actionIcon}><Text style={cs.actionIconText}>{'🖼'}</Text></View>
-              <Text style={cs.actionLabel}>{t('face.choosePhoto')}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {imageUri && (
-            <Animated.View entering={FadeInDown.delay(150).springify()}>
-              <TouchableOpacity style={cs.analyzeBtn} onPress={handleAnalyzePress} activeOpacity={0.8}>
-                <Text style={cs.analyzeBtnText}>
-                  {hasFaceTicket() ? t('face.startAnalysis') : '관상 분석하기'}
-                </Text>
-                {!hasFaceTicket() && (
-                  <Text style={cs.analyzeBtnPrice}>{t('paywall.facePrice')}</Text>
-                )}
-              </TouchableOpacity>
-              <Text style={cs.statusHint}>
-                {hasFaceTicket() ? t('face.ticketHint') : '분석권 구매 후 AI가 관상을 풀어드려요'}
-              </Text>
-            </Animated.View>
-          )}
         </Animated.View>
       )}
 
@@ -562,12 +590,23 @@ const rs = StyleSheet.create({
     color: theme.colors.text.primary,
     letterSpacing: 4,
   },
+  navDecoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 3,
+  },
+  navDeco: {
+    width: 20,
+    height: 1,
+    backgroundColor: theme.colors.gold.light,
+    opacity: 0.3,
+  },
   navTagline: {
     fontSize: 10,
     fontWeight: '400',
     color: theme.colors.text.tertiary,
-    letterSpacing: 1,
-    marginTop: 1,
+    letterSpacing: 3,
   },
   navSpacer: {
     width: 34,
@@ -603,124 +642,149 @@ const rs = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
 
-  // ── 2. Hook + Score + Share ──
-  tagRow: {
-    flexDirection: 'row',
+  // ── 2. 메인 카드 (검정) ──
+  mainCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: theme.radius.lg,
+    padding: 24,
+    marginTop: -4,
+    marginBottom: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(181,149,48,0.15)',
   },
-  tag: {
+  mainTagRow: {
+    marginBottom: 12,
+  },
+  mainTag: {
     backgroundColor: theme.colors.gold.primary,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 4,
   },
-  tagText: {
+  mainTagText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  scoreText: {
-    fontSize: 28,
+  mainScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+    marginBottom: 8,
+  },
+  mainScoreNum: {
+    fontSize: 48,
     fontWeight: '200',
     color: theme.colors.gold.primary,
     letterSpacing: -1,
   },
-  scoreUnit: {
-    fontSize: 14,
+  mainScoreUnit: {
+    fontSize: 16,
     fontWeight: '400',
     color: theme.colors.gold.dark,
   },
-  hookLine: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
+  mainDivider: {
+    width: 40,
+    height: 1,
+    backgroundColor: 'rgba(181,149,48,0.25)',
+    marginBottom: 14,
+  },
+  mainHookLine: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: theme.spacing.sm,
+    lineHeight: 24,
+    letterSpacing: 0.3,
     paddingHorizontal: 4,
   },
-  celebrityText: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
+  mainCelebrity: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: theme.spacing.md,
+    marginTop: 10,
   },
-  shareBtn: {
-    backgroundColor: theme.colors.goldCard.bg,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: theme.radius.full,
-    alignSelf: 'center',
-    marginBottom: theme.spacing.xl,
+  mainShareBtn: {
+    marginTop: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: theme.colors.gold.dark + '60',
+    borderColor: 'rgba(181,149,48,0.4)',
+    borderRadius: theme.radius.sm,
   },
-  shareBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+  mainShareText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: theme.colors.gold.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
 
-  // ── 3. Best Card ──
+  // ── 3. Best Card (다크) ──
   bestCard: {
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#1A1A1A',
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.cardPadding,
-    marginBottom: theme.spacing.cardGap,
+    padding: 28,
+    marginBottom: 20,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.gold.dark + '30',
-    ...theme.shadow.card,
   },
-  bestBadge: {
-    backgroundColor: theme.colors.gold.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 4,
+  bestLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 3,
     marginBottom: 8,
   },
-  bestBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 2,
+  bestDivider: {
+    width: 20,
+    height: 1,
+    backgroundColor: theme.colors.gold.primary + '40',
+    marginBottom: 16,
+  },
+  bestHanja: {
+    fontSize: 36,
+    fontWeight: '200',
+    color: theme.colors.gold.primary,
+    letterSpacing: 4,
+    marginBottom: 8,
   },
   bestArea: {
     fontSize: 16,
     fontWeight: '700',
-    color: theme.colors.text.primary,
-    marginBottom: 6,
+    color: '#FFFFFF',
+    letterSpacing: 1.5,
+    marginBottom: 10,
   },
   bestMessage: {
     fontSize: 13,
-    color: theme.colors.text.secondary,
+    color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
-    lineHeight: 21,
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
 
   // ── 4. Radar ──
   radarCard: {
-    backgroundColor: theme.colors.bg.elevated,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.cardPadding,
-    marginBottom: theme.spacing.cardGap,
-    borderWidth: 1,
-    borderColor: theme.colors.glass.border,
-    ...theme.shadow.card,
+    marginBottom: 20,
+  },
+  radarTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 18,
+  },
+  radarTitleLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(212, 168, 75, 0.08)',
   },
   radarTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    letterSpacing: 2,
-    marginBottom: 14,
-    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.gold.dark,
+    letterSpacing: 3,
   },
   radarRow: {
     flexDirection: 'row',
@@ -769,22 +833,23 @@ const rs = StyleSheet.create({
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.glass.border,
+    backgroundColor: 'rgba(212, 168, 75, 0.12)',
   },
   sectionTitle: {
-    ...theme.typo.sectionTitle,
     fontSize: 14,
-    letterSpacing: 2,
+    fontWeight: '600',
+    color: theme.colors.gold.dark,
+    letterSpacing: 3,
   },
 
   // ── Feature Expand Cards ──
   featureCard: {
     backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
+    padding: 20,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: theme.colors.glass.border,
+    borderColor: theme.colors.border.subtle,
     position: 'relative',
     ...theme.shadow.card,
   },
@@ -801,7 +866,7 @@ const rs = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(181,149,48,0.1)',
+    backgroundColor: theme.colors.gold.primary + '12',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -823,8 +888,8 @@ const rs = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   nicknameBadge: {
-    backgroundColor: 'rgba(181,149,48,0.1)',
-    paddingHorizontal: 6,
+    backgroundColor: theme.colors.gold.primary + '10',
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
   },
@@ -857,7 +922,7 @@ const rs = StyleSheet.create({
   },
   detailDivider: {
     height: 1,
-    backgroundColor: theme.colors.glass.border,
+    backgroundColor: 'rgba(212, 168, 75, 0.08)',
     marginBottom: 10,
   },
   featureDetail: {
@@ -867,7 +932,8 @@ const rs = StyleSheet.create({
   featureDesc: {
     fontSize: 13,
     color: theme.colors.text.secondary,
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
   expandArrow: {
     fontSize: 9,
@@ -901,38 +967,55 @@ const rs = StyleSheet.create({
     flex: 1,
   },
   cardLabel: {
-    ...theme.typo.cardTitle,
-    marginBottom: theme.spacing.sm,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.gold.dark,
+    letterSpacing: 3,
+    marginBottom: 12,
   },
 
   // ── 7. Bottom Actions ──
   bottomActions: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
+    gap: 10,
+    marginTop: 24,
     marginBottom: theme.spacing.md,
+  },
+  bottomShareBtn: {
+    flex: 1,
+    backgroundColor: theme.colors.gold.primary,
+    paddingVertical: 14,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+  },
+  bottomShareText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 1,
   },
   newBtn: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: theme.colors.glass.border,
-    paddingVertical: 12,
-    borderRadius: theme.radius.full,
+    borderWidth: 1.5,
+    borderColor: theme.colors.gold.primary,
+    paddingVertical: 14,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
   },
   newBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.text.secondary,
+    color: theme.colors.gold.dark,
+    letterSpacing: 0.5,
   },
 
   // ── Disclaimer ──
   disclaimer: {
     ...theme.typo.caption,
     textAlign: 'center',
-    lineHeight: 14,
-    marginTop: theme.spacing.sm,
+    lineHeight: 18,
+    marginTop: theme.spacing.md,
   },
 });
 
@@ -941,152 +1024,252 @@ const rs = StyleSheet.create({
 // ════════════════════════════════════════════════════════════════════════════
 
 const cs = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: theme.colors.bg.primary },
   content: { paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 62 : 52, paddingBottom: 120 },
 
   // Header
   hero: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: 24,
+  },
+  heroDecoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  heroDeco: {
+    width: 28,
+    height: 1,
+    backgroundColor: theme.colors.gold.light,
+    opacity: 0.3,
+  },
+  heroDot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: '#1A1A1A',
   },
   heroChar: {
-    fontSize: 64,
+    fontSize: 48,
     fontWeight: '200',
     color: theme.colors.gold.primary,
-    marginBottom: theme.spacing.md,
+    letterSpacing: 8,
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: theme.colors.text.primary,
     letterSpacing: 2,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
   heroSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '200',
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-    letterSpacing: 8,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
-    marginBottom: 24,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
 
-  // Photo area
-  captureArea: {
-    alignSelf: 'center',
-    backgroundColor: '#F4F2EF',
-    borderRadius: 20,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  previewImage: { width: '100%', height: '100%' },
-
-  // Action buttons
-  actionGroup: {
+  // 분석 안내 알림
+  infoNotice: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginTop: 20,
-    paddingVertical: 4,
-    ...Platform.select({
-      web: { boxShadow: '0 1px 6px rgba(0,0,0,0.06)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
-    }),
-  } as any,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 26, 0.06)',
+    padding: 20,
+    marginBottom: 24,
+    gap: 16,
+    ...theme.shadow.card,
+  },
+  infoChar: {
+    fontSize: 28,
+    fontWeight: '200',
+    color: theme.colors.text.tertiary,
+    letterSpacing: 2,
+  },
+  infoTextWrap: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  infoDesc: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+    letterSpacing: 0.3,
+  },
+
+  // Action buttons
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
   actionBtn: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 28,
     gap: 8,
-    paddingVertical: 16,
+    backgroundColor: '#1A1A1A',
+    borderRadius: theme.radius.lg,
   },
-  actionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionIconText: {
-    fontSize: 16,
+  actionHanja: {
+    fontSize: 28,
+    fontWeight: '200',
+    color: theme.colors.gold.primary,
   },
   actionLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.text.primary,
+    color: theme.colors.gold.primary,
+    letterSpacing: 0.5,
   },
-  actionDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+  guideHint: {
+    fontSize: 11,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    lineHeight: 18,
+  },
+
+  // 사진 준비 완료 카드
+  readyCard: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 168, 75, 0.10)',
+    padding: 28,
+    marginBottom: 8,
+    ...theme.shadow.card,
+  },
+  readyChar: {
+    fontSize: 36,
+    fontWeight: '200',
+    color: theme.colors.text.tertiary,
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  readyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  readyDesc: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    letterSpacing: 0.3,
+    lineHeight: 22,
+  },
+  changePhotoBtn: {
+    marginTop: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 26, 26, 0.10)',
+    borderRadius: theme.radius.sm,
+  },
+  changePhotoText: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
 
   // Analyze button
   analyzeBtn: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 14,
+    backgroundColor: '#1A1A1A',
+    borderRadius: theme.radius.md,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 14,
-  },
+    marginTop: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 12px rgba(26,26,26,0.15)' },
+      default: { shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 4 },
+    }),
+  } as any,
   analyzeBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: theme.colors.gold.primary,
-    letterSpacing: 0.5,
+    color: '#FFFFFF',
+    letterSpacing: 1,
   },
   analyzeBtnPrice: {
     fontSize: 12,
     fontWeight: '500',
-    color: theme.colors.gold.muted,
+    color: 'rgba(255,255,255,0.6)',
     marginTop: 2,
   },
   statusHint: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.text.tertiary,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: 8,
+    letterSpacing: 0.5,
   },
 
   // No face / Error
-  noFaceCard: { backgroundColor: '#FFF8F0', borderRadius: 16, padding: 24, marginTop: 16, alignItems: 'center' },
-  noFaceEmoji: { fontSize: 36, marginBottom: 10 },
-  noFaceTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 6, textAlign: 'center' },
-  noFaceDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 14, textAlign: 'center', lineHeight: 20 },
-  noFaceTips: { alignSelf: 'stretch', backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 12, marginBottom: 12, gap: 4 },
-  noFaceTipItem: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 20 },
-  noFaceReassure: { fontSize: 12, color: theme.colors.gold.primary, fontWeight: '600', marginBottom: 12 },
+  noFaceCard: {
+    backgroundColor: theme.colors.bg.elevated,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
+    padding: 24,
+    marginTop: 20,
+    alignItems: 'center',
+    ...theme.shadow.card,
+  },
+  noFaceChar: {
+    fontSize: 32,
+    fontWeight: '200',
+    color: theme.colors.gold.muted,
+    marginBottom: 12,
+    letterSpacing: 2,
+  },
+  noFaceTitle: { fontSize: 16, fontWeight: '600', color: theme.colors.text.primary, marginBottom: 8, textAlign: 'center', letterSpacing: 1 },
+  noFaceDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 16, textAlign: 'center', lineHeight: 22, letterSpacing: 0.3 },
+  noFaceTips: {
+    alignSelf: 'stretch',
+    backgroundColor: theme.colors.gold.primary + '08',
+    borderRadius: theme.radius.sm,
+    padding: 14,
+    marginBottom: 14,
+    gap: 6,
+  },
+  noFaceTipItem: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 22, letterSpacing: 0.3 },
+  noFaceReassure: { fontSize: 12, color: theme.colors.gold.dark, fontWeight: '600', marginBottom: 14, letterSpacing: 0.5 },
   retryActionBtn: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 10,
+    backgroundColor: theme.colors.gold.primary,
+    borderRadius: theme.radius.sm,
     paddingVertical: 12,
     paddingHorizontal: 28,
   },
   retryActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.gold.primary,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
-  tipText: { fontSize: 12, color: theme.colors.text.tertiary, lineHeight: 20 },
-  errorCard: { backgroundColor: '#FFF0F0', borderRadius: 16, padding: 20, marginTop: 16 },
-  errorTitle: { fontSize: 15, fontWeight: '700', color: '#C44', marginBottom: 4 },
-  errorDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 8 },
-  disclaimer: { fontSize: 10, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 14, marginTop: 32 },
+  tipText: { fontSize: 12, color: theme.colors.text.tertiary, lineHeight: 20, letterSpacing: 0.3 },
+  errorCard: {
+    backgroundColor: theme.colors.bg.elevated,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.error + '20',
+    padding: 24,
+    marginTop: 20,
+  },
+  errorTitle: { fontSize: 15, fontWeight: '600', color: theme.colors.error, marginBottom: 6, letterSpacing: 0.5 },
+  errorDesc: { fontSize: 13, color: theme.colors.text.secondary, marginBottom: 10, lineHeight: 22, letterSpacing: 0.3 },
+  disclaimer: { fontSize: 10, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 16, marginTop: 32, letterSpacing: 0.5 },
 });

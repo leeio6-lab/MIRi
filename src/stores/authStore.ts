@@ -9,11 +9,13 @@ interface AuthState {
   isAuthenticated: boolean;
   isGuest: boolean;
   hasCompletedOnboarding: boolean;
+  hasSeenGuide: boolean;
   isLoading: boolean;
 
   setUser: (user: UserProfile | null) => void;
   setAuthenticated: (auth: boolean) => void;
   setOnboardingComplete: () => void;
+  setGuideComplete: () => void;
   setLoading: (loading: boolean) => void;
 
   signInWithGoogle: () => Promise<{ success: boolean; error?: string; providerToken?: string }>;
@@ -31,11 +33,13 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isGuest: false,
       hasCompletedOnboarding: false,
+      hasSeenGuide: false,
       isLoading: false,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setAuthenticated: (auth) => set({ isAuthenticated: auth, isGuest: false }),
       setOnboardingComplete: () => set({ hasCompletedOnboarding: true }),
+      setGuideComplete: () => set({ hasSeenGuide: true }),
       setLoading: (loading) => set({ isLoading: loading }),
 
       signInWithGoogle: async () => {
@@ -95,6 +99,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         isGuest: state.isGuest,
         hasCompletedOnboarding: state.hasCompletedOnboarding,
+        hasSeenGuide: state.hasSeenGuide,
       }),
     }
   )

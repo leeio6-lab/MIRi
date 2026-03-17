@@ -407,6 +407,65 @@ export {
 };
 
 // ============================================================
+// 공망 (空亡, Void/Emptiness)
+// ============================================================
+
+/**
+ * 공망(空亡) 계산 — 순중공망(旬中空亡)
+ *
+ * 60갑자를 10개씩 6순(旬)으로 나눔:
+ *   甲子旬(0-9),  甲戌旬(10-19), 甲申旬(20-29),
+ *   甲午旬(30-39), 甲辰旬(40-49), 甲寅旬(50-59)
+ *
+ * 각 순에서 천간 10개가 지지 12개 중 10개와 짝을 이루고,
+ * 남은 2개의 지지가 공망이 됨.
+ *
+ * 계산법: 일주의 60갑자 번호를 구하고, 해당 순의 시작점에서
+ *         빠진 2개 지지를 찾음.
+ *
+ * @param stemIdx   일간 천간 인덱스 (0~9)
+ * @param branchIdx 일지 지지 인덱스 (0~11)
+ * @returns 공망에 해당하는 2개 지지 인덱스 배열
+ */
+export function calculateGongmang(stemIdx: number, branchIdx: number): [number, number] {
+  // 60갑자 내 위치: stem과 branch의 관계로 순(旬) 결정
+  // 순의 시작 지지 = branchIdx - stemIdx (10개 천간이 순서대로 짝지어지므로)
+  const startBranch = ((branchIdx - stemIdx) % 12 + 12) % 12;
+
+  // 공망 = 순의 시작 지지에서 10번째, 11번째 (0-indexed)
+  const gm1 = (startBranch + 10) % 12;
+  const gm2 = (startBranch + 11) % 12;
+
+  return [gm1, gm2];
+}
+
+/**
+ * 공망 한자 문자열 반환
+ * @returns "戌亥" 같은 2글자 한자
+ */
+export function getGongmangHanja(stemIdx: number, branchIdx: number): string {
+  const [gm1, gm2] = calculateGongmang(stemIdx, branchIdx);
+  return `${EARTHLY_BRANCHES_HANJA[gm1]}${EARTHLY_BRANCHES_HANJA[gm2]}`;
+}
+
+/**
+ * 공망 한글 문자열 반환
+ * @returns "술해" 같은 2글자 한글
+ */
+export function getGongmangText(stemIdx: number, branchIdx: number): string {
+  const [gm1, gm2] = calculateGongmang(stemIdx, branchIdx);
+  return `${EARTHLY_BRANCHES[gm1]}${EARTHLY_BRANCHES[gm2]}`;
+}
+
+/**
+ * 특정 지지가 공망에 해당하는지 확인
+ */
+export function isGongmang(dayStemIdx: number, dayBranchIdx: number, targetBranchIdx: number): boolean {
+  const [gm1, gm2] = calculateGongmang(dayStemIdx, dayBranchIdx);
+  return targetBranchIdx === gm1 || targetBranchIdx === gm2;
+}
+
+// ============================================================
 // 십성 (十星, Ten Gods)
 // ============================================================
 
@@ -1109,6 +1168,12 @@ export interface FullSajuAnalysis {
   yongShin: YongShinResult;
   yearlyFortune: YearlyFortune;
   todaySaju: TodaySajuResult;
+  gongmang: {
+    branches: [number, number];   // 공망 지지 인덱스 2개
+    hanja: string;                // "戌亥" 등
+    text: string;                 // "술해" 등
+    inPillars: string[];          // 사주 내 공망에 해당하는 기둥들 (예: ['년주', '시주'])
+  };
 }
 
 /**
@@ -1186,6 +1251,17 @@ export function calculateFullSaju(
   // 9. 오늘의 사주
   const todaySaju = calculateTodaySaju(dmIdx);
 
+  // 10. 공망
+  const gmBranches = calculateGongmang(fourPillars.day.stemIdx, fourPillars.day.branchIdx);
+  const gmInPillars: string[] = [];
+  const pillarNames = ['년주', '월주', '일주', '시주'];
+  const pillarBranches = [fourPillars.year.branchIdx, fourPillars.month.branchIdx, fourPillars.day.branchIdx, fourPillars.hour.branchIdx];
+  for (let i = 0; i < 4; i++) {
+    if (gmBranches.includes(pillarBranches[i] as any)) {
+      gmInPillars.push(pillarNames[i]);
+    }
+  }
+
   return {
     fourPillars,
     tenGods,
@@ -1196,6 +1272,12 @@ export function calculateFullSaju(
     yongShin,
     yearlyFortune,
     todaySaju,
+    gongmang: {
+      branches: gmBranches,
+      hanja: getGongmangHanja(fourPillars.day.stemIdx, fourPillars.day.branchIdx),
+      text: getGongmangText(fourPillars.day.stemIdx, fourPillars.day.branchIdx),
+      inPillars: gmInPillars,
+    },
   };
 }
 

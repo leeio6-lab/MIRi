@@ -14,6 +14,12 @@ const COMPATIBILITY_SYSTEM = `당신은 서울에서 30년간 궁합 전문 상�
 4. 궁위 교차 — A의 일지가 B에게 어떤 십성인지, 역방향도
 5. 운의 흐름 호환 — 대운 방향 일치/엇갈림, 올해 세운과의 관계
 
+## 일관성 규칙 (최우선)
+- 같은 두 사주의 궁합은 언제 분석해도 같은 결론이어야 한다.
+- ⚠️ [확정] 태그가 붙은 데이터(신강/신약, 용신)는 사전 계산된 정답이다. 절대 변경하지 마라.
+- 성격/궁합 판단은 십신 배치와 오행 비율에서 논리적으로 도출되어야 한다.
+- 무작위성 금지. 핵심 판단(시너지/충돌 포인트)은 동일해야 한다.
+
 ## 절대 규칙
 1. 모든 해석에 사주 근거 (어떤 글자와 어떤 글자가 어떤 관계)
 2. 누구에게나 해당되는 말 금지
@@ -30,6 +36,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 해시 기반 결정적 시드
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+  return h;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -42,13 +55,38 @@ serve(async (req) => {
     const n1 = name1 || '나';
     const n2 = name2 || '상대방';
 
-    const p1Info = pillarInfo1
-      ? `${n1}: ${person1.year}-${person1.month}-${person1.day} ${person1.hour || 12}시, ${person1.gender === 'male' ? '남' : '여'}\n사주: ${pillarInfo1.fourPillars}, 일간: ${pillarInfo1.dayMaster}\n오행: 목${pillarInfo1.elements?.wood ?? '?'}% 화${pillarInfo1.elements?.fire ?? '?'}% 토${pillarInfo1.elements?.earth ?? '?'}% 금${pillarInfo1.elements?.metal ?? '?'}% 수${pillarInfo1.elements?.water ?? '?'}%`
-      : `${n1}: ${person1.year}-${person1.month}-${person1.day} ${person1.hour || 12}시, ${person1.gender === 'male' ? '남' : '여'}`;
+    // 현재 연도의 간지 동적 계산
+    const STEMS_KO = ['갑','을','병','정','무','기','경','신','임','계'];
+    const BRANCHES_KO = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+    const STEMS_HANJA = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    const BRANCHES_HANJA = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    const yStemIdx = ((currentYear - 4) % 10 + 10) % 10;
+    const yBranchIdx = ((currentYear - 4) % 12 + 12) % 12;
+    const yearGanjiLabel = `${STEMS_KO[yStemIdx]}${BRANCHES_KO[yBranchIdx]}년(${STEMS_HANJA[yStemIdx]}${BRANCHES_HANJA[yBranchIdx]})`;
 
-    const p2Info = pillarInfo2
-      ? `${n2}: ${person2.year}-${person2.month}-${person2.day} ${person2.hour || 12}시, ${person2.gender === 'male' ? '남' : '여'}\n사주: ${pillarInfo2.fourPillars}, 일간: ${pillarInfo2.dayMaster}\n오행: 목${pillarInfo2.elements?.wood ?? '?'}% 화${pillarInfo2.elements?.fire ?? '?'}% 토${pillarInfo2.elements?.earth ?? '?'}% 금${pillarInfo2.elements?.metal ?? '?'}% 수${pillarInfo2.elements?.water ?? '?'}%`
-      : `${n2}: ${person2.year}-${person2.month}-${person2.day} ${person2.hour || 12}시, ${person2.gender === 'male' ? '남' : '여'}`;
+    // 결정적 시드: 두 사람의 생년월일 조합
+    const birthSeed = Math.abs(hashStr(
+      `${person1.year}${person1.month}${person1.day}${person2.year}${person2.month}${person2.day}`
+    ));
+
+    // 사주 정보 블록 구성 — 확정 데이터 포함
+    const formatPersonBlock = (name: string, person: any, pi: any) => {
+      if (!pi) {
+        return `${name}: ${person.year}-${person.month}-${person.day} ${person.hour || 12}시, ${person.gender === 'male' ? '남' : '여'}`;
+      }
+      let block = `${name}: ${person.year}-${person.month}-${person.day} ${person.hour || 12}시, ${person.gender === 'male' ? '남' : '여'}
+사주: ${pi.fourPillars}, 일간: ${pi.dayMaster}
+오행: 목${pi.elements?.wood ?? '?'}% 화${pi.elements?.fire ?? '?'}% 토${pi.elements?.earth ?? '?'}% 금${pi.elements?.metal ?? '?'}% 수${pi.elements?.water ?? '?'}%`;
+
+      // 확정 데이터 추가 (프리컴퓨트된 경우)
+      if (pi.strength || pi.yongShin) {
+        block += `\n[확정] 강약: ${pi.strength ?? '(미제공)'}, 용신: ${pi.yongShin ?? '(미제공)'}`;
+      }
+      return block;
+    };
+
+    const p1Info = formatPersonBlock(n1, person1, pillarInfo1);
+    const p2Info = formatPersonBlock(n2, person2, pillarInfo2);
 
     let userPrompt: string;
 
@@ -57,7 +95,7 @@ serve(async (req) => {
 ${p2Info}
 
 RESPOND IN ${lang}.
-현재연도: ${currentYear}년
+현재연도: ${currentYear}년 (${yearGanjiLabel})
 
 ## 중요: 이름 사용 규칙
 - 첫 번째 사람의 이름: "${n1}"
@@ -66,6 +104,14 @@ RESPOND IN ${lang}.
 
 두 사람의 궁합을 1시간짜리 대면 상담 수준으로 분석해줘.
 모든 항목에서 반드시 두 사람의 천간지지를 근거로 들어.
+
+## 자기검증 (출력 전 반드시 확인)
+□ categories 8개 점수가 모두 다른가? 같은 점수가 있으면 실패.
+□ 최고 점수 - 최저 점수 차이가 20점 이상인가?
+□ 모든 분석에 구체적 간지가 명시되어 있는가?
+□ "사람1", "사람2", "A", "B" 대신 실명을 썼는가?
+□ 뻔한 일반론 없이 이 두 사주에서만 나올 수 있는 분석인가?
+□ [확정] 데이터의 강약/용신을 그대로 사용했는가?
 
 JSON 응답 (모든 필드 필수, 빈 문자열 금지):
 {
@@ -146,11 +192,11 @@ JSON 응답 (모든 필드 필수, 빈 문자열 금지):
   },
 
   "timeline": {
-    "bestMonths${currentYear}": [
+    "bestMonths": [
       { "month": "3월", "score": 85, "reason": "사주 근거 60자+" },
       { "month": "9월", "score": 82, "reason": "..." }
     ],
-    "worstMonths${currentYear}": [
+    "worstMonths": [
       { "month": "6월", "score": 40, "reason": "사주 근거 60자+" },
       { "month": "10월", "score": 45, "reason": "..." }
     ],
@@ -210,41 +256,108 @@ JSON 응답:
 뻔한 일반론 금지. 두 사람의 사주 구조를 근거로. JSON만 출력.`;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: isPaid ? 'gpt-4o' : 'gpt-4o-mini',
+    // --- Helper: call OpenAI ---
+    const callAI = async (prompt: string, model: string, maxTok: number, temp: number, seed?: number) => {
+      const body: Record<string, unknown> = {
+        model,
         messages: [
           { role: 'system', content: COMPATIBILITY_SYSTEM },
-          { role: 'user', content: userPrompt },
+          { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: isPaid ? 0.6 : 0.75,
-        max_tokens: isPaid ? 8000 : 1500,
-      }),
-    });
+        temperature: temp,
+        max_tokens: maxTok,
+      };
+      if (seed !== undefined) body.seed = seed;
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await resp.json();
+      return JSON.parse(d.choices[0].message.content);
+    };
 
-    const data = await response.json();
-    const rawResult = JSON.parse(data.choices[0].message.content);
+    const model = isPaid ? 'gpt-4o' : 'gpt-4o-mini';
+    const maxTokens = isPaid ? 8000 : 1500;
+    const temperature = isPaid ? 0.6 : 0.75;
 
-    // Normalize timeline keys (bestMonthsXXXX -> bestMonths2026 for UI compatibility)
+    const rawResult = await callAI(userPrompt, model, maxTokens, temperature, birthSeed);
+
+    // --- Response validation & sanitization (paid only) ---
+    if (isPaid) {
+      // Ensure overallScore in range
+      if (typeof rawResult.overallScore === 'number') {
+        rawResult.overallScore = Math.max(35, Math.min(92, rawResult.overallScore));
+      } else {
+        rawResult.overallScore = 65;
+      }
+
+      // Ensure all category scores exist and are in range
+      const CATEGORIES = ['love', 'communication', 'values', 'sexual', 'finance', 'family', 'growth', 'crisis'];
+      if (rawResult.categories) {
+        for (const cat of CATEGORIES) {
+          if (!rawResult.categories[cat]) {
+            rawResult.categories[cat] = { score: 60, detail: '' };
+          } else if (typeof rawResult.categories[cat].score !== 'number') {
+            rawResult.categories[cat].score = 60;
+          } else {
+            rawResult.categories[cat].score = Math.max(30, Math.min(95, rawResult.categories[cat].score));
+          }
+        }
+
+        // Deduplicate category scores (AI sometimes returns identical scores)
+        const scores = CATEGORIES.map(c => rawResult.categories[c].score);
+        const seen = new Set<number>();
+        for (let i = 0; i < CATEGORIES.length; i++) {
+          while (seen.has(scores[i])) {
+            scores[i] += (i % 2 === 0 ? 1 : -1); // nudge alternating direction
+            scores[i] = Math.max(30, Math.min(95, scores[i]));
+          }
+          seen.add(scores[i]);
+          rawResult.categories[CATEGORIES[i]].score = scores[i];
+        }
+      }
+
+      // Ensure marriageGrade has grade field
+      if (rawResult.marriageGrade && !rawResult.marriageGrade.grade) {
+        rawResult.marriageGrade.grade = 'B';
+      }
+
+      // Ensure strengthPoints and conflictPoints are arrays
+      if (!Array.isArray(rawResult.strengthPoints)) rawResult.strengthPoints = [];
+      if (!Array.isArray(rawResult.conflictPoints)) rawResult.conflictPoints = [];
+      if (!Array.isArray(rawResult.advice)) rawResult.advice = [];
+
+      // Ensure disclaimer
+      if (!rawResult.disclaimer) {
+        rawResult.disclaimer = '본 분석은 전통 사주명리학 기반 참고용 콘텐츠이며, 중요한 결정에는 전문가와 상담하시기 바랍니다.';
+      }
+    }
+
+    // Normalize timeline keys — dynamic year + backward compat alias
     if (rawResult.timeline) {
       const tl = rawResult.timeline;
+
+      // AI가 bestMonthsXXXX 키로 반환할 수 있으므로 정규화
       const bestKey = Object.keys(tl).find(k => k.startsWith('bestMonths'));
       const worstKey = Object.keys(tl).find(k => k.startsWith('worstMonths'));
-      if (bestKey && bestKey !== `bestMonths${currentYear}`) {
-        tl[`bestMonths${currentYear}`] = tl[bestKey];
+
+      // bestMonths / worstMonths (연도 없는 키)로 통합
+      if (bestKey && bestKey !== 'bestMonths') {
+        tl.bestMonths = tl[bestKey];
       }
-      // UI reads bestMonths2026 — alias for backward compat
-      if (!tl.bestMonths2026 && tl[`bestMonths${currentYear}`]) tl.bestMonths2026 = tl[`bestMonths${currentYear}`];
-      if (worstKey && worstKey !== `worstMonths${currentYear}`) {
-        tl[`worstMonths${currentYear}`] = tl[worstKey];
+      if (worstKey && worstKey !== 'worstMonths') {
+        tl.worstMonths = tl[worstKey];
       }
-      if (!tl.worstMonths2026 && tl[`worstMonths${currentYear}`]) tl.worstMonths2026 = tl[`worstMonths${currentYear}`];
+
+      // UI backward compat: bestMonths2026 alias
+      if (tl.bestMonths) tl.bestMonths2026 = tl.bestMonths;
+      if (tl.worstMonths) tl.worstMonths2026 = tl.worstMonths;
+
+      // 동적 연도 alias도 추가
+      if (tl.bestMonths) tl[`bestMonths${currentYear}`] = tl.bestMonths;
+      if (tl.worstMonths) tl[`worstMonths${currentYear}`] = tl.worstMonths;
     }
 
     return new Response(JSON.stringify(rawResult), {

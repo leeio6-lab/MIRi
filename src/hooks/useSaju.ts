@@ -23,7 +23,7 @@ export function useSaju() {
 
     try {
       const pillarInfo = pillars
-        ? formatPillarInfo(pillars, user.birthYear)
+        ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender)
         : undefined;
 
       const result = await api.analyzeSaju(

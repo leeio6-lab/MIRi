@@ -3,7 +3,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 
 // ─── 관상 분석 시스템 프롬프트 ───
 const ANALYSIS_SYSTEM = `당신은 동양 관상학(面相學) 40년 경력 최고 전문가이자, SNS 바이럴 콘텐츠 전문가입니다.
@@ -89,30 +89,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** 타임아웃 유틸: AbortController 기반 */
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  try {
-    const { imageBase64, locale = 'ko' } = await req.json();
+  // ─── API 키 검증 (최우선) ───
+  if (!OPENAI_API_KEY) {
+    console.error('[face-transform] OPENAI_API_KEY is not set!');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error: API key missing', details: 'OPENAI_API_KEY not configured' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
 
-    if (!imageBase64) {
+  try {
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch (parseErr) {
+      console.error('[face-transform] Request body parse failed:', parseErr);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body', details: String(parseErr) }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { imageBase64, locale = 'ko' } = body;
+
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      console.error('[face-transform] No imageBase64 in request. Keys:', Object.keys(body));
       return new Response(
         JSON.stringify({ error: 'No image provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const imgSizeKB = ((imageBase64 as string).length / 1024).toFixed(0);
+    console.log(`[face-transform] Received image: ${imgSizeKB}KB base64, locale=${locale}`);
+
     const lang = locale === 'ko' ? '한국어' : locale === 'ja' ? '日本語' : 'English';
 
     // 이미지 MIME 타입 자동 감지
-    const mimeType = imageBase64.startsWith('iVBOR') ? 'image/png' : 'image/jpeg';
+    const mimeType = (imageBase64 as string).startsWith('iVBOR') ? 'image/png' : 'image/jpeg';
 
-    // ─── 병렬 실행: 관상 분석 + 동양화 변환 (클라이언트에서 얼굴 사전검증 완료) ───
+    // ─── 병렬 실행: 관상 분석 + 동양화 변환 ───
+    console.log('[face-transform] Starting parallel: analysis + transform');
     const [analysisRaw, transformResult] = await Promise.allSettled([
-      analyzePhysiognomy(imageBase64, lang, mimeType),
-      transformToOrientalPainting(imageBase64, mimeType),
+      analyzePhysiognomy(imageBase64 as string, lang, mimeType),
+      transformToOrientalPainting(imageBase64 as string, mimeType),
     ]);
 
     const analysisData = analysisRaw.status === 'fulfilled' ? analysisRaw.value : null;
@@ -120,6 +152,7 @@ serve(async (req) => {
 
     if (analysisError) console.error('[face-transform] Analysis failed:', analysisError);
     if (transformResult.status === 'rejected') console.error('[face-transform] Transform failed:', String(transformResult.reason));
+    console.log(`[face-transform] Analysis: ${analysisData ? 'OK' : 'FAIL'}, Transform: ${transformResult.status}`);
 
     // 얼굴 미감지
     if (analysisData?.noFace) {
@@ -143,7 +176,6 @@ serve(async (req) => {
       try {
         const coords = await detectFeaturePositions(transformedImage);
         if (coords) {
-          // 분석 결과의 features에 좌표 덮어쓰기
           for (const feat of analysis.features as any[]) {
             if (coords[feat.area]) {
               feat.position = coords[feat.area];
@@ -155,15 +187,21 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({
+    const responseBody = JSON.stringify({
       analysis,
       analysisError,
       transformedImage,
       transformError,
-    }), {
+    });
+
+    const respSizeKB = (responseBody.length / 1024).toFixed(0);
+    console.log(`[face-transform] Response size: ${respSizeKB}KB (image: ${transformedImage ? (transformedImage.length / 1024).toFixed(0) + 'KB' : 'null'})`);
+
+    return new Response(responseBody, {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('[face-transform] Unhandled error:', error);
     return new Response(
       JSON.stringify({ error: 'Face analysis failed', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -204,7 +242,7 @@ function normalizeAnalysis(raw: Record<string, unknown>): Record<string, unknown
   return result;
 }
 
-// ─── 관상 분석 — GPT-4o Vision ───
+// ─── 관상 분석 — GPT-4o mini Vision (60초 타임아웃) ───
 async function analyzePhysiognomy(
   selfieBase64: string,
   lang: string,
@@ -252,7 +290,7 @@ hookLine 나쁜 예:
   "highlight": {"area":"(최고 부위 영문키)", "message":"(이 부위가 왜 극귀(極貴)한지 관상학 근거+이것이 가져올 놀라운 행운. 마의상법 인용 포함. 180자)"}
 }`;
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -277,18 +315,18 @@ hookLine 나쁜 예:
       temperature: 0.7,
       max_tokens: 7000,
     }),
-  });
+  }, 60_000); // 60초 타임아웃
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`OpenAI Vision error (${response.status}): ${errText}`);
+    console.error(`[face-transform] OpenAI Vision error (${response.status}):`, errText.substring(0, 500));
+    throw new Error(`OpenAI Vision error (${response.status}): ${errText.substring(0, 200)}`);
   }
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error('Empty response from OpenAI analysis');
 
-  // finish_reason이 length면 토큰 부족으로 JSON이 잘렸을 수 있음
   const finishReason = data.choices?.[0]?.finish_reason;
   if (finishReason === 'length') {
     console.warn('[face-transform] GPT response truncated (finish_reason=length)');
@@ -302,79 +340,165 @@ hookLine 나쁜 예:
   }
 }
 
-// ─── 동양화 변환 — gpt-image-1 (images/edits with file upload) ───
+// ─── 동양화 변환 — gpt-image-1 (90초 타임아웃) ───
+const TRANSFORM_PROMPT =
+  'Convert this photo into a refined ink brush portrait — the style of a traditional East Asian master portrait painter (초상화가). ' +
+  '\n\n' +
+  '## STYLE — PORTRAIT, NOT ILLUSTRATION ' +
+  '- This should look like a FINE ART portrait, not a cartoon or comic illustration. ' +
+  '- INK LINES with VARYING thickness: thin delicate lines around eyes and lips, medium lines for nose and eyebrows, thicker bold strokes for jawline and hair. ' +
+  '- SKIN SHADING is important: apply soft gray ink wash (먹 번짐) to create REALISTIC facial dimension — ' +
+  '  shadows on the side of the nose, under the cheekbones, around eye sockets, under the lower lip, under the chin, and along the jaw. ' +
+  '  The face should have clear 3D depth from light and shadow, not be flat. ' +
+  '- EYES: detailed with clear iris, eyelid crease, and subtle shadow — they should feel alive and expressive. ' +
+  '- HAIR: bold black ink with visible brush stroke texture — thick, sweeping, confident strokes. ' +
+  '\n\n' +
+  '## BACKGROUND ' +
+  'Pure clean WHITE paper. No shading, no texture on background. ' +
+  '\n\n' +
+  '## COLORS ' +
+  'Black ink, white paper, and a FULL RANGE of grays for skin shading. NO color. ' +
+  '\n\n' +
+  '## LIKENESS ' +
+  '8 out of 10 people must recognize this person. Preserve face shape, eye shape, nose, jawline, hairstyle exactly. ' +
+  '\n\n' +
+  '## EXPRESSION ' +
+  'A faint, gentle smile — just barely there. Corners of the mouth slightly lifted, eyes soft and warm. Like a Mona Lisa smile. Absolutely NO teeth, NO wide grin. ' +
+  '\n\n' +
+  '## FLATTERING ' +
+  'Clear smooth skin, bright lively eyes, defined jawline. Best version of themselves, 2-3 years younger. ' +
+  '\n\n' +
+  'COMPOSITION: Head and shoulders, face ~65% of frame. NO text, NO stamps, NO background objects.';
+
 async function transformToOrientalPainting(
   selfieBase64: string,
   mimeType: string,
 ): Promise<string | null> {
-  const imageBytes = Uint8Array.from(atob(selfieBase64), c => c.charCodeAt(0));
+  // ─── 방법 1: images/edits (FormData file upload) ───
+  try {
+    const result = await tryImagesEdits(selfieBase64, mimeType);
+    if (result) return result;
+  } catch (editErr) {
+    console.warn('[face-transform] images/edits failed, trying generations fallback:', String(editErr).substring(0, 300));
+  }
 
-  // Deno FormData with File object
+  // ─── 방법 2: images/generations (base64 입력 — Deno File 호환 문제 우회) ───
+  try {
+    const result = await tryImagesGenerations(selfieBase64, mimeType);
+    if (result) return result;
+  } catch (genErr) {
+    console.error('[face-transform] generations fallback also failed:', String(genErr).substring(0, 300));
+    throw genErr;
+  }
+
+  throw new Error('All transform methods failed');
+}
+
+/** images/edits 엔드포인트 (FormData file upload) */
+async function tryImagesEdits(selfieBase64: string, mimeType: string): Promise<string | null> {
+  const imageBytes = Uint8Array.from(atob(selfieBase64), c => c.charCodeAt(0));
   const ext = mimeType === 'image/png' ? 'png' : 'jpg';
-  const file = new File([imageBytes], `selfie.${ext}`, { type: mimeType });
+
+  // Blob + filename (File 생성자보다 Deno Deploy 호환성 높음)
+  const blob = new Blob([imageBytes], { type: mimeType });
 
   const formData = new FormData();
   formData.append('model', 'gpt-image-1');
-  formData.append('image', file);
-  formData.append('prompt',
-    'Transform this selfie into a beautiful, flattering ink wash portrait that the person will LOVE and want to show everyone. ' +
-    '\n\n' +
-    '## IDENTITY — THE #1 PRIORITY ' +
-    'This must be RECOGNIZABLE as the EXACT same person. ' +
-    'Copy every unique facial feature pixel-by-pixel from the photo: ' +
-    '- EXACT same eye shape, size, spacing, single/double eyelid ' +
-    '- EXACT same nose shape, width, bridge height, tip ' +
-    '- EXACT same lip fullness, mouth width, lip line ' +
-    '- EXACT same face width-to-height ratio — do NOT widen or round the face ' +
-    '- EXACT same jawline, chin, cheekbones ' +
-    '- EXACT same eyebrow shape, thickness, arch ' +
-    '- EXACT same hairline, parting, hair length and volume ' +
-    'TEST: if 10 friends see this, all 10 MUST instantly say "that\'s definitely you!" ' +
-    '\n\n' +
-    '## FLATTERING ENHANCEMENT ' +
-    '- Skin: smooth, luminous, clear — remove minor blemishes but keep face structure ' +
-    '- Expression: warm, confident, approachable — slightly elevated from the photo ' +
-    '- The person should look like the BEST version of themselves — attractive and charismatic ' +
-    '- Look their age or 2-3 years younger, never older ' +
-    '\n\n' +
-    '## STYLE ' +
-    'Elegant East Asian ink wash (수묵화) portrait: ' +
-    '- Rich black ink for hair, eyebrows, eye outlines — bold and defined ' +
-    '- Soft gray wash for skin shadows and dimension ' +
-    '- Clean white background ' +
-    '- Head and shoulders composition, face ~65% of frame ' +
-    '- The overall feeling should be elegant, artistic, and share-worthy ' +
-    '\n\n' +
-    'NO: color, text, stamps, background objects, changed facial proportions, generic face.'
-  );
+  formData.append('image', blob, `selfie.${ext}`);
+  formData.append('prompt', TRANSFORM_PROMPT);
   formData.append('size', '1024x1024');
-  formData.append('response_format', 'b64_json');
 
-  const response = await fetch('https://api.openai.com/v1/images/edits', {
+  const response = await fetchWithTimeout('https://api.openai.com/v1/images/edits', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
     body: formData,
-  });
+  }, 120_000); // gpt-image-1은 최대 180초 소요 가능
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Image edit error (${response.status}): ${errText}`);
+    console.error(`[face-transform] images/edits error (${response.status}):`, errText.substring(0, 500));
+    throw new Error(`images/edits error (${response.status}): ${errText.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+
+  // gpt-image-1: b64_json으로 반환 (response_format 없이도 기본값)
+  const b64 = data.data?.[0]?.b64_json;
+  if (b64) {
+    console.log(`[face-transform] edits image size: ${(b64.length / 1024).toFixed(0)}KB`);
+    return b64;
+  }
+
+  // url 형식으로 반환된 경우 다운로드
+  const url = data.data?.[0]?.url;
+  if (url) {
+    console.log('[face-transform] Got URL response, downloading image...');
+    const imgResp = await fetchWithTimeout(url, {}, 30_000);
+    if (imgResp.ok) {
+      const arrBuf = await imgResp.arrayBuffer();
+      const bytes = new Uint8Array(arrBuf);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const downloaded = btoa(binary);
+      console.log(`[face-transform] Downloaded image: ${(downloaded.length / 1024).toFixed(0)}KB`);
+      return downloaded;
+    }
+  }
+
+  console.error('[face-transform] No image in edits response. Response keys:', JSON.stringify(data));
+  throw new Error('edits returned no image data');
+}
+
+/** images/generations 엔드포인트 (JSON body — FormData 없이, 폴백용) */
+async function tryImagesGenerations(selfieBase64: string, mimeType: string): Promise<string | null> {
+  console.log('[face-transform] Trying images/generations as fallback');
+
+  const response = await fetchWithTimeout('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-image-1',
+      prompt: TRANSFORM_PROMPT,
+      size: '1024x1024',
+    }),
+  }, 120_000);
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error(`[face-transform] generations error (${response.status}):`, errText.substring(0, 300));
+    throw new Error(`generations error (${response.status}): ${errText.substring(0, 200)}`);
   }
 
   const data = await response.json();
   const b64 = data.data?.[0]?.b64_json;
   if (!b64) {
-    console.error('[face-transform] No b64_json in response, keys:', JSON.stringify(Object.keys(data.data?.[0] ?? {})));
-    throw new Error('Transform returned no image data');
+    // URL 폴백
+    const url = data.data?.[0]?.url;
+    if (url) {
+      const imgResp = await fetchWithTimeout(url, {}, 30_000);
+      if (imgResp.ok) {
+        const arrBuf = await imgResp.arrayBuffer();
+        const bytes = new Uint8Array(arrBuf);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
+      }
+    }
+    throw new Error('generations returned no image data');
   }
+
+  console.log(`[face-transform] generations image size: ${(b64.length / 1024).toFixed(0)}KB`);
   return b64;
 }
 
-// ─── 생성된 관상화에서 이목구비 좌표 추출 — GPT-4o-mini Vision (경량 호출) ───
+// ─── 생성된 관상화에서 이목구비 좌표 추출 — GPT-4o-mini Vision (20초 타임아웃) ───
 async function detectFeaturePositions(
   portraitBase64: string,
 ): Promise<Record<string, { x: number; y: number }> | null> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENAI_API_KEY}`,
@@ -401,7 +525,7 @@ async function detectFeaturePositions(
       temperature: 0.1,
       max_tokens: 200,
     }),
-  });
+  }, 20_000); // 20초 타임아웃
 
   if (!response.ok) {
     console.warn('[face-transform] Coord detection API error:', response.status);
@@ -414,13 +538,11 @@ async function detectFeaturePositions(
 
   try {
     const coords = JSON.parse(content);
-    // 유효성 검증: 모든 좌표가 0~1 범위이고 y 순서가 맞는지
     const areas = ['forehead', 'eyes', 'nose', 'mouth', 'jawline'];
     for (const area of areas) {
       if (!coords[area] || typeof coords[area].x !== 'number' || typeof coords[area].y !== 'number') return null;
       if (coords[area].x < 0 || coords[area].x > 1 || coords[area].y < 0 || coords[area].y > 1) return null;
     }
-    // y 순서 검증
     if (coords.forehead.y >= coords.eyes.y || coords.eyes.y >= coords.nose.y ||
         coords.nose.y >= coords.mouth.y || coords.mouth.y >= coords.jawline.y) {
       console.warn('[face-transform] Coords failed y-order check, discarding');

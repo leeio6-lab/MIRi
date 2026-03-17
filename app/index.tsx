@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { theme } from '../src/constants/theme';
+import { MIRiLogo } from '../src/components/ui/MIRiLogo';
 import { useAuthStore } from '../src/stores/authStore';
 import { supabase } from '../src/services/supabase';
 

@@ -143,7 +143,7 @@ export function WeekendRoulette() {
 const styles = StyleSheet.create({
   container: { marginBottom: 16, alignItems: 'center' },
   label: { fontSize: 11, fontWeight: '700', color: theme.colors.gold.primary, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 },
-  waitWrap: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', width: '100%', alignItems: 'center' },
+  waitWrap: { padding: 20, backgroundColor: '#FFFFFF', borderRadius: 16, width: '100%', alignItems: 'center' },
   waitText: { fontSize: 13, color: theme.colors.text.tertiary },
   wheelWrap: { width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: 16 },
   pointer: { position: 'absolute', top: -4, zIndex: 10, alignItems: 'center' },
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
   centerText: { fontSize: 11, fontWeight: '800', color: '#FFF', letterSpacing: 1 },
   resultCard: {
     backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(232,176,74,0.2)',
     ...Platform.select({ web: { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }, default: { elevation: 3 } }),
   } as any,
   resultLabel: { fontSize: 12, color: theme.colors.text.tertiary, marginBottom: 6 },

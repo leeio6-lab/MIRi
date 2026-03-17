@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: '#1C1C1E',
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 20,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -170,12 +170,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#E8B04A',
+    letterSpacing: 0.5,
   },
   price: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#E8B04A',
   },

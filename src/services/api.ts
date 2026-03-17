@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from './supabase';
 import type { SajuInput, SajuResult, FaceResult, CompatibilityResult, DailyFortune } from '../types/api';
 import type { AnalysisMode } from '../stores/userStore';
 import type { FourPillarsCalc } from '../utils/saju-calc';
@@ -32,31 +32,38 @@ function checkRateLimit(functionName: string): void {
 const invokeFunction = async <T>(functionName: string, body: Record<string, unknown>): Promise<T> => {
   checkRateLimit(functionName);
 
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body,
+  // supabase.functions.invoke 대신 fetch 직접 사용 (401 문제 우회)
+  let token = supabaseAnonKey;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) token = session.access_token;
+  } catch { /* use anon key */ }
+
+  if (__DEV__) console.log(`[API] ${functionName}: url=${supabaseUrl ? 'OK' : 'EMPTY'}, key=${supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'EMPTY'}, token=${token ? token.substring(0, 20) + '...' : 'EMPTY'}`);
+
+  const url = `${supabaseUrl}/functions/v1/${functionName}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
   });
 
-  if (error) {
-    // FunctionsHttpError: try to extract response body for details
+  if (!response.ok) {
     let serverMsg = '';
     try {
-      if (data) {
-        serverMsg = data?.error ?? data?.details ?? '';
-      } else if ((error as any).context?.body) {
-        // supabase-js v2: response body might be in error context
-        const bodyText = await (error as any).context.body.text?.() ?? '';
-        if (bodyText) {
-          const parsed = JSON.parse(bodyText);
-          serverMsg = parsed.error ?? parsed.details ?? bodyText;
-        }
-      }
-    } catch { /* ignore parse errors */ }
+      const errBody = await response.json();
+      serverMsg = errBody?.error ?? errBody?.details ?? '';
+    } catch { /* ignore */ }
     const detail = serverMsg ? `: ${serverMsg}` : '';
-    if (__DEV__) console.error(`[API] ${functionName} error:`, error.message, detail);
-    throw new Error(`${error.message}${detail}`);
+    if (__DEV__) console.error(`[API] ${functionName} error (${response.status}):`, detail);
+    throw new Error(`서버 오류 (${response.status})${detail}`);
   }
 
-  return data as T;
+  return await response.json() as T;
 };
 
 export interface FaceTransformResponse {
@@ -184,7 +191,7 @@ function analyzeStrengthAndYongShin(pillars: FourPillarsCalc) {
     yongShin: ELEMENT_KO[yongShin],
     yongShinElement: yongShin,
     yongShinReason,
-    giShin: ELEMENT_KO[ELEMENT_GENERATES[yongShin]] ?? '', // 기신 = 용신을 설기하는 오행
+    giShin: ELEMENT_KO[ELEMENT_CONTROLLED_BY[yongShin]] ?? '', // 기신 = 용신을 극하는 오행
   };
 }
 
@@ -253,6 +260,9 @@ export interface AnalysisRecord {
   imageBase64?: string | null;
 }
 
+/** input_data에 저장할 최대 base64 크기 (500KB) — 초과 시 저장 생략 */
+const MAX_INPUT_DATA_SIZE = 500_000;
+
 async function saveAnalysis(
   type: 'saju' | 'face' | 'compatibility',
   isPaid: boolean,
@@ -275,11 +285,23 @@ async function saveAnalysis(
       return;
     }
 
+    // input_data에 거대한 base64가 있으면 제거 (JSONB 컬럼에 1-3MB PNG 저장 방지)
+    let safeInputData = inputData ?? null;
+    if (safeInputData && typeof safeInputData === 'object') {
+      const imgBase64 = (safeInputData as any).imageBase64;
+      if (typeof imgBase64 === 'string' && imgBase64.length > MAX_INPUT_DATA_SIZE) {
+        if (__DEV__) console.log(`[API] saveAnalysis: imageBase64 too large (${(imgBase64.length / 1024).toFixed(0)}KB), skipping image storage`);
+        // 이미지 제외, 나머지 데이터만 저장
+        const { imageBase64: _, ...rest } = safeInputData as Record<string, unknown>;
+        safeInputData = Object.keys(rest).length > 0 ? rest : null;
+      }
+    }
+
     const { error } = await supabase.from('analyses').insert({
       user_id: session.user.id,
       type,
       is_paid: isPaid,
-      input_data: inputData ?? null,
+      input_data: safeInputData,
       result,
     });
 

@@ -2,10 +2,10 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
+// email + profile만 요청 (민감한 scope 없음 → Google 심사 없이 즉시 게시 가능)
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
-  'https://www.googleapis.com/auth/user.birthday.read',
 ].join(' ');
 
 // ─── Google Sign-In ───
@@ -79,11 +79,15 @@ export async function signInWithGoogle(): Promise<{ success: boolean; error?: st
 // ─── Kakao Sign-In ───
 export async function signInWithKakao(): Promise<{ success: boolean; error?: string }> {
   try {
+    // 카카오: 비즈앱 전환 전에는 닉네임만 가능 (account_email, profile_image 권한 없음)
+    // Supabase GoTrue가 기본 scope를 덮어씌우도록 명시적으로 최소 scope만 지정
+    const kakaoScopes = 'profile_nickname,openid';
+
     if (Platform.OS === 'web') {
       const redirectTo = window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'kakao',
-        options: { redirectTo },
+        options: { redirectTo, scopes: kakaoScopes },
       });
       if (error) throw error;
       return { success: true };
@@ -95,7 +99,7 @@ export async function signInWithKakao(): Promise<{ success: boolean; error?: str
     const redirectTo = makeRedirectUri();
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
-      options: { redirectTo, skipBrowserRedirect: true },
+      options: { redirectTo, skipBrowserRedirect: true, scopes: kakaoScopes },
     });
 
     if (error) throw error;

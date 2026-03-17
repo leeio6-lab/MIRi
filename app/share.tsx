@@ -114,8 +114,6 @@ const st = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(181,149,48,0.15)',
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 8px 32px rgba(181,149,48,0.12), 0 2px 8px rgba(0,0,0,0.04)' }
       : { shadowColor: '#B59530', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 8 }),

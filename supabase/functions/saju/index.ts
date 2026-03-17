@@ -302,6 +302,17 @@ serve(async (req) => {
     const { input, locale = 'ko', isPaid = false, pillarInfo, _forceModel, userName } = await req.json();
     const lang = locale === 'ko' ? '한국어로. overview 항목은 반말(~다/~중/~패턴/~유형)로 짧게. 상세 분석(personality.core, career.analysis 등)은 ~요 체로 친근하게.' : locale === 'ja' ? '日本語(丁寧語)で' : 'In English, warm but direct';
     const currentYear = new Date().getFullYear();
+
+    // 현재 연도의 간지 동적 계산 (하드코딩 방지)
+    const STEMS_HANJA = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    const BRANCHES_HANJA = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    const STEMS_KO = ['갑','을','병','정','무','기','경','신','임','계'];
+    const BRANCHES_KO = ['자','축','인','묘','진','사','오','미','신','유','술','해'];
+    const yStemIdx = ((currentYear - 4) % 10 + 10) % 10;
+    const yBranchIdx = ((currentYear - 4) % 12 + 12) % 12;
+    const yearGanjiHanja = `${STEMS_HANJA[yStemIdx]}${BRANCHES_HANJA[yBranchIdx]}`;
+    const yearGanjiKo = `${STEMS_KO[yStemIdx]}${BRANCHES_KO[yBranchIdx]}`;
+    const yearGanjiLabel = `${yearGanjiKo}년(${yearGanjiHanja})`;
     // 이름에서 성 제외한 이름 추출 (예: 윤정훈 → 정훈, 박지애 → 지애)
     const fullName = userName || '';
     const givenName = fullName.length >= 2 ? fullName.slice(fullName.length >= 3 ? 1 : 0) : fullName;
@@ -525,9 +536,9 @@ JSON 응답:
   "overallScore": number(60-88),
   "headline": "이 사주를 꿰뚫는 한 문장 비유. 반드시 일간 오행에 맞는 자연물로(火=불/촛불/벽난로, 水=바다/강/비, 木=나무/숲, 金=칼/보석, 土=산/대지). 예시 복사 금지, 이 사주에 맞게 창작.",
   "summary": [
-    "첫째 줄: 일간과 일지의 관계로 이 사람의 본질을 짚어줘. 사주 용어를 근거로 쓰되 쉽게 풀어서. (예: '임수 일간이 자수에 앉았으니, 물 위의 물이에요. 생각이 깊고 감정의 파도가 거세죠. 밤에 이런저런 생각에 잠 못 드는 날이 많지 않아요?')",
-    "둘째 줄: 이 사주의 가장 특이한 점 하나 — 합/충/오행편중/특수신살 등. (예: '월간 정화와 임정합을 이루고 있어요. 이성한테 한 번 꽂히면 올인하는 스타일이에요. 감정 때문에 인생이 크게 흔들린 적 있지 않아요?')",
-    "셋째 줄: ${currentYear}년과 이 사주의 관계를 한 마디로. (예: '올해 병오년은 편재운이라 돈이 움직이는 해예요. 벌기도 하지만 나가는 것도 많을 수 있으니 하반기 지출 관리에 신경 쓰세요.')"
+    "첫째 줄: 일간+일지 관계로 이 사람의 본질을 자극적 비유로 단정. 종결형 문장('~다'체). '~하지 않아요?'류 금지. (예: '임수가 자수에 앉았다. 바다 밑 해류 같은 사람이다. 겉은 잔잔한데 속에서 감정 쓰나미가 치고 있다.')",
+    "둘째 줄: 이 사주의 가장 특이한 점 하나 — 합/충/오행편중/특수신살. 날카로운 비유로 단정. (예: '임정합이 박혀 있다. 연애하면 올인하는 도박꾼 기질이다. 사랑이 인생을 통째로 뒤집어놓은 적이 있다.')",
+    "셋째 줄: ${currentYear}년과 이 사주의 관계를 한 방에 정리. 비유+단정. (예: '올해는 편재가 떴다. 돈이 들어오는 문이 열리는 해다. 대신 그 문으로 나가는 돈도 있다. 하반기에 주머니 단속 안 하면 남는 게 없다.')"
   ],
   "elements": {"wood":number,"fire":number,"earth":number,"metal":number,"water":number},
   "dayMasterInsight": "일간의 오행을 자연물에 비유한 한 줄 해석 (예: '임수(壬水) — 큰 강물. 넓은 포용력을 가졌지만, 한 곳에 머물지 못하는 방랑자 기질')",
@@ -672,7 +683,7 @@ JSON만 출력.`;
 
 {
   "yearly${currentYear}": {
-    "overview": "400자+. 세운 천간지지(${currentYear}년=병오년)가 원국과 어떤 합충을 일으키는지. 올해 주의점과 기회. 돈/직업/연애/건강 흐름.",
+    "overview": "400자+. 세운 천간지지(${yearGanjiLabel})가 원국과 어떤 합충을 일으키는지. 올해 주의점과 기회. 돈/직업/연애/건강 흐름.",
     "quarters": [
       {"period":"1~3월","score":number(55-88),"keyword":"2글자","detail":"월운이 원국+세운과 어떤 작용. 조언 포함. 100자+"},
       {"period":"4~6월","score":number(55-88),"keyword":"2글자","detail":"100자+"},
@@ -815,16 +826,20 @@ JSON만 출력.`;
         }));
       }
 
-      // Normalize yearly field name
+      // Normalize yearly field name — always alias to both yearlyXXXX and yearly2026 for UI compat
       const yearKey = `yearly${currentYear}`;
-      if (result[yearKey] && !result.yearly2026) {
-        result.yearly2026 = result[yearKey];
+      if (result[yearKey]) {
+        result.yearly2026 = result[yearKey]; // UI backward compat alias
+      } else if (result.yearly2026 && !result[yearKey]) {
+        result[yearKey] = result.yearly2026;
       }
 
       // Normalize monthly field name
       const monthKey = `monthly${currentYear}`;
-      if (result[monthKey] && !result.monthly2026) {
-        result.monthly2026 = result[monthKey];
+      if (result[monthKey]) {
+        result.monthly2026 = result[monthKey]; // UI backward compat alias
+      } else if (result.monthly2026 && !result[monthKey]) {
+        result[monthKey] = result.monthly2026;
       }
 
       // Ensure lifePeriods scores exist

@@ -148,16 +148,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       web: { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
       default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
     }),
   } as any,
-  cardBack: {
-    borderColor: 'rgba(181,149,48,0.2)',
-  },
+  cardBack: {},
   pulseRing: {
     position: 'absolute',
     width: 80,

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent, Share } from 'react-native';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -116,6 +116,17 @@ function DayMasterIcon({ stem, size = 32 }: { stem: string; size?: number }) {
 
 const SCREEN_W = Dimensions.get('window').width;
 const isSmall = SCREEN_W < 380;
+const SHARE_BASE_URL = 'https://dist-drab-ten-14.vercel.app/share';
+
+function ShareIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M16 6l-4-4-4 4" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 2v13" stroke="#FFF" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 const sc = (s?: number) => {
   const v = s ?? 70;
@@ -176,6 +187,28 @@ export default function SajuResultScreen() {
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>
   );
 
+  const handleShare = async () => {
+    const hookTitle = r.overview?.poeticTitle || r.headline || '사주 분석 결과';
+    const lines: string[] = [];
+    if (r.overview?.personality) lines.push(`성격: ${r.overview.personality}`);
+    if (r.overview?.career) lines.push(`직업: ${r.overview.career}`);
+    if (r.overview?.wealth) lines.push(`재물: ${r.overview.wealth}`);
+    if (r.overview?.love) lines.push(`연애: ${r.overview.love}`);
+    const params = new URLSearchParams();
+    params.set('type', 'saju');
+    if (hookTitle) params.set('title', encodeURIComponent(hookTitle));
+    if (lines[0]) params.set('summary', encodeURIComponent(lines[0]));
+    const shareUrl = `${SHARE_BASE_URL}?${params.toString()}`;
+    const shareText = `[MIRi 사주]\n\n${hookTitle}\n\n${lines.slice(0, 3).join('\n')}\n\n나도 보러가기 → ${shareUrl}`;
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
+        await (navigator as any).share({ title: 'MIRi 사주', text: shareText });
+      } else if (Platform.OS !== 'web') {
+        await Share.share({ message: shareText, title: 'MIRi 사주' });
+      }
+    } catch {}
+  };
+
   const yearly = r.yearly2026 ?? r.yearlyFortune;
   const lucky = r.lucky ?? r.luckyElements;
   const final = r.finalWords ?? r.finalMessage;
@@ -225,6 +258,7 @@ export default function SajuResultScreen() {
               </>
             );
           })()}
+          <View style={$.hookAccent} />
         </View>
       </Animated.View>
 
@@ -367,7 +401,7 @@ export default function SajuResultScreen() {
       {/* ═══ 올해 운세 ═══ */}
       {(yearly?.overview || monthly?.length) && (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { sectionY.current['yearly'] = e.nativeEvent.layout.y; }}>
-          <GlassCard gold style={$.card}>
+          <GlassCard style={$.card}>
             <Section title={`${new Date().getFullYear()}년 운세`} termKey="yearlyFortune" />
             {yearly?.overview && <SajuText style={$.body}>{yearly.overview}</SajuText>}
             {monthly && monthly.length > 0 && (
@@ -395,7 +429,7 @@ export default function SajuResultScreen() {
       {/* ═══ 평생 운세 ═══ */}
       {(lifePeriods?.length || daeun?.current) && (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { sectionY.current['lifePeak'] = e.nativeEvent.layout.y; }}>
-          <GlassCard gold style={$.card}>
+          <GlassCard style={$.card}>
             <Section title="평생 운세" termKey="daeun" />
             {lifePeriods?.length > 0 && <LifePeriodTimeline data={lifePeriods} />}
             {daeun?.lifeGraph?.length > 0 && <><View style={$.divider} /><LifeGraph data={daeun.lifeGraph} /></>}
@@ -445,9 +479,9 @@ export default function SajuResultScreen() {
           <GlassCard style={$.card}>
             <Section title="행운 요소" termKey="yongShin" />
             <View style={$.luckyGrid}>
-              {lucky.color && <LuckyRow icon="🎨" label="색상" val={lucky.color} />}
-              {lucky.number && <LuckyRow icon="🔢" label="숫자" val={lucky.number} />}
-              {lucky.direction && <LuckyRow icon="🧭" label="방위" val={lucky.direction} />}
+              {lucky.color && <LuckyRow icon="彩" label="색상" val={lucky.color} />}
+              {lucky.number && <LuckyRow icon="數" label="숫자" val={lucky.number} />}
+              {lucky.direction && <LuckyRow icon="方" label="방위" val={lucky.direction} />}
             </View>
             {lucky.avoid && <View style={$.alertBox}><Text style={$.alertT}>{lucky.avoid}</Text></View>}
           </GlassCard>
@@ -457,12 +491,52 @@ export default function SajuResultScreen() {
       {/* ═══ 마무리 ═══ */}
       {final && (
         <Animated.View entering={FadeInDown.delay(nd()).springify()}>
-          <GlassCard gold style={{ marginTop: 24 }}>
+          <GlassCard style={{ marginTop: 24 }}>
             <Text style={$.finalQuote}>"</Text>
             <SajuText style={$.finalText}>{final}</SajuText>
           </GlassCard>
         </Animated.View>
       )}
+
+      {/* ═══ 공유 섹션 ═══ */}
+      <Animated.View entering={FadeInDown.delay(nd()).springify()}>
+        <View style={$.shareSection}>
+          <View style={$.shareDecoLine}>
+            <View style={$.decoLineSide} />
+            <Text style={$.decoChar}>命</Text>
+            <View style={$.decoLineSide} />
+          </View>
+
+          <Text style={$.shareCta}>{'이 사주,\n혼자만 볼 거야?'}</Text>
+
+          {r.overview && (() => {
+            const items: { kanji: string; val: string }[] = [];
+            if (r.overview.personality) items.push({ kanji: '性', val: r.overview.personality });
+            if (r.overview.career) items.push({ kanji: '業', val: r.overview.career });
+            if (r.overview.wealth) items.push({ kanji: '財', val: r.overview.wealth });
+            if (r.overview.love) items.push({ kanji: '緣', val: r.overview.love });
+            if (r.overview.health) items.push({ kanji: '體', val: r.overview.health });
+            const top3 = items.slice(0, 3);
+            return top3.length > 0 ? (
+              <View style={$.sharePreview}>
+                {top3.map((item, i) => (
+                  <View key={i} style={$.shareRow}>
+                    <Text style={$.shareKanji}>{item.kanji}</Text>
+                    <Text style={$.shareVal} numberOfLines={1}>{item.val}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null;
+          })()}
+
+          <TouchableOpacity style={$.shareBtn} onPress={handleShare} activeOpacity={0.85}>
+            <ShareIcon />
+            <Text style={$.shareBtnText}>친구에게 공유하기</Text>
+          </TouchableOpacity>
+
+          <Text style={$.shareHint}>카카오톡, 인스타, 문자로 보내기</Text>
+        </View>
+      </Animated.View>
 
       <TouchableOpacity style={$.reBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/saju' as any)} activeOpacity={0.7}>
         <Text style={$.reBtnT}>{t('result.reAnalyze')}</Text>
@@ -524,23 +598,23 @@ const $ = StyleSheet.create({
   identityCard: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    backgroundColor: theme.colors.bg.secondary,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(181,149,48,0.15)',
+    borderColor: 'rgba(212, 168, 75, 0.12)',
     gap: 16,
   },
   identityIconWrap: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(181,149,48,0.06)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
-    borderColor: 'rgba(181,149,48,0.12)',
+    borderColor: 'rgba(212, 168, 75, 0.12)',
   },
   identityBody: {
     flex: 1,
@@ -626,7 +700,7 @@ const $ = StyleSheet.create({
 
   // Quarter grid
   qGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  qItem: { width: (SCREEN_W - (isSmall ? 32 : 40) - 48 - 8) / 2, backgroundColor: theme.colors.bg.secondary, borderRadius: 10, padding: 8 },
+  qItem: { width: (SCREEN_W - (isSmall ? 32 : 40) - 48 - 8) / 2, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 8 },
   qHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   qPeriod: { fontSize: 11, fontWeight: '600', color: theme.colors.text.primary },
   qScore: { fontSize: 18, fontWeight: '700' },
@@ -636,7 +710,7 @@ const $ = StyleSheet.create({
 
   // Lucky
   luckyGrid: { gap: 6 },
-  luckyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: theme.colors.bg.secondary, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
+  luckyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
   luckyIcon: { fontSize: 14 },
   luckyLbl: { fontSize: 11, color: theme.colors.text.tertiary, width: 32 },
   luckyVal: { flex: 1, fontSize: 12, color: theme.colors.text.primary, fontWeight: '600' },
@@ -649,6 +723,103 @@ const $ = StyleSheet.create({
   reBtn: { marginTop: 12, borderWidth: 1, borderColor: theme.colors.gold.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   reBtnT: { fontSize: 14, fontWeight: '600', color: theme.colors.gold.primary },
   disc: { fontSize: 9, color: theme.colors.text.tertiary, textAlign: 'center', lineHeight: 13, marginTop: 16, marginBottom: 8 },
+
+  // Hook accent
+  hookAccent: {
+    width: 40,
+    height: 2,
+    backgroundColor: theme.colors.gold.primary,
+    opacity: 0.3,
+    borderRadius: 1,
+    marginTop: 14,
+  },
+
+  // Share section
+  shareSection: {
+    marginTop: 28,
+    backgroundColor: theme.colors.goldCard.bg,
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center' as const,
+  },
+  shareDecoLine: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    marginBottom: 20,
+    alignSelf: 'stretch' as const,
+  },
+  decoLineSide: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(212, 168, 75, 0.25)',
+  },
+  decoChar: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: theme.colors.gold.primary,
+    letterSpacing: 2,
+    opacity: 0.5,
+  },
+  shareCta: {
+    fontSize: 22,
+    fontWeight: '800' as const,
+    color: theme.colors.goldCard.text,
+    textAlign: 'center' as const,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+    marginBottom: 20,
+  },
+  sharePreview: {
+    alignSelf: 'stretch' as const,
+    gap: 8,
+    marginBottom: 24,
+  },
+  shareRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  shareKanji: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: theme.colors.gold.primary,
+    width: 24,
+    textAlign: 'center' as const,
+  },
+  shareVal: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: theme.colors.goldCard.textSecondary,
+    lineHeight: 19,
+  },
+  shareBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    backgroundColor: theme.colors.gold.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignSelf: 'stretch' as const,
+  },
+  shareBtnText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  shareHint: {
+    fontSize: 11,
+    color: theme.colors.goldCard.textTertiary,
+    marginTop: 10,
+    letterSpacing: 0.5,
+  },
 
   // Floating button
   floatingBtn: {

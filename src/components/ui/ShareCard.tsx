@@ -130,8 +130,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(181,149,48,0.15)',
   },
   header: {
     flexDirection: 'row',

@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
 import { DateInputRow } from '../../src/components/ui/DateInputRow';
@@ -30,6 +31,30 @@ import type { CompatibilityResult, CompatCategories, CompatDayMaster, CompatCate
 
 const sc = (score: number) =>
   score >= 75 ? theme.colors.success : score >= 55 ? theme.colors.gold.primary : score >= 40 ? theme.colors.warning : theme.colors.error;
+
+// Score ring
+const RING_SIZE = 172;
+const RING_STROKE = 10;
+const RING_R = (RING_SIZE - RING_STROKE) / 2;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
+const VERDICT_MAP: { min: number; label: string; sub: string; hanja: string }[] = [
+  { min: 90, label: '천생연분', sub: '전생에 약속한 인연', hanja: '天' },
+  { min: 80, label: '찢었다', sub: '주변에서 질투할 조합', hanja: '熱' },
+  { min: 70, label: '케미 폭발', sub: '같이 있으면 시간이 순삭', hanja: '和' },
+  { min: 60, label: '밀당의 고수들', sub: '적당한 긴장감이 관계를 지킨다', hanja: '引' },
+  { min: 50, label: '묘한 끌림', sub: '끌리는데 불안하기도 한', hanja: '動' },
+  { min: 40, label: '취급주의', sub: '서로 자극하는 위험한 관계', hanja: '險' },
+  { min: 0, label: '도망쳐', sub: '만나면 둘 다 지치는 관계', hanja: '離' },
+];
+
+const getVerdict = (score: number) => VERDICT_MAP.find(v => score >= v.min) || VERDICT_MAP[VERDICT_MAP.length - 1];
+
+const CAT_LABELS: Record<string, string> = {
+  love: '애정', communication: '소통', values: '가치관',
+  sexual: '성적', finance: '금전', family: '가족',
+  growth: '성장', crisis: '위기',
+};
 
 export default function CompatibilityScreen() {
   const { t } = useTranslation();
@@ -120,10 +145,11 @@ export default function CompatibilityScreen() {
         setCompatibilityResult(safeLocal);
         saveAndRecord('compatibility', false, safeLocal);
       } else {
-        const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar);
-        const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12);
-        const myPillarInfo = formatPillarInfo(myPillars, myEffectiveYear);
-        const partnerPillarInfo = formatPillarInfo(partnerPillars, partnerYearNum);
+        // useMemo로 이미 계산된 pillar 재활용 (중복 계산 방지)
+        const myPillars = myPillarsData ?? calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar);
+        const partnerPillars = partnerPillarsData ?? calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, 12);
+        const myPillarInfo = formatPillarInfo(myPillars, myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveGender);
+        const partnerPillarInfo = formatPillarInfo(partnerPillars, partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender);
 
         const apiResult = await api.analyzeCompatibility(
           {
@@ -281,71 +307,95 @@ export default function CompatibilityScreen() {
         />
       ) : (
         <Animated.View entering={FadeInDown.springify()}>
-          {/* Headline — 직관적 커플 타이틀 */}
-          {(myPillarsData && partnerPillarsData) ? (
-            <Text style={sty.headline}>{getCoupleTitle(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement)}</Text>
-          ) : result.headline ? (
-            <Text style={sty.headline}>{result.headline}</Text>
-          ) : null}
+          {/* ══════ SCORE HERO ══════ */}
+          {(() => {
+            const verdict = getVerdict(result.overallScore);
+            const strokeColor = sc(result.overallScore);
+            const dashOffset = RING_CIRC * (1 - result.overallScore / 100);
+            return (
+              <GlassCard gold style={sty.heroCard}>
+                {/* Verdict Hanja — watermark */}
+                <Text style={sty.heroHanja}>{verdict.hanja}</Text>
 
-          {/* ══════ SUMMARY DASHBOARD ══════ */}
-          <GlassCard gold style={sty.summaryDash}>
-            {/* Couple Archetype (if available) */}
-            {result.coupleArchetype && (
-              <View style={sty.archetypeRow}>
-                <Text style={sty.archetypeEmoji}>{result.coupleArchetype.emoji}</Text>
-                <View style={sty.archetypeMeta}>
-                  <Text style={sty.archetypeTitle}>{result.coupleArchetype.title}</Text>
-                  <Text style={sty.archetypeDesc} numberOfLines={2}>{result.coupleArchetype.description}</Text>
+                {/* Couple Names */}
+                <View style={sty.heroNamesRow}>
+                  <Text style={sty.heroName}>{myName}</Text>
+                  <Text style={sty.heroX}>&times;</Text>
+                  <Text style={sty.heroName}>{ptName}</Text>
                 </View>
-              </View>
-            )}
 
-            {/* Score */}
-            <View style={sty.scoreRow}>
-              <Text style={sty.scoreNum}>{result.overallScore}</Text>
-              <Text style={sty.scoreUnit}>점</Text>
-            </View>
-            <Text style={sty.scoreSummary}>{result.summary}</Text>
-
-            {/* Quick category previews — top 3 & bottom 1 */}
-            {result.categories && (() => {
-              const entries = Object.entries(result.categories)
-                .map(([key, val]) => {
-                  const cat = val as CompatCategoryScore;
-                  return { key, score: cat?.score ?? (typeof val === 'number' ? val : 50) };
-                })
-                .sort((a, b) => b.score - a.score);
-              const catLabels: Record<string, string> = {
-                love: '애정', communication: '소통', values: '가치관',
-                sexual: '성적', finance: '금전', family: '가족',
-                growth: '성장', crisis: '위기',
-              };
-              const best3 = entries.slice(0, 3);
-              const worst = entries[entries.length - 1];
-              return (
-                <View style={sty.quickCats}>
-                  <View style={sty.quickCatGroup}>
-                    <Text style={sty.quickCatGroupLabel}>강점</Text>
-                    {best3.map(e => (
-                      <View key={e.key} style={sty.quickCatItem}>
-                        <Text style={sty.quickCatName}>{catLabels[e.key] || e.key}</Text>
-                        <Text style={[sty.quickCatScore, { color: sc(e.score) }]}>{e.score}</Text>
-                      </View>
-                    ))}
+                {/* Score Ring */}
+                <View style={sty.ringWrap}>
+                  <Svg width={RING_SIZE} height={RING_SIZE} style={{ transform: [{ rotate: '-90deg' }] }}>
+                    <SvgCircle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
+                      stroke="rgba(212,168,75,0.10)" strokeWidth={RING_STROKE} fill="none" />
+                    <SvgCircle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
+                      stroke={strokeColor} strokeWidth={RING_STROKE} fill="none"
+                      strokeDasharray={`${RING_CIRC}`} strokeDashoffset={`${dashOffset}`} strokeLinecap="round" />
+                  </Svg>
+                  <View style={sty.ringCenter}>
+                    <Text style={sty.ringScore}>{result.overallScore}</Text>
+                    <Text style={sty.ringUnit}>/ 100</Text>
                   </View>
-                  <View style={sty.quickCatDivider} />
-                  <View style={sty.quickCatGroup}>
-                    <Text style={sty.quickCatGroupLabel}>주의</Text>
-                    <View style={sty.quickCatItem}>
-                      <Text style={sty.quickCatName}>{catLabels[worst.key] || worst.key}</Text>
-                      <Text style={[sty.quickCatScore, { color: sc(worst.score) }]}>{worst.score}</Text>
+                </View>
+
+                {/* Verdict */}
+                <Text style={sty.verdictLabel}>{verdict.label}</Text>
+                <Text style={sty.verdictSub}>{verdict.sub}</Text>
+
+                {/* Headline */}
+                {(myPillarsData && partnerPillarsData) ? (
+                  <Text style={sty.heroHeadline}>{getCoupleTitle(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement)}</Text>
+                ) : result.headline ? (
+                  <Text style={sty.heroHeadline}>{result.headline}</Text>
+                ) : null}
+
+                {/* Couple Archetype */}
+                {result.coupleArchetype && (
+                  <View style={sty.archetypeRow}>
+                    <View style={sty.archetypeBadge}>
+                      <Text style={sty.archetypeBadgeText}>{result.coupleArchetype.emoji}</Text>
+                    </View>
+                    <View style={sty.archetypeMeta}>
+                      <Text style={sty.archetypeTitle}>{result.coupleArchetype.title}</Text>
+                      <Text style={sty.archetypeDesc} numberOfLines={2}>{result.coupleArchetype.description}</Text>
                     </View>
                   </View>
-                </View>
-              );
-            })()}
-          </GlassCard>
+                )}
+
+                {/* Summary */}
+                <Text style={sty.scoreSummary}>{result.summary}</Text>
+              </GlassCard>
+            );
+          })()}
+
+          {/* ══════ EXTREME HIGHLIGHTS — 가장 자극적인 카드 ══════ */}
+          {result.categories && (() => {
+            const entries = Object.entries(result.categories)
+              .map(([key, val]) => {
+                const cat = val as CompatCategoryScore;
+                return { key, score: cat?.score ?? (typeof val === 'number' ? val : 50) };
+              })
+              .sort((a, b) => b.score - a.score);
+            const best = entries[0];
+            const worst = entries[entries.length - 1];
+            return (
+              <View style={sty.extremeRow}>
+                <GlassCard style={sty.extremeCard}>
+                  <Text style={sty.extremeHanja}>强</Text>
+                  <Text style={sty.extremeTag}>가장 뜨거운</Text>
+                  <Text style={[sty.extremeScore, { color: theme.colors.success }]}>{best.score}</Text>
+                  <Text style={sty.extremeName}>{CAT_LABELS[best.key] || best.key}</Text>
+                </GlassCard>
+                <GlassCard style={sty.extremeCard}>
+                  <Text style={[sty.extremeHanja, { color: theme.colors.error }]}>弱</Text>
+                  <Text style={sty.extremeTag}>가장 위험한</Text>
+                  <Text style={[sty.extremeScore, { color: theme.colors.error }]}>{worst.score}</Text>
+                  <Text style={sty.extremeName}>{CAT_LABELS[worst.key] || worst.key}</Text>
+                </GlassCard>
+              </View>
+            );
+          })()}
 
           {/* Both people info */}
           <GlassCard style={sty.detailCard}>
@@ -841,15 +891,48 @@ export default function CompatibilityScreen() {
         </Animated.View>
       )}
 
-      {result && (
-        <View style={sty.shareWrap}>
-          <ShareCard
-            type="compatibility"
-            score={result.overallScore}
-            summary={result.headline || (typeof result.summary === 'string' ? result.summary : '')}
-          />
-        </View>
-      )}
+      {result && (() => {
+        const verdict = getVerdict(result.overallScore);
+        return (
+        <Animated.View entering={FadeInDown.delay(680).springify()}>
+          <View style={sty.shareSection}>
+            {/* Decorative divider */}
+            <View style={sty.shareDividerRow}>
+              <View style={sty.shareDividerLine} />
+              <Text style={sty.shareDividerChar}>緣</Text>
+              <View style={sty.shareDividerLine} />
+            </View>
+
+            {/* Title card */}
+            <View style={sty.shareTitleCard}>
+              <Text style={sty.shareTitleNames}>{myName} &times; {ptName}</Text>
+              <Text style={sty.shareTitleScore}>{result.overallScore}<Text style={sty.shareTitleUnit}>점</Text></Text>
+              <Text style={sty.shareTitleVerdict}>{verdict.label}</Text>
+              <Text style={sty.shareTitleSub}>{verdict.sub}</Text>
+            </View>
+
+            <ShareCard
+              type="compatibility"
+              score={result.overallScore}
+              title={`${myName} × ${ptName} — ${verdict.label}`}
+              summary={result.headline || (typeof result.summary === 'string' ? result.summary : '')}
+              items={result.categories ? (() => {
+                const entries = Object.entries(result.categories)
+                  .map(([key, val]) => {
+                    const cat = val as CompatCategoryScore;
+                    return { key, score: cat?.score ?? (typeof val === 'number' ? val : 50) };
+                  })
+                  .sort((a, b) => b.score - a.score);
+                return [
+                  { label: '강점', value: `${CAT_LABELS[entries[0].key]} ${entries[0].score}점` },
+                  { label: '약점', value: `${CAT_LABELS[entries[entries.length - 1].key]} ${entries[entries.length - 1].score}점` },
+                ];
+              })() : undefined}
+            />
+          </View>
+        </Animated.View>
+        );
+      })()}
 
       <Text style={sty.disclaimer}>{t('common.disclaimer')}</Text>
 
@@ -936,30 +1019,97 @@ const sty = StyleSheet.create({
   genderTextActive: { color: theme.colors.gold.primary, fontWeight: '600' },
   analyzeBtn: { marginTop: theme.spacing.xl },
 
-  // Headline
-  headline: {
-    fontSize: 20, fontWeight: '700', color: theme.colors.gold.primary,
-    textAlign: 'center', marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm, lineHeight: 28,
+  // ── Hero Score Card ──
+  heroCard: {
+    marginTop: theme.spacing.md, alignItems: 'center' as const,
+    paddingTop: 32, paddingBottom: 28, overflow: 'hidden' as const,
+    position: 'relative' as const,
+  },
+  heroHanja: {
+    position: 'absolute' as const, top: -8, fontSize: 120, fontWeight: '200' as const,
+    color: 'rgba(212,168,75,0.06)', letterSpacing: 4,
+  },
+  heroNamesRow: {
+    flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
+    marginBottom: 20,
+  },
+  heroName: {
+    fontSize: 16, fontWeight: '700' as const, color: theme.colors.text.primary,
+    letterSpacing: 1,
+  },
+  heroX: {
+    fontSize: 14, fontWeight: '300' as const, color: theme.colors.gold.primary,
+  },
+  ringWrap: {
+    position: 'relative' as const, width: RING_SIZE, height: RING_SIZE,
+    alignItems: 'center' as const, justifyContent: 'center' as const,
+    marginBottom: 16,
+  },
+  ringCenter: {
+    position: 'absolute' as const, alignItems: 'center' as const,
+  },
+  ringScore: {
+    fontSize: 54, fontWeight: '700' as const, color: theme.colors.gold.primary,
+    letterSpacing: 1,
+  },
+  ringUnit: {
+    fontSize: 13, color: theme.colors.text.tertiary, marginTop: -4,
+    letterSpacing: 1,
+  },
+  verdictLabel: {
+    fontSize: 24, fontWeight: '700' as const, color: theme.colors.text.primary,
+    letterSpacing: 4, marginBottom: 4,
+  },
+  verdictSub: {
+    fontSize: 13, color: theme.colors.text.secondary, letterSpacing: 1,
+    marginBottom: 16,
+  },
+  heroHeadline: {
+    fontSize: 16, fontWeight: '600' as const, color: theme.colors.gold.primary,
+    textAlign: 'center' as const, lineHeight: 24, marginBottom: 12,
+    letterSpacing: 1,
+  },
+  archetypeRow: {
+    flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12,
+    width: '100%' as const, marginBottom: theme.spacing.md, paddingBottom: theme.spacing.md,
+    borderBottomWidth: 1, borderBottomColor: theme.colors.glass.border,
+  },
+  archetypeBadge: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(212,168,75,0.10)',
+    alignItems: 'center' as const, justifyContent: 'center' as const,
+  },
+  archetypeBadgeText: { fontSize: 22 },
+  archetypeMeta: { flex: 1 },
+  archetypeTitle: { fontSize: 16, fontWeight: '700' as const, color: theme.colors.gold.primary, marginBottom: 2, letterSpacing: 1 },
+  archetypeDesc: { fontSize: 12, color: theme.colors.text.secondary, lineHeight: 18 },
+  scoreSummary: {
+    fontSize: 14, color: theme.colors.text.secondary, lineHeight: 22,
+    textAlign: 'center' as const, marginTop: theme.spacing.sm,
   },
 
-  // ── Summary Dashboard ──
-  summaryDash: { marginTop: theme.spacing.md, alignItems: 'center' },
-  archetypeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginBottom: theme.spacing.md, paddingBottom: theme.spacing.md, borderBottomWidth: 1, borderBottomColor: theme.colors.glass.border },
-  archetypeEmoji: { fontSize: 36 },
-  archetypeMeta: { flex: 1 },
-  archetypeTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: 2 },
-  archetypeDesc: { fontSize: 12, color: theme.colors.text.secondary, lineHeight: 18 },
-  scoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
-  scoreNum: { fontSize: 52, fontWeight: '700', color: theme.colors.gold.primary },
-  scoreUnit: { fontSize: 16, fontWeight: '500', color: theme.colors.text.tertiary, marginBottom: 10 },
-  scoreSummary: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 22, textAlign: 'center', marginTop: theme.spacing.sm },
-  quickCats: { flexDirection: 'row', alignItems: 'flex-start', width: '100%', marginTop: theme.spacing.md, paddingTop: theme.spacing.md, borderTopWidth: 1, borderTopColor: theme.colors.glass.border },
-  quickCatGroup: { flex: 1, gap: 6 },
-  quickCatGroupLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  quickCatItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  quickCatName: { fontSize: 13, color: theme.colors.text.secondary },
-  quickCatScore: { fontSize: 14, fontWeight: '700' },
-  quickCatDivider: { width: 1, height: 60, backgroundColor: theme.colors.glass.border, marginHorizontal: theme.spacing.md },
+  // ── Extreme Highlights ──
+  extremeRow: {
+    flexDirection: 'row' as const, gap: 12, marginTop: theme.spacing.md,
+  },
+  extremeCard: {
+    flex: 1, alignItems: 'center' as const, paddingVertical: 20,
+  },
+  extremeHanja: {
+    fontSize: 28, fontWeight: '700' as const, color: theme.colors.success,
+    letterSpacing: 2, marginBottom: 2,
+  },
+  extremeTag: {
+    fontSize: 11, color: theme.colors.text.tertiary, letterSpacing: 1,
+    marginBottom: 6,
+  },
+  extremeScore: {
+    fontSize: 34, fontWeight: '700' as const, letterSpacing: 1,
+  },
+  extremeName: {
+    fontSize: 13, color: theme.colors.text.secondary, marginTop: 2,
+    letterSpacing: 0.5,
+  },
 
   // Section header
   secHeadRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: theme.spacing.sm },
@@ -1088,7 +1238,43 @@ const sty = StyleSheet.create({
   finalLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.muted, letterSpacing: 0.5 },
 
   // Share
-  shareWrap: { marginTop: theme.spacing.xl },
+  shareSection: { marginTop: theme.spacing.xl, alignItems: 'center' as const },
+  shareDividerRow: {
+    flexDirection: 'row' as const, alignItems: 'center' as const,
+    width: '100%' as const, marginBottom: 16,
+  },
+  shareDividerLine: {
+    flex: 1, height: 1, backgroundColor: 'rgba(212,168,75,0.15)',
+  },
+  shareDividerChar: {
+    fontSize: 22, fontWeight: '600' as const, color: theme.colors.gold.primary,
+    marginHorizontal: 16, letterSpacing: 2,
+  },
+  shareTitleCard: {
+    alignItems: 'center' as const, marginBottom: 20,
+    paddingVertical: 20, paddingHorizontal: 24,
+    backgroundColor: '#FFFDF8', borderRadius: 20,
+    borderWidth: 1, borderColor: 'rgba(212,168,75,0.15)',
+  },
+  shareTitleNames: {
+    fontSize: 15, fontWeight: '600' as const, color: theme.colors.text.primary,
+    letterSpacing: 2, marginBottom: 8,
+  },
+  shareTitleScore: {
+    fontSize: 42, fontWeight: '700' as const, color: theme.colors.gold.primary,
+    letterSpacing: 1,
+  },
+  shareTitleUnit: {
+    fontSize: 16, fontWeight: '500' as const, color: theme.colors.text.tertiary,
+  },
+  shareTitleVerdict: {
+    fontSize: 22, fontWeight: '700' as const, color: theme.colors.text.primary,
+    letterSpacing: 3, marginTop: 4,
+  },
+  shareTitleSub: {
+    fontSize: 13, color: theme.colors.text.secondary, letterSpacing: 1,
+    marginTop: 2,
+  },
 
   // Teaser/Paid
   teaserCard: {

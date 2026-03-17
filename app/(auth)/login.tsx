@@ -11,7 +11,7 @@ import Animated, {
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
-import { Button } from '../../src/components/ui/Button';
+import { MIRiLogo } from '../../src/components/ui/MIRiLogo';
 import { useAuthStore } from '../../src/stores/authStore';
 import { fetchGoogleProfile } from '../../src/services/auth';
 
@@ -82,6 +82,25 @@ function InkDrop({ delay, x, y, size, maxScale, color }: {
   );
 }
 
+// ─── 로그인 버튼 컴포넌트 ───
+function LoginButton({ label, icon, iconColor, iconBg, onPress, disabled }: {
+  label: string;
+  icon: string;
+  iconColor: string;
+  iconBg?: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <TouchableOpacity style={styles.loginBtn} onPress={onPress} disabled={disabled} activeOpacity={0.8}>
+      <View style={[styles.iconCircle, iconBg ? { backgroundColor: iconBg } : undefined]}>
+        <Text style={[styles.iconText, { color: iconColor }]}>{icon}</Text>
+      </View>
+      <Text style={styles.loginLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -101,25 +120,14 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     const result = await signInWithGoogle();
-    if (__DEV__) console.log('[Login] signInWithGoogle result:', JSON.stringify({
-      success: result.success,
-      error: result.error,
-      hasProviderToken: !!result.providerToken,
-    }));
-
-    // 웹: OAuth 리다이렉트 방식이라 success 후 브라우저가 직접 이동 → 네비게이션 불필요
     if (isWeb) return;
-
     if (result.success) {
       const profile = await fetchGoogleProfile(result.providerToken);
-      if (__DEV__) console.log('[Login] fetchGoogleProfile result:', JSON.stringify(profile));
-
       const params: Record<string, string> = {};
       if (profile.name) params.name = profile.name;
       if (profile.birthYear) params.year = String(profile.birthYear);
       if (profile.birthMonth) params.month = String(profile.birthMonth);
       if (profile.birthDay) params.day = String(profile.birthDay);
-
       const query = new URLSearchParams(params).toString();
       router.replace(`/(auth)/birth-input${query ? `?${query}` : ''}` as any);
     } else if (result.error && result.error !== 'Login cancelled') {
@@ -138,7 +146,6 @@ export default function LoginScreen() {
 
   const handleKakaoLogin = async () => {
     const result = await signInWithKakao();
-    // 웹: OAuth 리다이렉트 방식
     if (isWeb) return;
     if (result.success) {
       router.replace('/(auth)/birth-input');
@@ -149,7 +156,6 @@ export default function LoginScreen() {
 
   const handleLineLogin = async () => {
     const result = await signInWithLine();
-    // 웹: OAuth 리다이렉트 방식
     if (isWeb) return;
     if (result.success) {
       router.replace('/(auth)/birth-input');
@@ -163,21 +169,17 @@ export default function LoginScreen() {
     if (result.success) {
       router.replace('/(auth)/birth-input');
     } else {
-      // Even if Supabase anonymous auth fails, allow guest to continue
-      // (they just won't have a Supabase session, only local state)
       router.replace('/(auth)/birth-input');
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* 먹물 방울 — MIRi 주변에서 퍼짐 */}
       <InkDrop delay={200} x={width * 0.35} y={height * 0.28} size={120} maxScale={3.5} color="#1C1C1E" />
       <InkDrop delay={900} x={width * 0.7} y={height * 0.35} size={90} maxScale={3} color="#3A3A3C" />
       <InkDrop delay={1500} x={width * 0.5} y={height * 0.4} size={70} maxScale={2.5} color="#2C2C2E" />
 
       <Animated.View style={[styles.contentWrap, contentStyle]}>
-        {/* 상단 여백 — 타이틀을 시각적 중앙으로 */}
         <View style={styles.centerArea}>
           <Text style={styles.title}>MIRi</Text>
           <Text style={styles.subtitle}>{t('auth.welcome')}</Text>
@@ -187,30 +189,43 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* 하단 버튼 영역 */}
         <View style={styles.bottomArea}>
           <View style={styles.buttons}>
             {Platform.OS === 'ios' && (
-              <TouchableOpacity style={styles.loginBtn} onPress={handleAppleLogin} disabled={isLoading} activeOpacity={0.8}>
-                <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#000', fontSize: 17 }]}>{'\uF8FF'}</Text></View>
-                <Text style={styles.loginLabel}>{t('auth.loginApple')}</Text>
-              </TouchableOpacity>
+              <LoginButton
+                label={t('auth.loginApple')}
+                icon="A"
+                iconColor="#000"
+                onPress={handleAppleLogin}
+                disabled={isLoading}
+              />
             )}
 
-            <TouchableOpacity style={styles.loginBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
-              <View style={styles.iconCircle}><Text style={[styles.iconText, { color: '#4285F4' }]}>G</Text></View>
-              <Text style={styles.loginLabel}>{t('auth.loginGoogle')}</Text>
-            </TouchableOpacity>
+            <LoginButton
+              label={t('auth.loginGoogle')}
+              icon="G"
+              iconColor="#4285F4"
+              onPress={handleGoogleLogin}
+              disabled={isLoading}
+            />
 
-            <TouchableOpacity style={styles.loginBtn} onPress={handleKakaoLogin} disabled={isLoading} activeOpacity={0.8}>
-              <View style={[styles.iconCircle, { backgroundColor: '#FEE500' }]}><Text style={[styles.iconText, { color: '#3C1E1E', fontSize: 15 }]}>K</Text></View>
-              <Text style={styles.loginLabel}>{t('auth.loginKakao')}</Text>
-            </TouchableOpacity>
+            <LoginButton
+              label={t('auth.loginKakao')}
+              icon="K"
+              iconColor="#3C1E1E"
+              iconBg="#FEE500"
+              onPress={handleKakaoLogin}
+              disabled={isLoading}
+            />
 
-            <TouchableOpacity style={styles.loginBtn} onPress={handleLineLogin} disabled={isLoading} activeOpacity={0.8}>
-              <View style={[styles.iconCircle, { backgroundColor: '#06C755' }]}><Text style={[styles.iconText, { color: '#fff', fontSize: 14 }]}>L</Text></View>
-              <Text style={styles.loginLabel}>{t('auth.loginLine')}</Text>
-            </TouchableOpacity>
+            <LoginButton
+              label={t('auth.loginLine')}
+              icon="L"
+              iconColor="#fff"
+              iconBg="#06C755"
+              onPress={handleLineLogin}
+              disabled={isLoading}
+            />
           </View>
 
           <TouchableOpacity
@@ -249,6 +264,7 @@ const styles = StyleSheet.create({
   },
   bottomArea: {
     paddingBottom: 40,
+    alignItems: 'center',
   },
   title: {
     fontSize: 44,
@@ -280,64 +296,52 @@ const styles = StyleSheet.create({
     opacity: 0.2,
     marginTop: theme.spacing.md,
   },
+  // ─── 버튼 ───
   buttons: {
-    gap: 8,
-    paddingHorizontal: 20,
+    gap: 10,
+    width: '100%',
+    maxWidth: 320,
   },
   loginBtn: {
     backgroundColor: '#FFFFFF',
-    borderRadius: theme.radius.sm,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    minHeight: 42,
+    gap: 10,
+    height: 48,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
   },
   iconCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: 'rgba(0,0,0,0.04)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   loginLabel: {
     color: '#3C3C3C',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
+  // ─── 게스트 ───
   guestBtn: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.sm,
+    paddingVertical: 14,
+    marginTop: 8,
   },
   guestText: {
     color: theme.colors.text.tertiary,
     fontSize: 13,
     textDecorationLine: 'underline',
     letterSpacing: 0.5,
-  },
-  loginInfo: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    lineHeight: 18,
-    marginTop: theme.spacing.sm,
-  },
-  disclaimer: {
-    color: theme.colors.text.tertiary,
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: theme.spacing.xl,
-    lineHeight: 14,
   },
 });

@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
@@ -103,17 +103,6 @@ export default function CompatibilityScreen() {
   const myDisplayName = (editingMy ? myName.trim() : user?.name) || t('common.me');
   const ptName = partnerName.trim() || t('common.partner');
 
-  // Heart Y-axis rotation animation
-  const heartRotateY = useSharedValue(0);
-  React.useEffect(() => {
-    heartRotateY.value = withRepeat(
-      withTiming(360, { duration: 2000, easing: Easing.linear }),
-      -1, false,
-    );
-  }, []);
-  const heartAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 400 }, { rotateY: `${heartRotateY.value}deg` }],
-  }));
 
   const partnerPillarsData = React.useMemo(() => {
     if (!isPartnerValid) return null;
@@ -129,13 +118,16 @@ export default function CompatibilityScreen() {
     setLoading(true);
     setAnalyzeError(null);
     try {
-      const myPillars = calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, myEffectiveIsLunar);
-      const partnerPillars = calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum, undefined, undefined, undefined, partnerIsLunar);
+      // useMemo로 이미 계산된 pillar 재활용 (중복 계산 방지)
+      const myPillars = myPillarsData ?? calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, myEffectiveIsLunar);
+      const partnerPillars = partnerPillarsData ?? calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum, undefined, undefined, undefined, partnerIsLunar);
       console.log('[Compat] Calling API...');
       const apiResult = await api.analyzeCompatibility(
         { year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay, hour: myEffectiveHour, isLunar: myEffectiveIsLunar, gender: myEffectiveGender },
         { year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum, hour: partnerHourNum, isLunar: partnerIsLunar, gender: partnerGender },
-        user?.locale ?? 'ko', true, formatPillarInfo(myPillars, myEffectiveYear!), formatPillarInfo(partnerPillars, partnerYearNum),
+        user?.locale ?? 'ko', true,
+        formatPillarInfo(myPillars, myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveGender),
+        formatPillarInfo(partnerPillars, partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender),
         myDisplayName, ptName,
       );
       console.log('[Compat] API success');
@@ -169,21 +161,41 @@ export default function CompatibilityScreen() {
         <>
           <View style={st.hero}>
             <Text style={st.heroChar}>緣</Text>
+            <View style={st.heroDotsRow}>
+              <View style={st.heroDot} />
+              <View style={st.heroDotSmall} />
+              <View style={st.heroDot} />
+            </View>
             <Text style={st.heroTitle}>{t('compatibility.title')}</Text>
             <Text style={st.heroSub}>{'두 사람의 사주가 만나\n어떤 인연을 만드는지 알려드려요'}</Text>
           </View>
 
-          {/* My Info */}
-          <GlassCard style={st.personCard}>
-            <View style={st.personHeader}>
-              <Text style={st.personLabel}>{t('compatibility.myInfo')}</Text>
-              <TouchableOpacity onPress={() => setEditingMy(!editingMy)} activeOpacity={0.7}>
-                <Text style={st.editBtn}>{editingMy ? t('common.confirm') : t('home.profileEdit')}</Text>
-              </TouchableOpacity>
-            </View>
-            {editingMy ? (
+          {/* My Info — 간소화 (탭하면 수정) */}
+          <TouchableOpacity
+            style={st.myCompact}
+            onPress={() => setEditingMy(!editingMy)}
+            activeOpacity={0.7}
+          >
+            {!editingMy ? (
+              <View style={st.myCompactRow}>
+                <View style={st.myCompactLeft}>
+                  <Text style={st.myCompactLabel}>{t('compatibility.myInfo')}</Text>
+                  <Text style={st.myCompactInfo}>
+                    {myDisplayName}{' · '}
+                    {myEffectiveYear}.{String(myEffectiveMonth).padStart(2, '0')}.{String(myEffectiveDay).padStart(2, '0')}
+                    {' · '}{myEffectiveGender === 'male' ? t('common.male_short') : t('common.female_short')}
+                    {myPillarsData ? ` · ${myPillarsData.dayMaster}` : ''}
+                  </Text>
+                </View>
+                <Text style={st.myCompactEdit}>{t('home.profileEdit')}</Text>
+              </View>
+            ) : (
               <View>
-                {/* 이름 */}
+                <View style={st.myCompactEditHeader}>
+                  <Text style={st.myCompactLabel}>{t('compatibility.myInfo')}</Text>
+                  <Text style={st.myCompactDone}>{t('common.confirm')}</Text>
+                </View>
+
                 <TextInput
                   style={st.nameInput}
                   value={myName}
@@ -193,7 +205,6 @@ export default function CompatibilityScreen() {
                   maxLength={10}
                 />
 
-                {/* 양력/음력 */}
                 <Text style={st.inputLabel}>{t('home.editCalendar')}</Text>
                 <View style={st.calToggleRow}>
                   <TouchableOpacity style={[st.calToggleBtn, !myIsLunar && st.calToggleActive]} onPress={() => setMyIsLunar(false)}>
@@ -204,14 +215,12 @@ export default function CompatibilityScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* 생년월일 */}
                 <DateInputRow
                   year={myYear} month={myMonth} day={myDay}
                   onChangeYear={setMyYear} onChangeMonth={setMyMonth} onChangeDay={setMyDay}
                   variant="inline"
                 />
 
-                {/* 성별 */}
                 <View style={st.genderRow}>
                   <TouchableOpacity style={[st.genderBtn, myGender === 'male' && st.genderActive]} onPress={() => setMyGender('male')}>
                     <Text style={[st.genderText, myGender === 'male' && st.genderTextActive]}>{t('compatibility.maleGender')}</Text>
@@ -221,7 +230,6 @@ export default function CompatibilityScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* 생시 */}
                 <View style={st.hourHeader}>
                   <Text style={st.inputLabel}>{t('home.editBirthHour')}</Text>
                   <TouchableOpacity style={st.unknownRow} onPress={() => { setMyUnknownTime(!myUnknownTime); if (!myUnknownTime) setMySelectedHour(null); }}>
@@ -250,36 +258,8 @@ export default function CompatibilityScreen() {
                   </View>
                 )}
               </View>
-            ) : (
-              <View>
-                {user?.name ? <Text style={st.personName}>{user.name}</Text> : null}
-                <Text style={st.personInfo}>
-                  {myEffectiveYear}.{String(myEffectiveMonth).padStart(2, '0')}.{String(myEffectiveDay).padStart(2, '0')}
-                  {' · '}{myEffectiveGender === 'male' ? t('common.male_short') : t('common.female_short')}
-                </Text>
-                {myPillarsData && (
-                  <View style={st.myDetailRow}>
-                    <View style={st.myDetailItem}>
-                      <Text style={st.myDetailLabel}>일간</Text>
-                      <Text style={st.myDetailValue}>{myPillarsData.dayMaster}({getEl(myPillarsData.dayMasterElement)})</Text>
-                    </View>
-                    <View style={st.myDetailDivider} />
-                    <View style={st.myDetailItem}>
-                      <Text style={st.myDetailLabel}>띠</Text>
-                      <Text style={st.myDetailValue}>{myPillarsData.year.zodiac}</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
             )}
-          </GlassCard>
-
-          {/* Heart connector */}
-          <View style={st.coupleConnector}>
-            <View style={st.connLine} />
-            <View style={st.connHeart}><Animated.Text style={[st.connHeartText, heartAnimStyle]}>&hearts;</Animated.Text></View>
-            <View style={st.connLine} />
-          </View>
+          </TouchableOpacity>
 
           {/* Partner Info */}
           <GlassCard style={st.personCard}>
@@ -740,32 +720,70 @@ const st = StyleSheet.create({
     marginTop: 1,
   },
   hero: { alignItems: 'center', marginBottom: theme.spacing.xl },
-  heroChar: { fontSize: 64, fontWeight: '200', color: theme.colors.gold.primary, marginBottom: theme.spacing.md },
+  heroChar: { fontSize: 64, fontWeight: '200', color: theme.colors.gold.primary, marginBottom: 10 },
+  heroDotsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
+  heroDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#1A1A1A' },
+  heroDotSmall: { width: 2, height: 2, borderRadius: 1, backgroundColor: '#1A1A1A', opacity: 0.4 },
   heroTitle: { fontSize: 24, fontWeight: '700', color: theme.colors.text.primary, letterSpacing: 2, marginBottom: theme.spacing.sm },
   heroSub: { fontSize: 14, color: theme.colors.text.secondary, textAlign: 'center', lineHeight: 22 },
   // Input form
+  // My Info compact
+  myCompact: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: theme.radius.md,
+    padding: 16,
+    marginBottom: 12,
+  },
+  myCompactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  myCompactLeft: {
+    flex: 1,
+  },
+  myCompactLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  myCompactInfo: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 0.5,
+    lineHeight: 20,
+  },
+  myCompactEdit: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.gold.primary,
+    letterSpacing: 0.5,
+  },
+  myCompactEditHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  myCompactDone: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    letterSpacing: 0.5,
+  },
+  // Partner card (기존 유지)
   personCard: { marginBottom: theme.spacing.sm },
-  personHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.sm },
-  personLabel: { fontSize: 14, color: theme.colors.text.secondary },
-  editBtn: { fontSize: 13, fontWeight: '600', color: theme.colors.gold.primary },
-  personName: { fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 2 },
-  personInfo: { fontSize: 14, color: theme.colors.text.secondary, lineHeight: 20 },
-  myDetailRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: theme.colors.bg.secondary, borderRadius: theme.radius.sm, padding: 10 },
-  myDetailItem: { flex: 1, alignItems: 'center' },
-  myDetailLabel: { fontSize: 11, color: theme.colors.text.tertiary, marginBottom: 2 },
-  myDetailValue: { fontSize: 13, fontWeight: '600', color: theme.colors.gold.primary },
-  myDetailDivider: { width: 1, height: 24, backgroundColor: theme.colors.glass.border },
-  coupleConnector: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.lg },
-  connLine: { flex: 1, height: 1, backgroundColor: theme.colors.gold.primary + '30' },
-  connHeart: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.gold.primary + '15', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.gold.primary + '30' },
-  connHeartText: { fontSize: 16, color: '#E8546B' },
-  nameInput: { backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, paddingVertical: 12, paddingHorizontal: 12, color: theme.colors.text.primary, fontSize: 15, borderWidth: 1, borderColor: theme.colors.glass.border, marginBottom: theme.spacing.sm },
+  personLabel: { fontSize: 14, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
+  coupleConnector: { alignItems: 'center', marginVertical: 0 },
+  connLine: { width: 0, height: 0 },
+  nameInput: { backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, paddingVertical: 14, paddingHorizontal: 14, color: theme.colors.text.primary, fontSize: 15, borderWidth: 1, borderColor: theme.colors.border.subtle, marginBottom: 12, letterSpacing: 0.5 },
   inputLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.primary, marginBottom: 6, marginTop: theme.spacing.sm },
-  calToggleRow: { flexDirection: 'row', backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, padding: 2, marginBottom: theme.spacing.sm, borderWidth: 1, borderColor: theme.colors.glass.border },
-  calToggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  calToggleActive: { backgroundColor: '#1C1C1E' },
-  calToggleText: { color: theme.colors.text.tertiary, fontSize: 13, fontWeight: '500' },
-  calToggleTextActive: { color: theme.colors.gold.light, fontWeight: '600' },
+  calToggleRow: { flexDirection: 'row', backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, padding: 3, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.border.subtle },
+  calToggleBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 6 },
+  calToggleActive: { backgroundColor: '#1A1A1A' },
+  calToggleText: { color: theme.colors.text.tertiary, fontSize: 14, fontWeight: '600', letterSpacing: 1 },
+  calToggleTextActive: { color: theme.colors.gold.primary, fontWeight: '700' },
   hourScroll: { marginBottom: 6 },
   hourChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, backgroundColor: theme.colors.bg.secondary, marginRight: 6 },
   hourChipActive: { backgroundColor: '#1C1C1E' },
@@ -784,11 +802,11 @@ const st = StyleSheet.create({
   hourLabelActive: { color: theme.colors.gold.light, fontWeight: '600' },
   hourSub: { color: theme.colors.text.tertiary, fontSize: 10, marginTop: 1 },
   hourSubActive: { color: theme.colors.gold.muted },
-  genderRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  genderBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  genderActive: { backgroundColor: '#1C1C1E' },
-  genderText: { color: theme.colors.text.tertiary, fontSize: 13, fontWeight: '500' } as any,
-  genderTextActive: { color: theme.colors.gold.light, fontWeight: '600' },
+  genderRow: { flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 4 },
+  genderBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 6, borderWidth: 1, borderColor: theme.colors.border.subtle },
+  genderActive: { backgroundColor: '#1A1A1A', borderColor: '#1A1A1A' },
+  genderText: { color: theme.colors.text.tertiary, fontSize: 14, fontWeight: '600', letterSpacing: 1 } as any,
+  genderTextActive: { color: theme.colors.gold.primary, fontWeight: '700' },
   analyzeBtn: { marginTop: theme.spacing.xl },
   // Result header
   resetBtn: { marginBottom: theme.spacing.md },

@@ -16,6 +16,7 @@ export function useFace() {
   } = useFortuneStore();
   const [noFaceDetected, setNoFaceDetected] = useState(false);
   const [noFaceReason, setNoFaceReason] = useState('');
+  const [transformError, setTransformError] = useState<string | null>(null);
 
   const analyze = useCallback(async (imageUri: string) => {
     setLoading(true);
@@ -24,12 +25,16 @@ export function useFace() {
     setFaceResult(null);
     setNoFaceDetected(false);
     setNoFaceReason('');
+    setTransformError(null);
 
     try {
       const base64 = await compressImageToBase64(imageUri);
       const locale = user?.locale ?? 'ko';
 
+      console.log(`[Face] image size: ${(base64.length / 1024).toFixed(0)}KB`);
+
       const response = await api.analyzeFace(base64, locale, true, analysisMode);
+      console.log('[Face] response OK');
 
       if (__DEV__) {
         console.log('[Face] response keys:', Object.keys(response));
@@ -51,6 +56,9 @@ export function useFace() {
       if (response.transformedImage) {
         setTransformedImage(response.transformedImage);
         if (__DEV__) console.log('[Face] setTransformedImage done');
+      } else if (response.transformError) {
+        console.warn('[Face] Transform failed:', response.transformError);
+        setTransformError(response.transformError);
       }
 
       // 분석 결과
@@ -65,13 +73,28 @@ export function useFace() {
         return directResult;
       }
 
-      // 서버가 분석 에러를 반환한 경우
+      // 서버가 분석 에러를 반환한 경우 — 구체적 에러 메시지 포함
       if (response.analysisError) {
-        throw new Error(response.analysisError);
+        const msg = response.analysisError;
+        if (__DEV__) console.error('[Face] Server analysis error:', msg);
+        // 사용자에게 친화적인 에러 메시지로 변환
+        if (msg.includes('API key')) {
+          throw new Error('서버 설정 오류입니다. 잠시 후 다시 시도해주세요.');
+        }
+        if (msg.includes('timeout') || msg.includes('abort')) {
+          throw new Error('분석 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요.');
+        }
+        throw new Error('관상 분석에 실패했습니다. 다시 시도해주세요.');
+      }
+
+      // 분석과 변환 모두 실패
+      if (response.transformError && !response.analysis) {
+        if (__DEV__) console.error('[Face] Both analysis and transform failed:', response.transformError);
       }
 
       throw new Error('분석 결과를 받지 못했습니다. 다시 시도해주세요.');
     } catch (err) {
+      console.error('[Face] FULL ERROR:', err);
       const message = err instanceof Error ? err.message : '관상 분석에 실패했습니다.';
       setFaceResult(null);
       setError(message);
@@ -88,5 +111,5 @@ export function useFace() {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { faceResult, transformedImageBase64, analyze, isLoading, error, clearError, noFaceDetected, noFaceReason, clearNoFace };
+  return { faceResult, transformedImageBase64, analyze, isLoading, error, clearError, noFaceDetected, noFaceReason, clearNoFace, transformError };
 }

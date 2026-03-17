@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
+import { MIRiLogo } from '../../src/components/ui/MIRiLogo';
 import { LoadingInk } from '../../src/components/ui/LoadingInk';
 import { ElementChart } from '../../src/components/saju/ElementChart';
 import { PaywallModal } from '../../src/components/ui/PaywallModal';
@@ -193,8 +194,8 @@ const wkStyles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 6,
     paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.glass.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(212,168,75,0.12)',
   },
   dayCell: {
     flex: 1,
@@ -381,6 +382,14 @@ export default function HomeScreen() {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [celebrationValue, setCelebrationValue] = useState<number>(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const tarotY = useRef(0);
+
+  const handleTarotSelect = useCallback(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: tarotY.current - 40, animated: true });
+    }, 300);
+  }, []);
 
   // ── Streak check on mount ──
   useEffect(() => {
@@ -493,7 +502,7 @@ export default function HomeScreen() {
 
     try {
       const pillarInfo = pillars
-        ? formatPillarInfo(pillars, user.birthYear)
+        ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender)
         : undefined;
 
       const result = await api.analyzeSaju(
@@ -537,6 +546,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
@@ -558,16 +568,10 @@ export default function HomeScreen() {
       <Animated.View entering={FadeInDown.delay(50).duration(500)}>
         <View style={styles.header}>
           <Text style={styles.appName}>MIRi</Text>
-          <Text style={styles.appSub}>{t('common.appName')}</Text>
+          <Text style={styles.appSub}>운명을 미리 보다</Text>
+          <View style={styles.headerDivider} />
         </View>
       </Animated.View>
-
-      {/* ── 날짜 ── */}
-      <Text style={styles.date}>
-        {new Date().toLocaleDateString(i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'ja' ? 'ja-JP' : 'en-US', {
-          month: 'long', day: 'numeric', weekday: 'short',
-        })}
-      </Text>
 
       {/* ── 분석 대상 프로필 ── */}
       {user && (
@@ -581,17 +585,25 @@ export default function HomeScreen() {
               <Text style={styles.profileName}>
                 {user.name || t('home.defaultHero')}
               </Text>
-              <Text style={styles.profileBirth}>
-                {user.birthYear}.{String(user.birthMonth).padStart(2, '0')}.{String(user.birthDay).padStart(2, '0')}
-                {' · '}{user.gender === 'male' ? t('common.male_short') : t('common.female_short')}
-                {' · '}{user.isLunar ? t('birth.lunar') : t('birth.solar')}
-              </Text>
+              <View style={styles.profileMeta}>
+                <Text style={styles.profileBirth}>
+                  {user.birthYear}.{String(user.birthMonth).padStart(2, '0')}.{String(user.birthDay).padStart(2, '0')}
+                  {' · '}{user.gender === 'male' ? t('common.male_short') : t('common.female_short')}
+                  {' · '}{user.isLunar ? t('birth.lunar') : t('birth.solar')}
+                </Text>
+                <Text style={styles.profileDate}>
+                  {new Date().toLocaleDateString(i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'ja' ? 'ja-JP' : 'en-US', {
+                    month: 'long', day: 'numeric', weekday: 'short',
+                  })}
+                </Text>
+              </View>
             </View>
             <Text style={styles.profileEdit}>{t('home.profileEdit')}</Text>
           </TouchableOpacity>
         </Animated.View>
       )}
 
+      <View style={styles.sectionDivider} />
 
       {/* ── 일간 + 주 오행 ── */}
       {pillars && (
@@ -620,6 +632,8 @@ export default function HomeScreen() {
         </Animated.View>
       )}
 
+      <View style={styles.sectionDivider} />
+
       {/* ── 만세력 ── */}
       <Animated.View entering={FadeInDown.delay(180).duration(500)}>
         <TouchableOpacity
@@ -627,28 +641,46 @@ export default function HomeScreen() {
           onPress={() => router.push('/saju/detail')}
           activeOpacity={0.7}
         >
-          <Text style={styles.manseryeokCardIcon}>命</Text>
-          <View style={styles.manseryeokCardBody}>
-            <Text style={styles.manseryeokCardTitle}>{t('home.manseryeok')}</Text>
-            <Text style={styles.manseryeokCardSub}>사주 원국 · 대운 · 세운 확인</Text>
+          <View style={styles.manseryeokRow}>
+            <Text style={styles.manseryeokCardIcon}>命</Text>
+            <View style={styles.manseryeokBody}>
+              <Text style={styles.manseryeokCardTitle}>{t('home.manseryeok')}</Text>
+              <Text style={styles.manseryeokCardSub}>사주 원국 · 대운 · 세운</Text>
+            </View>
+            <Text style={styles.manseryeokArrow}>›</Text>
           </View>
-          <Text style={styles.manseryeokCardArrow}>›</Text>
         </TouchableOpacity>
       </Animated.View>
 
       {/* ── 오행 타로 ── */}
       {pillars && (
-        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <ElementTarot dayStemIdx={pillars.day.stemIdx} />
+        <Animated.View
+          entering={FadeInDown.delay(200).duration(500)}
+          onLayout={(e) => { tarotY.current = e.nativeEvent.layout.y; }}
+        >
+          <ElementTarot dayStemIdx={pillars.day.stemIdx} onCardSelect={handleTarotSelect} />
         </Animated.View>
       )}
+
+      <View style={styles.sectionDivider} />
 
       {/* ── 이번 주 운세 (Weekly Line Chart) ── */}
       {weeklyData && (
         <Animated.View entering={FadeInDown.delay(500).duration(500)}>
           <GlassCard style={styles.weeklyCard}>
             <View style={styles.weeklyHeader}>
-              <Text style={styles.weeklyTitle}>{t('home.weeklyTitle')}</Text>
+              <View>
+                <Text style={styles.weeklyLabel}>WEEKLY</Text>
+                <Text style={styles.weeklyTitle}>{t('home.weeklyTitle')}</Text>
+              </View>
+              {weeklyData.bestDay && (
+                <View style={styles.weeklyBest}>
+                  <Text style={styles.weeklyBestLabel}>BEST</Text>
+                  <Text style={styles.weeklyBestDay}>
+                    {t(`days.${['sun','mon','tue','wed','thu','fri','sat'][weeklyData.bestDay.dayOfWeek]}`)}
+                  </Text>
+                </View>
+              )}
             </View>
             <WeeklyLineChart weeklyData={weeklyData} t={t} />
           </GlassCard>
@@ -939,33 +971,33 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing.screenPadding,
-    paddingTop: 60,
+    paddingTop: 48,
     paddingBottom: 120,
   },
 
   /* ── 헤더 ── */
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   appName: {
-    fontSize: 38,
+    fontSize: 44,
     fontWeight: '200',
     color: theme.colors.text.primary,
-    letterSpacing: 6,
+    letterSpacing: 10,
   },
   appSub: {
-    fontSize: 14,
+    fontSize: 11,
     color: theme.colors.text.tertiary,
-    fontWeight: '300',
-    letterSpacing: 8,
-    marginTop: 4,
+    fontWeight: '500',
+    letterSpacing: 3,
+    marginTop: 2,
   },
-  date: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    textAlign: 'right',
-    marginBottom: 8,
+  headerDivider: {
+    width: 32,
+    height: 1,
+    backgroundColor: 'rgba(212,168,75,0.20)',
+    marginTop: 12,
   },
 
   /* ── 프로필 바 ── */
@@ -973,17 +1005,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#FFFFFF', borderRadius: theme.radius.md,
     paddingVertical: 12, paddingHorizontal: 16,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 10,
   },
   profileInfo: { flex: 1 },
-  profileName: { fontSize: 15, fontWeight: '600', color: theme.colors.text.primary },
-  profileBirth: { fontSize: 12, color: theme.colors.text.tertiary, marginTop: 2 },
-  profileEdit: { fontSize: 13, fontWeight: '600', color: theme.colors.text.tertiary },
+  profileName: { fontSize: 15, fontWeight: '600', color: theme.colors.text.primary, letterSpacing: 0.5 },
+  profileMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+  profileBirth: { fontSize: 11, color: theme.colors.text.tertiary, letterSpacing: 0.3 },
+  profileDate: { fontSize: 11, color: theme.colors.text.secondary, letterSpacing: 0.3 },
+  profileEdit: { fontSize: 12, fontWeight: '500', color: theme.colors.text.tertiary, letterSpacing: 0.3 },
 
   /* ── 일간 + 주오행 카드 ── */
   identityCard: {
-    marginBottom: 20,
+    marginBottom: 6,
     padding: 18,
   },
   identityRow: {
@@ -995,8 +1029,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayMasterChar: {
-    fontSize: 48,
-    fontWeight: '700',
+    fontSize: 54,
+    fontWeight: '300',
     color: theme.colors.gold.primary,
   },
   dayMasterYY: {
@@ -1007,7 +1041,7 @@ const styles = StyleSheet.create({
   identityDivider: {
     width: 1,
     height: 52,
-    backgroundColor: 'rgba(181,149,48,0.2)',
+    backgroundColor: 'rgba(212,168,75,0.15)',
     marginHorizontal: 18,
   },
   elementSide: {
@@ -1029,17 +1063,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text.primary,
+    letterSpacing: 0.5,
   },
   identitySub: {
     fontSize: 12,
     color: theme.colors.text.tertiary,
     fontWeight: '600',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   identityDesc: {
     fontSize: 11,
     color: theme.colors.text.tertiary,
     marginTop: 2,
+    letterSpacing: 0.5,
   },
 
   /* ── 사주 + 오행 통합 카드 ── */
@@ -1086,11 +1122,6 @@ const styles = StyleSheet.create({
   },
   manseryeokText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
-  },
-  manseryeokArrow: {
-    fontSize: 13,
     fontWeight: '600',
     color: theme.colors.text.secondary,
   },
@@ -1510,45 +1541,43 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
 
-  /* ── 만세력 카드 (별도) ── */
+  /* ── 만세력 카드 ── */
   manseryeokCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: theme.radius.lg,
     paddingVertical: 16,
     paddingHorizontal: 18,
-    marginBottom: 14,
-    gap: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    ...Platform.select({
-      web: { boxShadow: '0 2px 10px rgba(0,0,0,0.06)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 },
-    }),
-  } as any,
-  manseryeokCardIcon: {
-    fontSize: 22,
-    color: theme.colors.gold.primary,
-    fontWeight: '300',
+    marginBottom: 10,
   },
-  manseryeokCardBody: {
+  manseryeokRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  manseryeokCardIcon: {
+    fontSize: 28,
+    color: theme.colors.text.primary,
+    fontWeight: '200',
+    marginRight: 14,
+    fontFamily: Platform.select({ ios: 'Didot', android: 'serif', default: 'serif' }),
+  },
+  manseryeokBody: {
     flex: 1,
   },
   manseryeokCardTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: theme.colors.text.primary,
+    letterSpacing: 0.3,
   },
   manseryeokCardSub: {
     fontSize: 11,
     color: theme.colors.text.tertiary,
     marginTop: 2,
   },
-  manseryeokCardArrow: {
-    fontSize: 20,
+  manseryeokArrow: {
+    fontSize: 18,
     color: theme.colors.text.tertiary,
-    fontWeight: '200',
+    fontWeight: '300',
   },
 
   /* ── 만세력 버튼 (레거시) ── */
@@ -1585,15 +1614,46 @@ const styles = StyleSheet.create({
   weeklyCard: {
     marginTop: 12,
     marginBottom: 16,
-    padding: 20,
+    padding: 22,
   },
   weeklyHeader: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  weeklyLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    letterSpacing: 2,
+    opacity: 0.7,
+    marginBottom: 3,
   },
   weeklyTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: theme.colors.text.primary,
+    letterSpacing: 1,
+  },
+  weeklyBest: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.gold.primary + '0C',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  weeklyBestLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: theme.colors.gold.primary,
+    letterSpacing: 1.5,
+  },
+  weeklyBestDay: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    marginTop: 1,
   },
 
   /* ── 사주 해석 힌트 ── */
@@ -1703,12 +1763,22 @@ const styles = StyleSheet.create({
     color: theme.colors.gold.primary,
   },
 
+  /* ── 섹션 구분 ── */
+  sectionDivider: {
+    width: 24,
+    height: 1,
+    backgroundColor: 'rgba(212,168,75,0.15)',
+    alignSelf: 'center',
+    marginVertical: 4,
+  },
+
   /* ── 하단 ── */
   disclaimer: {
     fontSize: 10,
     color: theme.colors.text.tertiary,
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 18,
+    letterSpacing: 0.5,
     marginTop: 32,
   },
 });

@@ -19,6 +19,7 @@ import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { calculateFourPillars } from '../../src/utils/saju-calc';
 import { api, formatPillarInfo } from '../../src/services/api';
 import { CONFIG } from '../../src/constants/config';
+import { PremiumButton } from '../../src/components/ui/PremiumButton';
 
 export default function SajuScreen() {
   const router = useRouter();
@@ -137,33 +138,33 @@ export default function SajuScreen() {
       {/* Hero + CTA (첫 화면에 바로 보이도록) */}
       <Animated.View entering={FadeInDown.delay(100).springify()}>
         <View style={styles.hero}>
-          <Text style={styles.heroChar}>命</Text>
+          <View style={styles.heroDecoRow}>
+            <View style={styles.heroDot} />
+            <View style={styles.heroDeco} />
+            <Text style={styles.heroChar}>命</Text>
+            <View style={styles.heroDeco} />
+            <View style={styles.heroDot} />
+          </View>
+          <View style={styles.heroDotsCenter}>
+            <View style={styles.heroDotSmall} />
+            <View style={styles.heroDotSmall} />
+            <View style={styles.heroDotSmall} />
+          </View>
           <Text style={styles.heroTitle}>{t('saju.heroTitle')}</Text>
           <Text style={styles.heroSub}>
             {t('saju.heroSub')}
           </Text>
         </View>
 
-        {/* CTA 버튼 — 첫 화면에 바로 노출 */}
-        <TouchableOpacity
-          style={styles.ctaBtn}
+        {/* CTA */}
+        <PremiumButton
+          title={t('saju.ctaTitle')}
+          price={t('paywall.price')}
           onPress={() => CONFIG.DEV_BYPASS_PAYMENT ? handlePaidAnalyze() : setShowPaywall(true)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.ctaInner}>
-            <View>
-              <Text style={styles.ctaTitle}>{t('saju.ctaTitle')}</Text>
-              <Text style={styles.ctaSub}>{t('saju.ctaSub')}</Text>
-            </View>
-            <View style={styles.ctaPriceBox}>
-              <View style={styles.ctaDiscountBadge}>
-                <Text style={styles.ctaDiscountText}>50% OFF</Text>
-              </View>
-              <Text style={styles.ctaPriceOld}>{t('saju.ctaPriceOld')}</Text>
-              <Text style={styles.ctaPrice}>{t('paywall.price')}</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+          variant="shimmer"
+          socialProof
+          style={styles.ctaWrap}
+        />
       </Animated.View>
 
       {/* 분석 항목 미리보기 */}
@@ -211,24 +212,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.xl,
   },
+  heroDecoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 14,
+  },
+  heroDeco: {
+    width: 28,
+    height: 1,
+    backgroundColor: theme.colors.gold.light,
+    opacity: 0.3,
+  },
+  heroDot: {
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: theme.colors.text.primary,
+  },
+  heroDotsCenter: {
+    flexDirection: 'row',
+    gap: 5,
+    marginBottom: 10,
+    marginTop: 6,
+  },
+  heroDotSmall: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: theme.colors.text.primary,
+    opacity: 0.35,
+  },
   heroChar: {
     fontSize: 64,
     fontWeight: '200',
     color: theme.colors.gold.primary,
-    marginBottom: theme.spacing.md,
+    letterSpacing: 8,
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: theme.colors.text.primary,
     letterSpacing: 2,
     marginBottom: theme.spacing.sm,
   },
   heroSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
+    letterSpacing: 0.3,
   },
   // Section
   sectionTitle: {
@@ -273,59 +306,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
     lineHeight: 18,
   },
-  // CTA (Hero 바로 아래)
-  ctaBtn: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: theme.radius.lg,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.gold.dark + '60',
+  // CTA
+  ctaWrap: {
     marginBottom: theme.spacing.xl,
-  },
-  ctaInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  ctaTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: theme.colors.gold.primary,
-    marginBottom: 4,
-  },
-  ctaSub: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 0.3,
-  },
-  ctaPriceBox: {
-    alignItems: 'flex-end',
-  },
-  ctaDiscountBadge: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginBottom: 4,
-    alignSelf: 'flex-end',
-  },
-  ctaDiscountText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  ctaPriceOld: {
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    textDecorationLine: 'line-through',
-    marginBottom: 2,
-  },
-  ctaPrice: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: theme.colors.gold.primary,
   },
   disclaimer: {
     fontSize: 10,

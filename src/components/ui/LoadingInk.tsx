@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
     alignItems: 'center',
     paddingHorizontal: 16,
-    minHeight: 50,
+    height: 70, // 2줄 고정 높이 (label 19 + tipText 2줄 40 + 여유) — 줄 수 변해도 레이아웃 안 움직임
   },
   tipLabel: {
     fontSize: 11,

@@ -111,8 +111,6 @@ const styles = StyleSheet.create({
   dateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
     paddingVertical: 6,
     paddingHorizontal: 8,
     marginBottom: theme.spacing.lg,
@@ -122,8 +120,6 @@ const styles = StyleSheet.create({
   inlineContainer: {
     backgroundColor: theme.colors.bg.primary,
     borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.glass.border,
     paddingVertical: 2,
     paddingHorizontal: 4,
     marginBottom: 4,

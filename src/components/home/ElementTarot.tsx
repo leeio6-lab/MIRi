@@ -53,14 +53,37 @@ function getPeriod(): 'morning' | 'afternoon' { return new Date().getHours() >= 
 
 /* ─── Mandala ─── */
 function Mandala() {
-  const s = 48, c = 24, r = 18;
+  const s = 64, c = 32;
+  const r1 = 26, r2 = 18, r3 = 10;
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`}>
-      <Circle cx={c} cy={c} r={r} stroke={G} strokeWidth={0.8} fill="none" opacity={0.6} />
+      {/* Outer ring */}
+      <Circle cx={c} cy={c} r={r1} stroke={G} strokeWidth={0.6} fill="none" opacity={0.35} />
+      {/* Middle ring */}
+      <Circle cx={c} cy={c} r={r2} stroke={G} strokeWidth={0.4} fill="none" opacity={0.25} />
+      {/* Inner ring */}
+      <Circle cx={c} cy={c} r={r3} stroke={G} strokeWidth={0.4} fill="none" opacity={0.20} />
+      {/* Center dot */}
       <Circle cx={c} cy={c} r={2} fill={G} opacity={0.5} />
+      {/* 8 radial lines — outer */}
       {Array.from({ length: 8 }).map((_, i) => {
         const a = (i / 8) * Math.PI * 2;
-        return <Line key={i} x1={c + 4 * Math.cos(a)} y1={c + 4 * Math.sin(a)} x2={c + (i % 2 === 0 ? r : r - 2) * Math.cos(a)} y2={c + (i % 2 === 0 ? r : r - 2) * Math.sin(a)} stroke={G} strokeWidth={0.5} opacity={0.5} />;
+        return <Line key={`o${i}`} x1={c + r3 * Math.cos(a)} y1={c + r3 * Math.sin(a)} x2={c + r1 * Math.cos(a)} y2={c + r1 * Math.sin(a)} stroke={G} strokeWidth={0.35} opacity={i % 2 === 0 ? 0.4 : 0.2} />;
+      })}
+      {/* 8 small dots on middle ring */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const a = ((i + 0.5) / 8) * Math.PI * 2;
+        return <Circle key={`d${i}`} cx={c + r2 * Math.cos(a)} cy={c + r2 * Math.sin(a)} r={1} fill={G} opacity={0.3} />;
+      })}
+      {/* 4 petal arcs between inner and middle */}
+      {Array.from({ length: 4 }).map((_, i) => {
+        const a1 = (i / 4) * Math.PI * 2;
+        const a2 = ((i + 0.5) / 4) * Math.PI * 2;
+        const a3 = ((i + 1) / 4) * Math.PI * 2;
+        const x1 = c + r3 * Math.cos(a1), y1 = c + r3 * Math.sin(a1);
+        const xm = c + (r2 + 2) * Math.cos(a2), ym = c + (r2 + 2) * Math.sin(a2);
+        const x2 = c + r3 * Math.cos(a3), y2 = c + r3 * Math.sin(a3);
+        return <Path key={`p${i}`} d={`M${x1},${y1} Q${xm},${ym} ${x2},${y2}`} stroke={G} strokeWidth={0.4} fill="none" opacity={0.25} />;
       })}
     </Svg>
   );
@@ -102,9 +125,10 @@ function CardBack() {
     <View style={[$.cardBack, { backgroundColor: '#1A150A' }]}>
       <View style={$.outerBorder}>
         <View style={$.innerFrame}>
-          <Text style={$.diamonds}>{'◆ ◆ ◆'}</Text>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Mandala /></View>
-          <Text style={$.diamonds}>{'◆ ◆ ◆'}</Text>
+          <Text style={$.backLabelTop}>MIRi</Text>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Mandala />
+          </View>
           <Text style={$.backLabel}>五行</Text>
         </View>
       </View>
@@ -409,7 +433,7 @@ function AnimCard({ element, isMe, isOther, phase, onPress, resetKey, centerOffs
 /* ═══ MAIN ═══ */
 type Phase = 'pick' | 'selected' | 'fading' | 'centering' | 'flipping' | 'landed' | 'analysis';
 
-export function ElementTarot({ dayStemIdx }: { dayStemIdx: number }) {
+export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number; onCardSelect?: () => void }) {
   const { i18n } = useTranslation();
   const lang = (i18n.language || 'ko') as 'ko' | 'en' | 'ja';
   const store = useFortuneStore();
@@ -455,18 +479,19 @@ export function ElementTarot({ dayStemIdx }: { dayStemIdx: number }) {
     try { const H = require('expo-haptics'); H.impactAsync(H.ImpactFeedbackStyle.Medium); } catch {}
 
     setPhase('selected');
-    setTimeout(() => setPhase('fading'), 200);
-    setTimeout(() => setPhase('centering'), 600);
-    setTimeout(() => setPhase('flipping'), 1300);
-    setTimeout(() => setPhase('landed'), 2000);
+    onCardSelect?.();
+    setTimeout(() => setPhase('fading'), 150);
+    setTimeout(() => setPhase('centering'), 400);
+    setTimeout(() => setPhase('flipping'), 800);
+    setTimeout(() => setPhase('landed'), 1300);
     setTimeout(() => {
       if (pendingResult.current) {
         store.setTarotResult(period, pendingResult.current.element, pendingResult.current.variant);
         pendingResult.current = null;
       }
       setPhase('analysis');
-    }, 2500);
-  }, [phase, shuffled, period, store]);
+    }, 1600);
+  }, [phase, shuffled, period, store, onCardSelect]);
 
   const handleReset = useCallback(() => {
     if (isAfternoon) {
@@ -581,10 +606,10 @@ const $ = StyleSheet.create({
       default: { shadowColor: '#8B7530', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 14, elevation: 6 },
     }),
   } as any,
-  outerBorder: { flex: 1, margin: 3, borderRadius: 8, borderWidth: 0.5, borderColor: G + '80', overflow: 'hidden' },
-  innerFrame: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 4 },
-  diamonds: { fontSize: 5, color: G, opacity: 0.6, letterSpacing: 2 },
-  backLabel: { fontSize: 10, color: G, opacity: 0.5, letterSpacing: 2, marginTop: 2 },
+  outerBorder: { flex: 1, margin: 4, borderRadius: 8, borderWidth: 0.5, borderColor: G + '50', overflow: 'hidden' },
+  innerFrame: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4 },
+  backLabelTop: { fontSize: 8, color: G, opacity: 0.4, letterSpacing: 4, fontWeight: '300' },
+  backLabel: { fontSize: 12, color: G, opacity: 0.6, letterSpacing: 4, fontWeight: '200', marginTop: 4 },
 
   // Card front (premium)
   cardFront: {

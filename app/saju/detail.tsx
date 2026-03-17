@@ -8,12 +8,11 @@ import {
   LayoutChangeEvent,
   Platform,
 } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
-import { HelpButton } from '../../src/components/ui/HelpButton';
-import { TermTip, TermBadge } from '../../src/components/ui/TermTip';
+import { TermBadge } from '../../src/components/ui/TermTip';
 import { BackButton } from '../../src/components/ui/BackButton';
 import { ElementRadar } from '../../src/components/saju/ElementRadar';
 import { ElementChart } from '../../src/components/saju/ElementChart';
@@ -25,7 +24,11 @@ import {
   ELEMENT_NAMES_KO,
   HIDDEN_STEMS,
   HEAVENLY_STEMS_HANJA,
+  EARTHLY_BRANCHES_HANJA,
   STEM_ELEMENTS,
+  STEM_YINYANG,
+  BRANCH_ELEMENTS,
+  isGongmang,
   type FullSajuAnalysis,
   type DaeunPillar,
   type YearlyFortune,
@@ -123,7 +126,6 @@ function getMainHiddenStemIdx(branchIdx: number): number {
   return hidden[hidden.length - 1].stemIdx;
 }
 
-// ─── Section Header with optional ? help button ───
 // ─── Scroll-triggered lazy reveal ───
 function LazySection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const [visible, setVisible] = useState(false);
@@ -138,19 +140,16 @@ function LazySection({ children, delay = 0 }: { children: React.ReactNode; delay
   }
 
   return (
-    <Animated.View entering={FadeInUp.delay(delay).duration(500).springify()}>
+    <Animated.View entering={FadeInDown.delay(delay).duration(500).springify()}>
       {children}
     </Animated.View>
   );
 }
 
-function SectionHeader({ title, subtitle, helpKey }: { title: string; subtitle?: string; helpKey?: string }) {
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={s.sectionHeader}>
-      <View style={s.sectionTitleRow}>
-        <Text style={s.sectionTitle}>{title}</Text>
-        {helpKey && <TermTip termKey={helpKey as any} label="?" style={{ fontSize: 14, fontWeight: '700' }} />}
-      </View>
+      <Text style={s.sectionTitle}>{title}</Text>
       {subtitle && <Text style={s.sectionSubtitle}>{subtitle}</Text>}
     </View>
   );
@@ -185,7 +184,7 @@ function PersonalNarrativeSection({ analysis }: { analysis: FullSajuAnalysis }) 
   const elementWord = ELEMENT_INTERPRETATIONS[strongest]?.meaning.split('·')[1]?.trim() || '';
 
   return (
-    <GlassCard gold style={s.cardSpacing}>
+    <GlassCard style={s.cardSpacing}>
       <View style={s.narrativeWrap}>
         <Text style={s.narrativeTitle}>
           {dm?.nature}처럼 {elementWord}이 넘치는,{'\n'}{strengthWord} 사주
@@ -310,8 +309,8 @@ function MyGuideSection({ analysis }: { analysis: FullSajuAnalysis }) {
   ];
 
   return (
-    <GlassCard gold style={s.cardSpacing}>
-      <SectionHeader title="나에게 맞는 것들" subtitle="일상에서 바로 써먹는 기운 보완법" helpKey="yongShin" />
+    <GlassCard style={s.cardSpacing}>
+      <SectionHeader title="나에게 맞는 것들" subtitle="일상에서 바로 써먹는 기운 보완법" />
       <View style={s.guideGrid}>
         {items.map((item, i) => (
           <View key={i} style={[s.guideItem, i === items.length - 1 && s.guideItemLast]}>
@@ -330,8 +329,8 @@ function TodaySajuSection({ analysis }: { analysis: FullSajuAnalysis }) {
   const color = stemColor(todaySaju.dayStemIdx);
 
   return (
-    <GlassCard gold style={s.cardSpacing}>
-      <SectionHeader title="오늘의 기운" subtitle={`${todaySaju.date} — 오늘 나에게 흐르는 에너지`} helpKey="tenGods" />
+    <GlassCard style={s.cardSpacing}>
+      <SectionHeader title="오늘의 기운" subtitle={`${todaySaju.date} — 오늘 나에게 흐르는 에너지`} />
       <View style={s.todayRow}>
         <View style={s.todayPillar}>
           <Text style={[s.todayHanja, { color }]}>{todaySaju.dayStemHanja}</Text>
@@ -345,7 +344,7 @@ function TodaySajuSection({ analysis }: { analysis: FullSajuAnalysis }) {
               </View>
             </TermBadge>
             <TermBadge termKey="lifeStages" label={todaySaju.lifeStage}>
-              <View style={[s.pillBadge, { backgroundColor: theme.colors.bg.tertiary }]}>
+              <View style={[s.pillBadge, { backgroundColor: '#F5F5F5' }]}>
                 <Text style={[s.pillBadgeText, { color: theme.colors.text.secondary }]}>{todaySaju.lifeStage}</Text>
               </View>
             </TermBadge>
@@ -373,25 +372,21 @@ function FourPillarsCardSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="나의 사주팔자" subtitle="네 기둥이 나를 이루고 있어요" helpKey="fourPillars" />
+      <SectionHeader title="나의 사주팔자" subtitle="네 기둥이 나를 이루고 있어요" />
 
       {/* 범례 */}
       <View style={s.pillarHelpRow}>
         <View style={s.pillarHelpItem}>
-          <Text style={s.pillarHelpLabel}>관계</Text>
-          <HelpButton termKey="tenGods" size={14} />
+          <Text style={s.pillarHelpLabel}>십성</Text>
         </View>
         <View style={s.pillarHelpItem}>
-          <Text style={s.pillarHelpLabel}>숨은 기운</Text>
-          <HelpButton termKey="hiddenStems" size={14} />
+          <Text style={s.pillarHelpLabel}>지장간</Text>
         </View>
         <View style={s.pillarHelpItem}>
-          <Text style={s.pillarHelpLabel}>에너지</Text>
-          <HelpButton termKey="lifeStages" size={14} />
+          <Text style={s.pillarHelpLabel}>12운성</Text>
         </View>
         <View style={s.pillarHelpItem}>
-          <Text style={s.pillarHelpLabel}>특성</Text>
-          <HelpButton termKey="spiritStars" size={14} />
+          <Text style={s.pillarHelpLabel}>12신살</Text>
         </View>
       </View>
 
@@ -476,7 +471,7 @@ function FourPillarsCardSection({ analysis }: { analysis: FullSajuAnalysis }) {
                 {/* Spirit star — fixed height */}
                 <TermBadge termKey="spiritStars" label={p.ss}>
                   <View style={s.pillarMetaRow}>
-                    <View style={[s.pillBadge, { backgroundColor: theme.colors.bg.tertiary }]}>
+                    <View style={[s.pillBadge, { backgroundColor: '#F5F5F5' }]}>
                       <Text style={[s.pillBadgeTextSm, { color: theme.colors.text.secondary }]}>{p.ss}</Text>
                     </View>
                   </View>
@@ -486,6 +481,153 @@ function FourPillarsCardSection({ analysis }: { analysis: FullSajuAnalysis }) {
           );
         })}
       </View>
+    </GlassCard>
+  );
+}
+
+// ─── 2.5 전통 만세력 명식표 (Classic Manseryeok Table) ───
+
+function ManseryeokTableSection({ analysis }: { analysis: FullSajuAnalysis }) {
+  const { fourPillars, tenGods, lifeStages, spiritStars, gongmang } = analysis;
+  const dmIdx = fourPillars.day.stemIdx;
+
+  // 시 → 일 → 월 → 년 순서 (전통 만세력 표 기준)
+  const columns = [
+    { label: '시주', pillar: fourPillars.hour, stemTG: tenGods.hourStem, branchTG: tenGods.hourBranch, ls: lifeStages.hourBranch, ss: spiritStars.hourBranch, isDay: false },
+    { label: '일주', pillar: fourPillars.day, stemTG: '일간', branchTG: tenGods.dayBranch, ls: lifeStages.dayBranch, ss: spiritStars.dayBranch, isDay: true },
+    { label: '월주', pillar: fourPillars.month, stemTG: tenGods.monthStem, branchTG: tenGods.monthBranch, ls: lifeStages.monthBranch, ss: spiritStars.monthBranch, isDay: false },
+    { label: '년주', pillar: fourPillars.year, stemTG: tenGods.yearStem, branchTG: tenGods.yearBranch, ls: lifeStages.yearBranch, ss: spiritStars.yearBranch, isDay: false },
+  ];
+
+  const ROW_LABEL_WIDTH = 52;
+
+  // 행 렌더링 함수
+  const renderRow = (label: string, cells: React.ReactNode[], bgColor?: string) => (
+    <View style={[s2.tableRow, bgColor ? { backgroundColor: bgColor } : undefined]}>
+      <View style={[s2.tableRowLabel, { width: ROW_LABEL_WIDTH }]}>
+        <Text style={s2.tableRowLabelText}>{label}</Text>
+      </View>
+      {cells.map((cell, i) => (
+        <View key={i} style={[s2.tableCell, columns[i].isDay && s2.tableCellDay]}>
+          {cell}
+        </View>
+      ))}
+    </View>
+  );
+
+  return (
+    <GlassCard style={s.cardSpacing}>
+      <SectionHeader title="명식표" subtitle="전통 만세력 형식의 사주 원국" />
+
+      <View style={s2.tableContainer}>
+        {/* 기둥 헤더 */}
+        <View style={s2.tableRow}>
+          <View style={[s2.tableRowLabel, { width: ROW_LABEL_WIDTH }]} />
+          {columns.map((col) => (
+            <View key={col.label} style={[s2.tableCell, col.isDay && s2.tableCellDay]}>
+              <Text style={[s2.tableHeaderText, col.isDay && s2.tableHeaderTextDay]}>{col.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* 십성 (천간) */}
+        {renderRow('십성', columns.map((col) => (
+          <Text style={[s2.tableTenGodText, { color: stemColor(col.pillar.stemIdx) }]}>
+            {col.stemTG}
+          </Text>
+        )))}
+
+        {/* 천간 */}
+        {renderRow('천간', columns.map((col) => {
+          const sColor = stemColor(col.pillar.stemIdx);
+          const yinyang = STEM_YINYANG[col.pillar.stemIdx];
+          return (
+            <View style={s2.tableStemCell}>
+              <Text style={[s2.tableHanjaLarge, { color: sColor }]}>{col.pillar.stemHanja}</Text>
+              <Text style={[s2.tableKoSmall, { color: sColor }]}>
+                {col.pillar.stem}{yinyang === '양' ? '(+)' : '(-)'}
+              </Text>
+            </View>
+          );
+        }), '#F5F5F5' + '40')}
+
+        {/* 지지 */}
+        {renderRow('지지', columns.map((col) => {
+          const bEl = BRANCH_ELEMENTS[col.pillar.branchIdx];
+          const bColor = getElementColor(bEl);
+          const isGM = isGongmang(dmIdx, fourPillars.day.branchIdx, col.pillar.branchIdx);
+          return (
+            <View style={s2.tableStemCell}>
+              <View style={{ position: 'relative' }}>
+                <Text style={[s2.tableHanjaLarge, { color: bColor }]}>{col.pillar.branchHanja}</Text>
+                {isGM && <View style={s2.gongmangDot} />}
+              </View>
+              <Text style={[s2.tableKoSmall, { color: bColor }]}>{col.pillar.branch}</Text>
+            </View>
+          );
+        }), '#F5F5F5' + '40')}
+
+        {/* 십성 (지지) */}
+        {renderRow('지지십성', columns.map((col) => {
+          const bEl = BRANCH_ELEMENTS[col.pillar.branchIdx];
+          const bColor = getElementColor(bEl);
+          return <Text style={[s2.tableTenGodText, { color: bColor }]}>{col.branchTG}</Text>;
+        }))}
+
+        {/* 지장간 */}
+        {renderRow('지장간', columns.map((col) => {
+          const hidden = HIDDEN_STEMS[col.pillar.branchIdx];
+          return (
+            <View style={s2.tableHiddenRow}>
+              {hidden.map((h, i) => (
+                <Text key={i} style={[s2.tableHiddenText, { color: stemColor(h.stemIdx) }]}>
+                  {HEAVENLY_STEMS_HANJA[h.stemIdx]}
+                </Text>
+              ))}
+            </View>
+          );
+        }))}
+
+        {/* 12운성 */}
+        {renderRow('12운성', columns.map((col) => (
+          <Text style={s2.tableMetaText}>{col.ls}</Text>
+        )))}
+
+        {/* 12신살 */}
+        {renderRow('12신살', columns.map((col) => (
+          <Text style={s2.tableMetaText}>{col.ss}</Text>
+        )))}
+
+        {/* 띠 */}
+        {renderRow('띠', columns.map((col) => (
+          <Text style={s2.tableMetaText}>
+            {col.pillar.zodiac ? `${col.pillar.zodiac}띠` : '—'}
+          </Text>
+        )))}
+      </View>
+
+      {/* 공망 */}
+      <View style={s2.gongmangRow}>
+        <Text style={s2.gongmangLabel}>공망(空亡)</Text>
+        <View style={s2.gongmangValueWrap}>
+          <Text style={s2.gongmangHanja}>{gongmang.hanja}</Text>
+          <Text style={s2.gongmangText}>({gongmang.text})</Text>
+          {gongmang.inPillars.length > 0 && (
+            <View style={s2.gongmangInPillars}>
+              {gongmang.inPillars.map((name) => (
+                <View key={name} style={s2.gongmangPillarBadge}>
+                  <Text style={s2.gongmangPillarText}>{name}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </View>
+      {gongmang.inPillars.length > 0 && (
+        <Text style={s2.gongmangNote}>
+          {gongmang.inPillars.join(', ')}에 공망이 걸려 있습니다. 해당 기둥의 기운이 실속 없이 드러나거나 뜻대로 안 될 수 있지만, 오히려 집착을 내려놓으면 자유로워지는 에너지입니다.
+        </Text>
+      )}
     </GlassCard>
   );
 }
@@ -558,7 +700,7 @@ function ElementBalanceSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="나의 오행 균형" subtitle="다섯 가지 기운의 밸런스" helpKey="fiveElements" />
+      <SectionHeader title="나의 오행 균형" subtitle="다섯 가지 기운의 밸런스" />
 
       {/* Radar chart */}
       <ElementRadar balance={balance} />
@@ -596,10 +738,7 @@ function ElementBalanceSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
       {/* Ten gods distribution */}
       <View style={s.tenGodSection}>
-        <View style={s.sectionTitleRow}>
-          <Text style={s.subSectionTitle}>나를 둘러싼 관계의 기운</Text>
-          <HelpButton termKey="tenGods" size={16} />
-        </View>
+        <Text style={s.subSectionTitle}>나를 둘러싼 관계의 기운</Text>
         <View style={s.tenGodPillsWrap}>
           {tenGodEntries.map(([name, count]) => {
             const pct = Math.round((count / 8) * 100);
@@ -631,7 +770,7 @@ function StrengthSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title={strength.isStrong ? '자아가 강한 사주' : '조화를 이루는 사주'} helpKey="strength" />
+      <SectionHeader title={strength.isStrong ? '자아가 강한 사주' : '조화를 이루는 사주'} />
 
       <View style={s.strengthGrid}>
         {indicators.map((ind) => (
@@ -670,7 +809,7 @@ function YongShinSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="나에게 필요한 기운" subtitle="부족한 기운을 채우면 운이 열려요" helpKey="yongShin" />
+      <SectionHeader title="나에게 필요한 기운" subtitle="부족한 기운을 채우면 운이 열려요" />
 
       <View style={s.yongShinRow}>
         <View style={s.yongShinItem}>
@@ -729,7 +868,7 @@ function DaeunTimelineSection({ analysis, birthYear }: { analysis: FullSajuAnaly
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title="인생의 큰 흐름 (대운)" subtitle={daeun.direction === '순행' ? '순행 — 10년마다 새 기운이 열려요' : '역행 — 10년마다 내면이 깊어져요'} helpKey="daeun" />
+      <SectionHeader title="인생의 큰 흐름 (대운)" subtitle={daeun.direction === '순행' ? '순행 — 10년마다 새 기운이 열려요' : '역행 — 10년마다 내면이 깊어져요'} />
       <Text style={s.daeunStartInfo}>대운수: {daeun.daeunNumber}세부터 시작</Text>
 
       <ScrollView
@@ -794,14 +933,14 @@ function ThisYearFlowSection({ analysis }: { analysis: FullSajuAnalysis }) {
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title={`${currentYear}년, 나의 한 해`} subtitle="올해 어떤 기운이 흐르고 있을까" helpKey="yearlyFortune" />
+      <SectionHeader title={`${currentYear}년, 나의 한 해`} subtitle="올해 어떤 기운이 흐르고 있을까" />
 
       {/* Current year highlight */}
       {currentYearData && (
         <View style={s.yearHighlight}>
           <View style={s.yearHighlightLeft}>
             <Text style={s.yearHighlightYear}>{currentYearData.year}</Text>
-            <Text style={s.yearHighlightZodiac}>{currentYearData.zodiac}맬</Text>
+            <Text style={s.yearHighlightZodiac}>{currentYearData.zodiac}띠</Text>
           </View>
           <View style={s.yearHighlightCenter}>
             <Text style={[s.yearHighlightHanja, { color: stemColor(currentYearData.stemIdx) }]}>
@@ -914,19 +1053,16 @@ export default function SajuDetailScreen() {
             ELEMENT_NAMES_KO[analysis.fourPillars.dayMasterElement] || analysis.fourPillars.dayMasterElement
           }
         </Text>
-        <View style={s.dayMasterCaptionRow}>
-          <Text style={s.dayMasterCaption}>나를 대표하는 기운</Text>
-          <HelpButton termKey="dayMaster" size={18} color={theme.colors.gold.muted} />
-        </View>
+        <Text style={s.dayMasterCaption}>나를 대표하는 기운</Text>
       </View>
 
       {/* ★ 한 줄 요약 */}
-      <Animated.View entering={FadeInUp.duration(500)}>
+      <Animated.View entering={FadeInDown.duration(500)}>
         <PersonalNarrativeSection analysis={analysis} />
       </Animated.View>
 
       {/* ── 오행 밸런스 요약 ── */}
-      <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+      <Animated.View entering={FadeInDown.delay(100).duration(500)}>
         <GlassCard style={s.quickElementCard}>
           <ElementChart balance={analysis.fourPillars.elementBalance} noCard />
         </GlassCard>
@@ -935,6 +1071,11 @@ export default function SajuDetailScreen() {
       {/* ── 사주팔자 한눈에 ── */}
       <LazySection delay={0}>
         <FourPillarsCardSection analysis={analysis} />
+      </LazySection>
+
+      {/* ── 전통 만세력 명식표 ── */}
+      <LazySection delay={50}>
+        <ManseryeokTableSection analysis={analysis} />
       </LazySection>
 
       {/* ── 기둥 간 관계 ── */}
@@ -964,11 +1105,15 @@ export default function SajuDetailScreen() {
 
       {/* ★ 사주풀이 CTA */}
       <LazySection delay={100}>
-        <GlassCard gold style={s.ctaCard}>
-          <Text style={s.ctaEmoji}>{'✦'}</Text>
+        <GlassCard style={s.ctaCard}>
+          <View style={s.ctaDeco}>
+            <View style={s.ctaDecoLine} />
+            <Text style={s.ctaDecoChar}>命</Text>
+            <View style={s.ctaDecoLine} />
+          </View>
           <Text style={s.ctaTitle}>여기까지는 만세력 기본 정보예요</Text>
           <Text style={s.ctaSub}>
-            나만의 사주를 AI가 깊이 읽어드려요{'\n'}
+            나만의 사주를 명리학으로 깊이 풀어드려요{'\n'}
             성격, 적성, 연애운, 재물운까지 상세 풀이
           </Text>
           <TouchableOpacity
@@ -1013,7 +1158,7 @@ const s = StyleSheet.create({
   // ─── Layout ───
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg.primary,
+    backgroundColor: '#FFFFFF',
   },
   content: {
     padding: theme.spacing.screenPadding,
@@ -1021,8 +1166,8 @@ const s = StyleSheet.create({
     paddingBottom: 120,
   },
   quickElementCard: {
-    marginBottom: 14,
-    padding: 16,
+    marginBottom: theme.spacing.sectionGap,
+    padding: 20,
   },
   cardSpacing: {
     marginBottom: theme.spacing.sectionGap,
@@ -1049,23 +1194,20 @@ const s = StyleSheet.create({
     fontSize: 56,
     fontWeight: '700',
     color: theme.colors.gold.primary,
+    letterSpacing: 2,
   },
   dayMasterInfo: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.text.primary,
     marginTop: theme.spacing.xs,
+    letterSpacing: 1,
   },
   dayMasterCaption: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.colors.text.tertiary,
-  },
-  dayMasterCaptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
+    letterSpacing: 0.5,
     marginTop: theme.spacing.xs,
-    justifyContent: 'center',
   },
 
   // ─── Section Header ───
@@ -1079,12 +1221,14 @@ const s = StyleSheet.create({
   },
   sectionTitle: {
     ...theme.typo.sectionTitle,
-    color: theme.colors.gold.primary,
+    color: theme.colors.gold.dark,
   },
   sectionSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: theme.colors.text.tertiary,
-    marginTop: 2,
+    marginTop: 4,
+    letterSpacing: 0.5,
+    lineHeight: 18,
   },
 
   // ─── Pill Badge (universal) ───
@@ -1096,10 +1240,12 @@ const s = StyleSheet.create({
   pillBadgeText: {
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
   pillBadgeTextSm: {
     fontSize: 11,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
 
   // ─── 1. Today's Saju ───
@@ -1132,7 +1278,8 @@ const s = StyleSheet.create({
   todayDesc: {
     fontSize: 13,
     color: theme.colors.text.secondary,
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
 
   // ─── 2. Four Pillars — Card Stack ───
@@ -1156,7 +1303,7 @@ const s = StyleSheet.create({
   },
   pillarCardsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
+    gap: 6,
     justifyContent: 'center',
   },
   pillarCard: {
@@ -1166,19 +1313,20 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     minHeight: 260,
     borderWidth: 1,
-    borderColor: theme.colors.glass.border,
+    borderColor: theme.colors.border.subtle,
+    backgroundColor: '#FFFFFF',
   },
   pillarCardDay: {
-    backgroundColor: theme.colors.gold.primary + '0A',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: theme.colors.gold.primary + '30',
+    borderColor: theme.colors.gold.light + '40',
     ...Platform.select({
-      web: { boxShadow: `0px 4px 8px ${theme.colors.gold.primary}1F` },
+      web: { boxShadow: `0px 4px 12px ${theme.colors.gold.muted}30` },
       default: {
-        shadowColor: theme.colors.gold.primary,
+        shadowColor: theme.colors.gold.muted,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,
-        shadowRadius: 8,
+        shadowRadius: 12,
         elevation: 4,
       },
     }),
@@ -1276,17 +1424,18 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   energySummaryDesc: {
-    fontSize: 14,
-    color: theme.colors.text.primary,
+    fontSize: 13,
+    color: theme.colors.text.secondary,
     lineHeight: 22,
     textAlign: 'center',
     paddingHorizontal: theme.spacing.sm,
+    letterSpacing: 0.3,
   },
   energySummaryDivider: {
     width: 40,
     height: 1,
-    backgroundColor: theme.colors.gold.muted + '40',
-    marginVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.border.divider,
+    marginVertical: 12,
   },
   energySummaryRow: {
     flexDirection: 'row',
@@ -1408,8 +1557,10 @@ const s = StyleSheet.create({
   tenGodPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.bg.secondary,
+    backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
     paddingHorizontal: 12,
     paddingVertical: 6,
     gap: 8,
@@ -1444,10 +1595,12 @@ const s = StyleSheet.create({
   strengthItem: {
     width: '48%' as unknown as number,
     alignItems: 'center',
-    backgroundColor: theme.colors.bg.secondary,
-    borderRadius: theme.radius.sm,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
   },
   strengthIcon: {
     width: 32,
@@ -1502,14 +1655,17 @@ const s = StyleSheet.create({
   },
   strengthInterpBox: {
     marginTop: theme.spacing.md,
-    backgroundColor: theme.colors.bg.secondary,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
+    padding: 20,
   },
   strengthInterpText: {
     fontSize: 13,
     color: theme.colors.text.secondary,
-    lineHeight: 21,
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
 
   // ─── 6. Yong Shin ───
@@ -1543,13 +1699,16 @@ const s = StyleSheet.create({
   yongShinDesc: {
     fontSize: 13,
     color: theme.colors.text.secondary,
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
   yongShinTipBox: {
     marginTop: theme.spacing.md,
-    backgroundColor: theme.colors.bg.secondary,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
+    padding: 20,
   },
   yongShinTipLabel: {
     fontSize: 11,
@@ -1561,7 +1720,8 @@ const s = StyleSheet.create({
   yongShinTipText: {
     fontSize: 13,
     color: theme.colors.text.secondary,
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: 0.3,
   },
 
   // ─── 7. Daeun — Horizontal Scroll ───
@@ -1579,14 +1739,16 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 6,
-    backgroundColor: theme.colors.bg.secondary,
+    backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
     gap: 3,
   },
   daeunCardCurrent: {
-    backgroundColor: theme.colors.gold.primary + '10',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: theme.colors.gold.primary + '40',
+    borderColor: theme.colors.gold.light + '40',
   },
   daeunNowBadge: {
     backgroundColor: theme.colors.gold.primary,
@@ -1686,8 +1848,8 @@ const s = StyleSheet.create({
   },
   monthSeparator: {
     height: 1,
-    backgroundColor: theme.colors.glass.border,
-    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.border.divider,
+    marginVertical: 20,
   },
   monthGridTitle: {
     fontSize: 14,
@@ -1703,15 +1865,17 @@ const s = StyleSheet.create({
   monthItem: {
     width: '23%',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 10,
     borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.bg.secondary,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
     gap: 3,
   },
   monthItemCurrent: {
-    backgroundColor: theme.colors.gold.primary + '10',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: theme.colors.gold.primary + '40',
+    borderColor: theme.colors.gold.light + '40',
   },
   monthLabel: {
     fontSize: 12,
@@ -1733,26 +1897,27 @@ const s = StyleSheet.create({
     paddingVertical: theme.spacing.md,
   },
   narrativeTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '300',
     color: theme.colors.text.primary,
     textAlign: 'center',
     lineHeight: 28,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   narrativeDivider: {
     width: 32,
     height: 1,
-    backgroundColor: theme.colors.gold.primary,
+    backgroundColor: theme.colors.gold.light,
     opacity: 0.4,
-    marginVertical: 14,
+    marginVertical: 16,
   },
   narrativeAdvice: {
-    fontSize: 14,
-    color: theme.colors.gold.primary,
+    fontSize: 13,
+    color: theme.colors.gold.dark,
     textAlign: 'center',
     fontWeight: '500',
     lineHeight: 22,
+    letterSpacing: 0.5,
   },
 
   // ─── ★ Interactions ───
@@ -1765,7 +1930,7 @@ const s = StyleSheet.create({
     gap: 12,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: 'rgba(212,168,75,0.08)',
   },
   interactionBadge: {
     width: 36,
@@ -1821,7 +1986,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
+    borderBottomColor: 'rgba(212,168,75,0.08)',
   },
   guideItemLast: {
     borderBottomWidth: 0,
@@ -1843,38 +2008,53 @@ const s = StyleSheet.create({
   // ─── CTA ───
   ctaCard: {
     alignItems: 'center',
-    paddingVertical: 28,
-    paddingHorizontal: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
     marginBottom: theme.spacing.sectionGap,
   },
-  ctaEmoji: {
-    fontSize: 24,
+  ctaDeco: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  ctaDecoLine: {
+    width: 24,
+    height: 1,
+    backgroundColor: theme.colors.gold.light,
+    opacity: 0.4,
+  },
+  ctaDecoChar: {
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.gold.primary,
-    marginBottom: 10,
+    letterSpacing: 2,
   },
   ctaTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.colors.text.primary,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 1,
   },
   ctaSub: {
     fontSize: 13,
     color: theme.colors.text.secondary,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 18,
+    lineHeight: 22,
+    marginBottom: 20,
+    letterSpacing: 0.3,
   },
   ctaButton: {
     backgroundColor: theme.colors.gold.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: theme.radius.full,
+    borderRadius: theme.radius.md,
     ...Platform.select({
-      web: { boxShadow: `0px 4px 12px ${theme.colors.gold.primary}40` },
+      web: { boxShadow: `0px 4px 12px ${theme.colors.gold.muted}50` },
       default: {
-        shadowColor: theme.colors.gold.primary,
+        shadowColor: theme.colors.gold.muted,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
         shadowRadius: 12,
@@ -1885,8 +2065,8 @@ const s = StyleSheet.create({
   ctaButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 0.5,
+    color: '#FFFFFF',
+    letterSpacing: 1,
   },
 
   // ─── Disclaimer ───
@@ -1896,5 +2076,146 @@ const s = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
     marginTop: theme.spacing.xl,
+  },
+});
+
+// ─── 전통 만세력 명식표 스타일 ───
+const s2 = StyleSheet.create({
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.subtle,
+    borderRadius: theme.radius.md,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.divider,
+  },
+  tableRowLabel: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 7,
+    backgroundColor: '#F5F5F5' + '80',
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.border.divider,
+  },
+  tableRowLabelText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: theme.colors.text.tertiary,
+    letterSpacing: 0.5,
+  },
+  tableCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(212,168,75,0.08)',
+  },
+  tableCellDay: {
+    backgroundColor: theme.colors.gold.primary + '06',
+  },
+  tableHeaderText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.text.secondary,
+  },
+  tableHeaderTextDay: {
+    color: theme.colors.gold.primary,
+    fontWeight: '700',
+  },
+  tableTenGodText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tableStemCell: {
+    alignItems: 'center',
+    gap: 1,
+  },
+  tableHanjaLarge: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  tableKoSmall: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  tableHiddenRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  tableHiddenText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tableMetaText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: theme.colors.text.secondary,
+  },
+  // 공망 표시
+  gongmangDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.error,
+  },
+  gongmangRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(212,168,75,0.10)',
+    gap: 10,
+  },
+  gongmangLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.text.tertiary,
+  },
+  gongmangValueWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  gongmangHanja: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  gongmangText: {
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+  },
+  gongmangInPillars: {
+    flexDirection: 'row',
+    gap: 4,
+    marginLeft: 4,
+  },
+  gongmangPillarBadge: {
+    backgroundColor: theme.colors.error + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  gongmangPillarText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: theme.colors.error,
+  },
+  gongmangNote: {
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    lineHeight: 18,
+    marginTop: 8,
   },
 });

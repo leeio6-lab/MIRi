@@ -52,14 +52,12 @@ export default function BirthInputScreen() {
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [unknownTime, setUnknownTime] = useState(false);
 
-  // OAuth 후 provider_token으로 Google 프로필(생년월일만) 가져오기
   useEffect(() => {
     const providerToken = params.pt;
     if (!providerToken) return;
     (async () => {
       try {
         const profile = await fetchGoogleProfile(providerToken);
-        // 이름: 한글인 경우에만 자동입력 (영문은 사주에 부적합)
         if (profile.name && /[\uAC00-\uD7AF]/.test(profile.name) && !userName) {
           setUserName(profile.name);
         }
@@ -72,7 +70,6 @@ export default function BirthInputScreen() {
     })();
   }, [params.pt]);
 
-  // City search
   const [cityQuery, setCityQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [showCityResults, setShowCityResults] = useState(false);
@@ -145,6 +142,7 @@ export default function BirthInputScreen() {
   const monthNum_ = parseInt(month, 10);
   const dayNum_ = parseInt(day, 10);
   const isValid =
+    userName.trim().length > 0 &&
     year.length === 4 &&
     !isNaN(yearNum_) &&
     yearNum_ >= 1900 &&
@@ -160,24 +158,28 @@ export default function BirthInputScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={s.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Header */}
-        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.header}>
-          <Text style={styles.decorChar}>命</Text>
-          <View style={styles.decorLine} />
-          <Text style={styles.title}>{t('birth.title')}</Text>
-          <Text style={styles.subtitle}>{t('birth.subtitle')}</Text>
+        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={s.header}>
+          <Text style={s.decorChar}>命</Text>
+          <View style={s.decorDots}>
+            <View style={s.dot} />
+            <View style={s.dotSm} />
+            <View style={s.dot} />
+          </View>
+          <Text style={s.title}>{t('birth.title')}</Text>
+          <Text style={s.subtitle}>{t('birth.subtitle')}</Text>
         </Animated.View>
 
         {/* Name */}
         <Animated.View entering={FadeInDown.delay(150).duration(600)}>
-          <Text style={styles.sectionLabel}>{t('home.editName')}</Text>
-          <View style={styles.nameCard}>
+          <Text style={s.sectionLabel}>{t('home.editName')}</Text>
+          <View style={s.inputCard}>
             <TextInput
-              style={styles.nameInput}
+              style={s.inputField}
               value={userName}
               onChangeText={setUserName}
               placeholder={t('birth.namePlaceholder')}
@@ -189,30 +191,20 @@ export default function BirthInputScreen() {
 
         {/* Calendar type */}
         <Animated.View entering={FadeInDown.delay(250).duration(600)}>
-          <Text style={styles.sectionLabel}>{t('home.editCalendar')}</Text>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, !isLunar && styles.toggleActive]}
-              onPress={() => setIsLunar(false)}
-            >
-              <Text style={[styles.toggleText, !isLunar && styles.toggleTextActive]}>
-                {t('birth.solar')}
-              </Text>
+          <Text style={s.sectionLabel}>{t('home.editCalendar')}</Text>
+          <View style={s.toggleRow}>
+            <TouchableOpacity style={[s.toggleBtn, !isLunar && s.toggleActive]} onPress={() => setIsLunar(false)}>
+              <Text style={[s.toggleText, !isLunar && s.toggleTextActive]}>{t('birth.solar')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, isLunar && styles.toggleActive]}
-              onPress={() => setIsLunar(true)}
-            >
-              <Text style={[styles.toggleText, isLunar && styles.toggleTextActive]}>
-                {t('birth.lunar')}
-              </Text>
+            <TouchableOpacity style={[s.toggleBtn, isLunar && s.toggleActive]} onPress={() => setIsLunar(true)}>
+              <Text style={[s.toggleText, isLunar && s.toggleTextActive]}>{t('birth.lunar')}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
 
         {/* Birth date */}
         <Animated.View entering={FadeInDown.delay(300).duration(600)}>
-          <Text style={styles.sectionLabel}>{t('home.editBirthDate')}</Text>
+          <Text style={s.sectionLabel}>{t('home.editBirthDate')}</Text>
           <DateInputRow
             year={year}
             month={month}
@@ -226,33 +218,23 @@ export default function BirthInputScreen() {
 
         {/* Gender */}
         <Animated.View entering={FadeInDown.delay(400).duration(600)}>
-          <Text style={styles.sectionLabel}>{t('home.editGender')}</Text>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, gender === 'male' && styles.toggleActive]}
-              onPress={() => setGender('male')}
-            >
-              <Text style={[styles.toggleText, gender === 'male' && styles.toggleTextActive]}>
-                {t('birth.male')}
-              </Text>
+          <Text style={s.sectionLabel}>{t('home.editGender')}</Text>
+          <View style={s.toggleRow}>
+            <TouchableOpacity style={[s.toggleBtn, gender === 'male' && s.toggleActive]} onPress={() => setGender('male')}>
+              <Text style={[s.toggleText, gender === 'male' && s.toggleTextActive]}>{t('birth.male')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, gender === 'female' && styles.toggleActive]}
-              onPress={() => setGender('female')}
-            >
-              <Text style={[styles.toggleText, gender === 'female' && styles.toggleTextActive]}>
-                {t('birth.female')}
-              </Text>
+            <TouchableOpacity style={[s.toggleBtn, gender === 'female' && s.toggleActive]} onPress={() => setGender('female')}>
+              <Text style={[s.toggleText, gender === 'female' && s.toggleTextActive]}>{t('birth.female')}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
 
         {/* Birth city */}
         <Animated.View entering={FadeInDown.delay(420).duration(600)}>
-          <Text style={styles.sectionLabel}>{t('birth.birthCity')}</Text>
-          <View style={styles.nameCard}>
+          <Text style={s.sectionLabel}>{t('birth.birthCity')}</Text>
+          <View style={s.inputCard}>
             <TextInput
-              style={styles.nameInput}
+              style={s.inputField}
               value={cityQuery}
               onChangeText={(v) => {
                 setCityQuery(v);
@@ -265,23 +247,23 @@ export default function BirthInputScreen() {
             />
           </View>
           {showCityResults && filteredCities.length > 0 && (
-            <View style={styles.cityResults}>
+            <View style={s.cityResults}>
               {filteredCities.map((city) => (
                 <TouchableOpacity
                   key={city.id}
-                  style={styles.cityItem}
+                  style={s.cityItem}
                   onPress={() => handleCitySelect(city)}
                 >
-                  <Text style={styles.cityName}>
+                  <Text style={s.cityName}>
                     {i18n.language === 'en' ? city.nameEn : city.name}
                   </Text>
-                  <Text style={styles.cityCountry}>{city.countryNameEn}</Text>
+                  <Text style={s.cityCountry}>{city.countryNameEn}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
           {selectedCity && correctionText && (
-            <Text style={styles.correctionHint}>
+            <Text style={s.correctionHint}>
               {t('birth.solarCorrection')}: {correctionText}
             </Text>
           )}
@@ -289,34 +271,34 @@ export default function BirthInputScreen() {
 
         {/* Birth hour */}
         <Animated.View entering={FadeInDown.delay(450).duration(600)}>
-          <View style={styles.hourHeader}>
-            <Text style={styles.sectionLabel}>{t('home.editBirthHour')}</Text>
+          <View style={s.hourHeader}>
+            <Text style={s.sectionLabel}>{t('home.editBirthHour')}</Text>
             <TouchableOpacity
-              style={styles.unknownRow}
+              style={s.unknownRow}
               onPress={() => setUnknownTime(!unknownTime)}
             >
-              <View style={[styles.checkbox, unknownTime && styles.checkboxActive]}>
-                {unknownTime && <Text style={styles.checkIcon}>✓</Text>}
+              <View style={[s.checkbox, unknownTime && s.checkboxActive]}>
+                {unknownTime && <Text style={s.checkIcon}>✓</Text>}
               </View>
-              <Text style={styles.unknownText}>{t('birth.unknownTime')}</Text>
+              <Text style={s.unknownText}>{t('birth.unknownTime')}</Text>
             </TouchableOpacity>
           </View>
 
           {!unknownTime && (
-            <View style={styles.hoursGrid}>
+            <View style={s.hoursGrid}>
               {HOURS.map((h) => {
                 const active = selectedHour === h.value;
                 return (
                   <TouchableOpacity
                     key={h.value}
-                    style={[styles.hourBtn, active && styles.hourBtnActive]}
+                    style={[s.hourBtn, active && s.hourBtnActive]}
                     onPress={() => setSelectedHour(h.value)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.hourLabel, active && styles.hourLabelActive]}>
+                    <Text style={[s.hourLabel, active && s.hourLabelActive]}>
                       {t(`birth.${h.labelKey}`)}
                     </Text>
-                    <Text style={[styles.hourSub, active && styles.hourSubActive]}>
+                    <Text style={[s.hourSub, active && s.hourSubActive]}>
                       {h.sub}
                     </Text>
                   </TouchableOpacity>
@@ -332,7 +314,7 @@ export default function BirthInputScreen() {
             title={t('birth.start')}
             onPress={handleStart}
             disabled={!isValid}
-            style={styles.startBtn}
+            style={s.startBtn}
           />
         </Animated.View>
       </ScrollView>
@@ -340,61 +322,80 @@ export default function BirthInputScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg.primary,
+    backgroundColor: '#FFFFFF',
   },
   scroll: {
     padding: theme.spacing.screenPadding,
-    paddingTop: 70,
+    paddingTop: 64,
     paddingBottom: 120,
   },
+
+  /* ── Header ── */
   header: {
     alignItems: 'center',
-    marginBottom: theme.spacing.sectionGap,
+    marginBottom: 36,
   },
   decorChar: {
-    fontSize: 40,
+    fontSize: 56,
     fontWeight: '200',
     color: theme.colors.gold.primary,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
-  decorLine: {
-    width: 40,
-    height: 1,
-    backgroundColor: theme.colors.gold.primary,
+  decorDots: {
+    flexDirection: 'row',
+    gap: 5,
+    marginBottom: 18,
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#1A1A1A',
+  },
+  dotSm: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#1A1A1A',
     opacity: 0.3,
-    marginBottom: theme.spacing.lg,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '200',
     color: theme.colors.text.primary,
     textAlign: 'center',
-    letterSpacing: 4,
-    marginBottom: theme.spacing.xs,
+    letterSpacing: 3,
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 13,
     color: theme.colors.text.secondary,
     textAlign: 'center',
     fontWeight: '300',
+    letterSpacing: 0.5,
   },
+
+  /* ── Section labels ── */
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.colors.gold.primary,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
+    opacity: 0.7,
   },
+
+  /* ── Toggle (solar/lunar, gender) ── */
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.bg.secondary,
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.sm,
     padding: 3,
-    marginBottom: theme.spacing.lg,
+    marginBottom: 20,
   },
   toggleBtn: {
     flex: 1,
@@ -403,39 +404,40 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   toggleActive: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#1A1A1A',
   },
   toggleText: {
     color: theme.colors.text.tertiary,
     fontSize: 14,
     fontWeight: '500',
+    letterSpacing: 0.3,
   },
   toggleTextActive: {
-    color: theme.colors.gold.light,
+    color: theme.colors.gold.primary,
     fontWeight: '600',
   },
-  nameCard: {
-    backgroundColor: '#FFFFFF',
+
+  /* ── Input fields ── */
+  inputCard: {
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 20,
   },
-  nameInput: {
+  inputField: {
     paddingVertical: 14,
     paddingHorizontal: 16,
     color: theme.colors.text.primary,
     fontSize: 16,
     fontWeight: '400',
+    letterSpacing: 0.3,
   },
-  // City search
+
+  /* ── City search ── */
   cityResults: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    marginTop: -theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginTop: -12,
+    marginBottom: 16,
     overflow: 'hidden',
   },
   cityItem: {
@@ -445,7 +447,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: 'rgba(212,168,75,0.10)',
   },
   cityName: {
     fontSize: 15,
@@ -459,16 +461,18 @@ const styles = StyleSheet.create({
   correctionHint: {
     fontSize: 12,
     color: theme.colors.gold.primary,
-    marginTop: -theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    marginTop: -8,
+    marginBottom: 16,
     paddingHorizontal: 4,
+    letterSpacing: 0.3,
   },
-  // Hour grid
+
+  /* ── Hour grid ── */
   hourHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
   unknownRow: {
     flexDirection: 'row',
@@ -496,44 +500,46 @@ const styles = StyleSheet.create({
   unknownText: {
     color: theme.colors.text.secondary,
     fontSize: 13,
+    letterSpacing: 0.3,
   },
   hoursGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xl,
+    gap: 8,
+    marginBottom: 32,
   },
   hourBtn: {
     width: '31%',
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.sm,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
   },
   hourBtnActive: {
-    borderColor: theme.colors.gold.primary,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#1A1A1A',
   },
   hourLabel: {
     color: theme.colors.text.primary,
     fontSize: 14,
     fontWeight: '500',
+    letterSpacing: 0.5,
   },
   hourLabelActive: {
-    color: theme.colors.gold.light,
-    fontWeight: '600',
+    color: theme.colors.gold.primary,
+    fontWeight: '700',
   },
   hourSub: {
     color: theme.colors.text.tertiary,
     fontSize: 10,
     marginTop: 2,
+    letterSpacing: 0.3,
   },
   hourSubActive: {
-    color: theme.colors.gold.muted,
+    color: theme.colors.text.tertiary,
   },
+
+  /* ── CTA ── */
   startBtn: {
-    marginTop: theme.spacing.md,
+    marginTop: 8,
   },
 });

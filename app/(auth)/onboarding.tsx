@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Dimensions, Pressable, PanResponder } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,82 +7,122 @@ import { theme } from '../../src/constants/theme';
 import { Button } from '../../src/components/ui/Button';
 
 const { width } = Dimensions.get('window');
+const SWIPE_THRESHOLD = 50;
 
 interface SlideData {
   id: string;
   titleKey: string;
   descKey: string;
   icon: string;
-  color: string;
 }
 
 const SLIDES: SlideData[] = [
-  { id: '1', titleKey: 'auth.onboarding1Title', descKey: 'auth.onboarding1Desc', icon: '命', color: theme.colors.text.primary },
-  { id: '2', titleKey: 'auth.onboarding2Title', descKey: 'auth.onboarding2Desc', icon: '相', color: theme.colors.text.primary },
-  { id: '3', titleKey: 'auth.onboarding3Title', descKey: 'auth.onboarding3Desc', icon: '科', color: theme.colors.text.primary },
-  { id: '4', titleKey: 'auth.onboarding4Title', descKey: 'auth.onboarding4Desc', icon: '運', color: theme.colors.text.primary },
+  { id: '1', titleKey: 'auth.onboarding1Title', descKey: 'auth.onboarding1Desc', icon: '命' },
+  { id: '2', titleKey: 'auth.onboarding2Title', descKey: 'auth.onboarding2Desc', icon: '相' },
+  { id: '3', titleKey: 'auth.onboarding3Title', descKey: 'auth.onboarding3Desc', icon: '緣' },
+  { id: '4', titleKey: 'auth.onboarding4Title', descKey: 'auth.onboarding4Desc', icon: '運' },
 ];
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState<'right' | 'left'>('right');
 
   const currentSlide = SLIDES[currentIndex];
 
+  const goTo = (idx: number) => {
+    if (idx < 0 || idx >= SLIDES.length || idx === currentIndex) return;
+    setDirection(idx > currentIndex ? 'right' : 'left');
+    setCurrentIndex(idx);
+  };
+
   const handleNext = () => {
     if (currentIndex < SLIDES.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      goTo(currentIndex + 1);
     } else {
       router.push('/(auth)/login');
     }
   };
 
+  // 좌우 스와이프
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -SWIPE_THRESHOLD && currentIndex < SLIDES.length - 1) {
+          goTo(currentIndex + 1);
+        } else if (g.dx > SWIPE_THRESHOLD && currentIndex > 0) {
+          goTo(currentIndex - 1);
+        }
+      },
+    })
+  ).current;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.appName}>MIRi</Text>
-        <Text style={styles.appNameSub}>미리</Text>
+    <View style={s.container}>
+      {/* 브랜드 헤더 */}
+      <View style={s.header}>
+        <Text style={s.appName}>MIRi</Text>
+        <View style={s.headerDecoRow}>
+          <View style={s.headerDeco} />
+          <Text style={s.appNameSub}>운명을 미리 보다</Text>
+          <View style={s.headerDeco} />
+        </View>
       </View>
 
-      {/* Slide content - state based (works on web + native) */}
-      <View style={styles.slideArea}>
+      {/* 슬라이드 (스와이프 가능) */}
+      <View style={s.slideArea} {...panResponder.panHandlers}>
         <Animated.View
           key={currentSlide.id}
-          entering={FadeIn.duration(400)}
-          style={styles.slide}
+          entering={FadeIn.duration(600)}
+          exiting={FadeOut.duration(300)}
+          style={s.slide}
         >
-          <View style={styles.iconContainer}>
-            <Text style={[styles.icon, { color: currentSlide.color }]}>{currentSlide.icon}</Text>
-            <View style={[styles.iconGlow, { backgroundColor: currentSlide.color }]} />
+          {/* 한자 아이콘 */}
+          <View style={s.iconWrap}>
+            <View style={s.iconCornerTL} />
+            <View style={s.iconCornerTR} />
+            <View style={s.iconCornerBL} />
+            <View style={s.iconCornerBR} />
+            <Text style={s.icon}>{currentSlide.icon}</Text>
           </View>
-          <Text style={styles.slideTitle}>{t(currentSlide.titleKey)}</Text>
-          <Text style={styles.slideDesc}>{t(currentSlide.descKey)}</Text>
+
+          {/* 점 장식 */}
+          <View style={s.dotsRow}>
+            <View style={s.dotSmall} />
+            <View style={s.dotSmall} />
+            <View style={s.dotSmall} />
+          </View>
+
+          {/* 텍스트 */}
+          <Text style={s.slideTitle}>{t(currentSlide.titleKey)}</Text>
+          <Text style={s.slideDesc}>{t(currentSlide.descKey)}</Text>
         </Animated.View>
       </View>
 
-      {/* Dots */}
-      <View style={styles.dots}>
-        {SLIDES.map((_, i) => (
-          <Pressable key={i} onPress={() => setCurrentIndex(i)}>
-            <View style={[styles.dot, i === currentIndex && styles.dotActive]} />
+      {/* 인디케이터 */}
+      <View style={s.dots}>
+        {SLIDES.map((slide, i) => (
+          <Pressable key={slide.id} onPress={() => goTo(i)}>
+            <View style={[s.dot, i === currentIndex && s.dotActive]} />
           </Pressable>
         ))}
       </View>
 
-      {/* Buttons */}
-      <View style={styles.footer}>
+      {/* 버튼 */}
+      <View style={s.footer}>
         <Button
           title={currentIndex === SLIDES.length - 1 ? t('birth.start') : t('common.next')}
           onPress={handleNext}
-          style={styles.btn}
+          style={s.btn}
         />
         {currentIndex < SLIDES.length - 1 && (
           <Pressable
             onPress={() => router.push('/(auth)/login')}
-            style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [s.skipBtn, pressed && { opacity: 0.7 }]}
           >
-            <Text style={styles.skipText}>{t('auth.skipOnboarding')}</Text>
+            <Text style={s.skipText}>{t('auth.skipOnboarding')}</Text>
           </Pressable>
         )}
       </View>
@@ -90,23 +130,36 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  header: { paddingTop: 70, alignItems: 'center', gap: 2 },
-  appName: { fontSize: 28, fontWeight: '200', color: theme.colors.text.primary, letterSpacing: 8 },
-  appNameSub: { fontSize: 14, color: theme.colors.text.secondary, letterSpacing: 4, fontWeight: '300' },
-  slideArea: { flex: 1, justifyContent: 'center' },
+  header: { paddingTop: 70, alignItems: 'center', gap: 8 },
+  appName: { fontSize: 32, fontWeight: '200', color: theme.colors.text.primary, letterSpacing: 10 },
+  headerDecoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerDeco: { width: 20, height: 1, backgroundColor: theme.colors.gold.light, opacity: 0.3 },
+  appNameSub: { fontSize: 11, color: theme.colors.text.tertiary, letterSpacing: 3, fontWeight: '400' },
+
+  slideArea: { flex: 1, justifyContent: 'center', overflow: 'hidden' },
   slide: { alignItems: 'center', paddingHorizontal: theme.spacing.xl },
-  iconContainer: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.xl, borderRadius: 70, borderWidth: 1, borderColor: theme.colors.text.primary + '12' },
-  icon: { fontSize: 64, fontWeight: '300', zIndex: 1 },
-  iconGlow: { position: 'absolute', width: 100, height: 100, borderRadius: 50, opacity: 0.1 },
-  slideTitle: { ...theme.typo.screenTitle, color: theme.colors.text.primary, textAlign: 'center', marginBottom: theme.spacing.md },
-  slideDesc: { ...theme.typo.body, textAlign: 'center', lineHeight: 24 },
+
+  iconWrap: { width: 120, height: 120, alignItems: 'center', justifyContent: 'center', marginBottom: 24, position: 'relative' },
+  icon: { fontSize: 56, fontWeight: '200', color: theme.colors.gold.primary, letterSpacing: 4 },
+  iconCornerTL: { position: 'absolute', top: 0, left: 0, width: 18, height: 18, borderTopWidth: 1, borderLeftWidth: 1, borderColor: theme.colors.gold.light + '40' },
+  iconCornerTR: { position: 'absolute', top: 0, right: 0, width: 18, height: 18, borderTopWidth: 1, borderRightWidth: 1, borderColor: theme.colors.gold.light + '40' },
+  iconCornerBL: { position: 'absolute', bottom: 0, left: 0, width: 18, height: 18, borderBottomWidth: 1, borderLeftWidth: 1, borderColor: theme.colors.gold.light + '40' },
+  iconCornerBR: { position: 'absolute', bottom: 0, right: 0, width: 18, height: 18, borderBottomWidth: 1, borderRightWidth: 1, borderColor: theme.colors.gold.light + '40' },
+
+  dotsRow: { flexDirection: 'row', gap: 5, marginBottom: 20 },
+  dotSmall: { width: 2, height: 2, borderRadius: 1, backgroundColor: theme.colors.text.primary, opacity: 0.25 },
+
+  slideTitle: { fontSize: 22, fontWeight: '700', color: theme.colors.text.primary, textAlign: 'center', marginBottom: 14, letterSpacing: 2 },
+  slideDesc: { fontSize: 14, fontWeight: '400', color: theme.colors.text.secondary, textAlign: 'center', lineHeight: 24, letterSpacing: 0.5 },
+
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 10, paddingVertical: theme.spacing.lg },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.gold.primary + '20' },
-  dotActive: { backgroundColor: theme.colors.gold.primary, width: 28, borderRadius: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.gold.primary + '20' },
+  dotActive: { backgroundColor: theme.colors.gold.primary, width: 24, borderRadius: 3 },
+
   footer: { paddingHorizontal: theme.spacing.screenPadding, paddingBottom: theme.spacing.xxl, gap: theme.spacing.sm },
   btn: { width: '100%' },
   skipBtn: { alignItems: 'center', paddingVertical: 12 },
-  skipText: { ...theme.typo.caption, color: theme.colors.text.tertiary },
+  skipText: { fontSize: 13, color: theme.colors.text.tertiary, letterSpacing: 1 },
 });

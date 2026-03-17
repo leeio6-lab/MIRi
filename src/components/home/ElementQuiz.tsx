@@ -122,13 +122,13 @@ const styles = StyleSheet.create({
   btnLabel: { fontSize: 9, color: '#C4912E', marginTop: 1 },
   resultCard: {
     marginTop: 12, width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, alignItems: 'center',
-    borderWidth: 1, ...Platform.select({
+    ...Platform.select({
       web: { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
       default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
     }),
   } as any,
-  resultCorrect: { borderColor: 'rgba(232,176,74,0.3)' },
-  resultWrong: { borderColor: 'rgba(0,0,0,0.06)' },
+  resultCorrect: {},
+  resultWrong: {},
   resultTitle: { fontSize: 16, fontWeight: '700', color: '#E8B04A', marginBottom: 8, letterSpacing: 1 },
   resultDesc: { fontSize: 13, color: theme.colors.text.secondary, textAlign: 'center', lineHeight: 20, marginBottom: 8 },
   resultAccuracy: { fontSize: 22, fontWeight: '800', color: '#E8B04A' },
