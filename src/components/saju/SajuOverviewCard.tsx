@@ -8,39 +8,40 @@ import Svg, { Path, Circle as SvgCircle, Rect } from 'react-native-svg';
 
 const G = theme.colors.gold.primary;
 
-// ── 커스텀 SVG 아이콘 (골드, 18px) ──
-function IcPersonality() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><SvgCircle cx={12} cy={8} r={4} stroke={G} strokeWidth={1.8} /><Path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke={G} strokeWidth={1.8} strokeLinecap="round" /><Path d="M15 6c1 1.5 1 3 0 4" stroke={G} strokeWidth={1.3} strokeLinecap="round" opacity={0.5} /></Svg>;
+// ── 커스텀 SVG 아이콘 (color prop으로 테마 색상 적용) ──
+type IcProps = { color?: string };
+function IcPersonality({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><SvgCircle cx={12} cy={8} r={4} stroke={c} strokeWidth={1.8} /><Path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke={c} strokeWidth={1.8} strokeLinecap="round" /><Path d="M15 6c1 1.5 1 3 0 4" stroke={c} strokeWidth={1.3} strokeLinecap="round" opacity={0.5} /></Svg>;
 }
-function IcCareer() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Rect x={3} y={7} width={18} height={13} rx={2} stroke={G} strokeWidth={1.8} /><Path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke={G} strokeWidth={1.8} /><Path d="M3 12h18" stroke={G} strokeWidth={1.3} opacity={0.4} /></Svg>;
+function IcCareer({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Rect x={3} y={7} width={18} height={13} rx={2} stroke={c} strokeWidth={1.8} /><Path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" stroke={c} strokeWidth={1.8} /><Path d="M3 12h18" stroke={c} strokeWidth={1.3} opacity={0.4} /></Svg>;
 }
-function IcWealth() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><SvgCircle cx={12} cy={12} r={9} stroke={G} strokeWidth={1.8} /><Path d="M12 6v12M9 9.5c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3 .9-3 2 1.3 2 3 2 3-.9 3-2" stroke={G} strokeWidth={1.5} strokeLinecap="round" /></Svg>;
+function IcWealth({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><SvgCircle cx={12} cy={12} r={9} stroke={c} strokeWidth={1.8} /><Path d="M12 6v12M9 9.5c0-1.1 1.3-2 3-2s3 .9 3 2-1.3 2-3 2-3 .9-3 2 1.3 2 3 2 3-.9 3-2" stroke={c} strokeWidth={1.5} strokeLinecap="round" /></Svg>;
 }
-function IcLove() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M12 21s-7-5.3-7-10c0-2.8 2.2-5 5-5 1.5 0 2.8.7 3.5 1.7" stroke={G} strokeWidth={1.8} strokeLinecap="round" /><Path d="M12 21s7-5.3 7-10c0-2.8-2.2-5-5-5-1.5 0-2.8.7-3.5 1.7" stroke={G} strokeWidth={1.8} strokeLinecap="round" /></Svg>;
+function IcLove({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M12 21s-7-5.3-7-10c0-2.8 2.2-5 5-5 1.5 0 2.8.7 3.5 1.7" stroke={c} strokeWidth={1.8} strokeLinecap="round" /><Path d="M12 21s7-5.3 7-10c0-2.8-2.2-5-5-5-1.5 0-2.8.7-3.5 1.7" stroke={c} strokeWidth={1.8} strokeLinecap="round" /></Svg>;
 }
-function IcHealth() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M4 12h4l2-6 4 12 2-6h4" stroke={G} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+function IcHealth({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M4 12h4l2-6 4 12 2-6h4" stroke={c} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
-function IcFamily() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M3 21l3-12 6-6 6 6 3 12z" stroke={G} strokeWidth={1.8} strokeLinejoin="round" /><Rect x={9} y={14} width={6} height={7} rx={0.5} stroke={G} strokeWidth={1.5} /><SvgCircle cx={12} cy={10} r={1.5} fill={G} fillOpacity={0.3} /></Svg>;
+function IcFamily({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M3 21l3-12 6-6 6 6 3 12z" stroke={c} strokeWidth={1.8} strokeLinejoin="round" /><Rect x={9} y={14} width={6} height={7} rx={0.5} stroke={c} strokeWidth={1.5} /><SvgCircle cx={12} cy={10} r={1.5} fill={c} fillOpacity={0.3} /></Svg>;
 }
-function IcSocial() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><SvgCircle cx={9} cy={8} r={3} stroke={G} strokeWidth={1.6} /><SvgCircle cx={17} cy={9} r={2.5} stroke={G} strokeWidth={1.4} opacity={0.6} /><Path d="M2 19c0-3.5 3-6 7-6s7 2.5 7 6" stroke={G} strokeWidth={1.6} strokeLinecap="round" /><Path d="M16 13c2.5 0 5 1.5 5 4" stroke={G} strokeWidth={1.3} strokeLinecap="round" opacity={0.5} /></Svg>;
+function IcSocial({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><SvgCircle cx={9} cy={8} r={3} stroke={c} strokeWidth={1.6} /><SvgCircle cx={17} cy={9} r={2.5} stroke={c} strokeWidth={1.4} opacity={0.6} /><Path d="M2 19c0-3.5 3-6 7-6s7 2.5 7 6" stroke={c} strokeWidth={1.6} strokeLinecap="round" /><Path d="M16 13c2.5 0 5 1.5 5 4" stroke={c} strokeWidth={1.3} strokeLinecap="round" opacity={0.5} /></Svg>;
 }
-function IcYearly() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Rect x={3} y={4} width={18} height={17} rx={2} stroke={G} strokeWidth={1.8} /><Path d="M3 9h18" stroke={G} strokeWidth={1.5} /><Path d="M8 2v4M16 2v4" stroke={G} strokeWidth={1.8} strokeLinecap="round" /><SvgCircle cx={12} cy={15} r={2} fill={G} fillOpacity={0.25} stroke={G} strokeWidth={1.2} /></Svg>;
+function IcYearly({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Rect x={3} y={4} width={18} height={17} rx={2} stroke={c} strokeWidth={1.8} /><Path d="M3 9h18" stroke={c} strokeWidth={1.5} /><Path d="M8 2v4M16 2v4" stroke={c} strokeWidth={1.8} strokeLinecap="round" /><SvgCircle cx={12} cy={15} r={2} fill={c} fillOpacity={0.25} stroke={c} strokeWidth={1.2} /></Svg>;
 }
-function IcLifePeak() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M3 20l4-6 4 3 5-10 5 7" stroke={G} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /><SvgCircle cx={16} cy={7} r={2} fill={G} fillOpacity={0.3} stroke={G} strokeWidth={1.3} /></Svg>;
+function IcLifePeak({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M3 20l4-6 4 3 5-10 5 7" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /><SvgCircle cx={16} cy={7} r={2} fill={c} fillOpacity={0.3} stroke={c} strokeWidth={1.3} /></Svg>;
 }
-function IcDirection() {
-  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M12 2l7 10-7 10-7-10z" stroke={G} strokeWidth={1.8} strokeLinejoin="round" /><Path d="M12 2v20" stroke={G} strokeWidth={1.2} opacity={0.3} /><Path d="M5 12h14" stroke={G} strokeWidth={1.2} opacity={0.3} /><SvgCircle cx={12} cy={10} r={2} fill={G} fillOpacity={0.2} /></Svg>;
+function IcDirection({ color: c = G }: IcProps) {
+  return <Svg width={18} height={18} viewBox="0 0 24 24" fill="none"><Path d="M12 2l7 10-7 10-7-10z" stroke={c} strokeWidth={1.8} strokeLinejoin="round" /><Path d="M12 2v20" stroke={c} strokeWidth={1.2} opacity={0.3} /><Path d="M5 12h14" stroke={c} strokeWidth={1.2} opacity={0.3} /><SvgCircle cx={12} cy={10} r={2} fill={c} fillOpacity={0.2} /></Svg>;
 }
 
-const ICON_MAP: Record<string, React.FC> = {
+const ICON_MAP: Record<string, React.FC<IcProps>> = {
   personality: IcPersonality,
   career: IcCareer,
   wealth: IcWealth,
@@ -108,7 +109,7 @@ export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview,
                 { backgroundColor: accent + '0C' },
                 isHot && { backgroundColor: accent + '1A', borderWidth: 1, borderColor: accent + '30' },
               ]}>
-                {Icon && <Icon />}
+                {Icon && <Icon color={accent} />}
               </View>
               <View style={styles.textWrap}>
                 <Text style={[styles.value, isHot && styles.hotValue]} numberOfLines={2}>{value}</Text>
