@@ -557,7 +557,7 @@ const $ = StyleSheet.create({
   // Card front (premium)
   cardFront: {
     width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden',
-    backgroundColor: '#FFFDF8',
+    backgroundColor: '#FFFFFF',
     borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       web: { boxShadow: '0 4px 18px rgba(0,0,0,0.12)' },
