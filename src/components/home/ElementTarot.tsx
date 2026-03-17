@@ -241,10 +241,8 @@ function CardFront({ element, keyword, message, label, revealed }: {
           <Text style={$.fMsg}>{message || ''}</Text>
         </Animated.View>
 
-        <View style={{ flex: 1 }} />
-
         {/* Bottom symbol */}
-        <Animated.View style={[{ alignItems: 'center', marginBottom: 4 }, bottomAnim]}>
+        <Animated.View style={[{ alignItems: 'center', marginTop: 4 }, bottomAnim]}>
           {ElemIcon && <ElemIcon size={10} color={info.primary + '50'} />}
         </Animated.View>
       </View>
@@ -561,7 +559,7 @@ const $ = StyleSheet.create({
     }),
   } as any,
   frontContent: {
-    flex: 1, alignItems: 'center', paddingTop: 6, paddingBottom: 2, paddingHorizontal: 4,
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, paddingHorizontal: 4,
   },
   frontIllustWrap: { marginTop: 0 },
   fHanja: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },

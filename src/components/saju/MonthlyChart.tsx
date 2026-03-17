@@ -12,7 +12,8 @@ import Svg, {
 import { theme } from '../../constants/theme';
 
 const SCREEN_W = Dimensions.get('window').width;
-const CHART_W = SCREEN_W - theme.spacing.screenPadding * 2 - 40;
+// 화면 padding(20*2) + GlassCard 내부 padding(24*2) = 88
+const CHART_W = SCREEN_W - theme.spacing.screenPadding * 2 - theme.spacing.cardPadding * 2;
 const CHART_H = 160;
 const PAD_L = 28;
 const PAD_R = 12;

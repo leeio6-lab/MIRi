@@ -659,7 +659,7 @@ const $ = StyleSheet.create({
 
   // Quarter grid
   qGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  qItem: { width: (SCREEN_W - (isSmall ? 32 : 40) - 48 - 8) / 2, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 8 },
+  qItem: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 8 },
   qHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   qPeriod: { fontSize: 11, fontWeight: '600', color: theme.colors.text.primary },
   qScore: { fontSize: 18, fontWeight: '700' },
