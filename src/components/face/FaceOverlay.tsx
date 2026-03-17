@@ -11,7 +11,6 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { theme } from '../../constants/theme';
-import { FACE_POINTS } from './FaceGuide';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -244,27 +243,17 @@ export function FaceOverlay({
   const centerX = imageSize / 2;
   const centerY = imageSize / 2;
 
-  const PAINTING_POINTS: Record<string, { x: number; y: number }> = {
-    forehead: { x: 0.52, y: 0.14 },
-    eyes:     { x: 0.48, y: 0.32 },
-    nose:     { x: 0.50, y: 0.45 },
-    mouth:    { x: 0.50, y: 0.56 },
-    jawline:  { x: 0.50, y: 0.70 },
-    ears:     { x: 0.22, y: 0.34 },
-  };
-
+  // AI가 관상화에서 감지한 좌표만 사용 (하드코딩 폴백 없음)
   const getPoint = useCallback(
     (f: FeatureData) => {
       if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number'
           && f.position.x > 0.01 && f.position.x < 0.99 && f.position.y > 0.01 && f.position.y < 0.99) {
         return f.position;
       }
-      if (isTransformed) {
-        return PAINTING_POINTS[f.area] ?? FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
-      }
-      return FACE_POINTS[f.area as keyof typeof FACE_POINTS] ?? null;
+      // AI 좌표가 없으면 표시하지 않음
+      return null;
     },
-    [isTransformed],
+    [],
   );
 
   const handleSelect = useCallback(

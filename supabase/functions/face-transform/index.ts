@@ -175,19 +175,42 @@ serve(async (req) => {
     const transformedImage = transformResult.status === 'fulfilled' ? transformResult.value : null;
     const transformError = transformResult.status === 'rejected' ? String(transformResult.reason) : null;
 
-    // ─── 생성된 관상화에서 실제 이목구비 좌표 추출 ───
+    // ─── 생성된 관상화에서 실제 이목구비 좌표 추출 (2회 시도) ───
     if (transformedImage && analysis && Array.isArray(analysis.features)) {
+      // 먼저 분석 프롬프트가 셀피 기준으로 넣은 좌표를 제거 (관상화와 안 맞으므로)
+      for (const feat of analysis.features as any[]) {
+        delete feat.position;
+      }
+
+      let coords: Record<string, { x: number; y: number }> | null = null;
+
+      // 1차 시도
       try {
-        const coords = await detectFeaturePositions(transformedImage);
-        if (coords) {
-          for (const feat of analysis.features as any[]) {
-            if (coords[feat.area]) {
-              feat.position = coords[feat.area];
-            }
+        coords = await detectFeaturePositions(transformedImage);
+        console.log('[face-transform] Coord detection 1st attempt:', coords ? 'OK' : 'null');
+      } catch (e) {
+        console.warn('[face-transform] Coord detection 1st attempt failed:', e);
+      }
+
+      // 실패 시 2차 시도
+      if (!coords) {
+        try {
+          coords = await detectFeaturePositions(transformedImage);
+          console.log('[face-transform] Coord detection 2nd attempt:', coords ? 'OK' : 'null');
+        } catch (e) {
+          console.warn('[face-transform] Coord detection 2nd attempt failed:', e);
+        }
+      }
+
+      // 성공한 좌표만 적용
+      if (coords) {
+        for (const feat of analysis.features as any[]) {
+          if (coords[feat.area]) {
+            feat.position = coords[feat.area];
           }
         }
-      } catch (e) {
-        console.warn('[face-transform] Coordinate detection failed (non-critical):', e);
+      } else {
+        console.warn('[face-transform] All coord detection attempts failed — features will have no position');
       }
     }
 
