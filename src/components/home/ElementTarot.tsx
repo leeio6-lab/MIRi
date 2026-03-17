@@ -623,8 +623,8 @@ const $ = StyleSheet.create({
   ctaNote: { fontSize: 12, color: '#AAA', textAlign: 'center' },
   ctaQ: { fontSize: 13, color: '#666', textAlign: 'center', fontWeight: '600', marginTop: 4 },
 
-  redrawBtn: { marginTop: 14, alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(212,168,75,0.25)' },
-  redrawText: { fontSize: 12, color: '#999', fontWeight: '500', letterSpacing: 0.5 },
+  redrawBtn: { marginTop: 14, alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 16 },
+  redrawText: { fontSize: 12, color: '#AAA', fontWeight: '400', letterSpacing: 0.5 },
   devBtn: { marginTop: 8, alignItems: 'center', padding: 6 },
   devText: { fontSize: 11, color: '#E85D4A', fontWeight: '600' },
 });

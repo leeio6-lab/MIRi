@@ -22,28 +22,39 @@ function useOsc(duration: number, delay = 0) {
 // Each animation wraps the ENTIRE Svg in an Animated.View for web compat
 
 // ═══════════════════════════════════════
-// 甲 — 큰 나무: 전체 살짝 흔들림
+// 甲 — 큰 나무: 줄기 고정, 수관(잎)만 흔들림
 // ═══════════════════════════════════════
 function GapMok({ s }: { s: number }) {
   const C = '#5B7A4A';
-  const osc = useOsc(2500);
-  const style = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${interpolate(osc.value, [0, 1], [-2, 2])}deg` }],
+  const osc = useOsc(2800);
+  const osc2 = useOsc(3400, 600);
+  const canopyStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(osc.value, [0, 1], [-2.5, 2.5]) },
+      { rotate: `${interpolate(osc2.value, [0, 1], [-2, 2])}deg` },
+    ],
   }));
   return (
-    <Animated.View style={[{ width: s, height: s }, style]}>
-      <Svg width={s} height={s} viewBox="0 0 48 48">
+    <View style={{ width: s, height: s }}>
+      {/* Static trunk + branches */}
+      <Svg width={s} height={s} viewBox="0 0 48 48" style={{ position: 'absolute' }}>
         <Path d="M24 44 L24 18" stroke={C} strokeWidth={2.5} strokeLinecap="round" />
         <Path d="M24 28 L16 22" stroke={C} strokeWidth={1.5} strokeLinecap="round" />
         <Path d="M24 28 L32 22" stroke={C} strokeWidth={1.5} strokeLinecap="round" />
         <Path d="M24 22 L20 16" stroke={C} strokeWidth={1.2} strokeLinecap="round" />
-        <Ellipse cx={24} cy={10} rx={4} ry={2.5} fill={C} opacity={0.7} />
-        <Ellipse cx={18} cy={14} rx={4} ry={2.5} fill={C} opacity={0.6} />
-        <Ellipse cx={30} cy={14} rx={4} ry={2.5} fill={C} opacity={0.6} />
-        <Ellipse cx={15} cy={20} rx={3.5} ry={2} fill={C} opacity={0.5} />
-        <Ellipse cx={33} cy={20} rx={3.5} ry={2} fill={C} opacity={0.5} />
       </Svg>
-    </Animated.View>
+      {/* Animated canopy — sways gently */}
+      <Animated.View style={[{ position: 'absolute', width: s, height: s }, canopyStyle]}>
+        <Svg width={s} height={s} viewBox="0 0 48 48">
+          <Ellipse cx={24} cy={10} rx={4.5} ry={2.8} fill={C} opacity={0.7} />
+          <Ellipse cx={18} cy={14} rx={4.5} ry={2.8} fill={C} opacity={0.6} />
+          <Ellipse cx={30} cy={14} rx={4.5} ry={2.8} fill={C} opacity={0.6} />
+          <Ellipse cx={15} cy={20} rx={4} ry={2.2} fill={C} opacity={0.5} />
+          <Ellipse cx={33} cy={20} rx={4} ry={2.2} fill={C} opacity={0.5} />
+          <Ellipse cx={24} cy={7} rx={3} ry={2} fill={C} opacity={0.45} />
+        </Svg>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -52,9 +63,13 @@ function GapMok({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function EulMok({ s }: { s: number }) {
   const C = '#6B8E5B';
-  const osc = useOsc(3000);
+  const osc = useOsc(2600);
+  const osc2 = useOsc(3200, 400);
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(osc.value, [0, 1], [-2, 2]) }],
+    transform: [
+      { translateX: interpolate(osc.value, [0, 1], [-3.5, 3.5]) },
+      { rotate: `${interpolate(osc2.value, [0, 1], [-1.5, 1.5])}deg` },
+    ],
   }));
   return (
     <Animated.View style={[{ width: s, height: s }, style]}>
@@ -74,10 +89,10 @@ function EulMok({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function ByungHwa({ s }: { s: number }) {
   const C = '#B85450';
-  const osc = useOsc(2500);
+  const osc = useOsc(2200);
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(osc.value, [0, 1], [0.95, 1.05]) }],
-    opacity: interpolate(osc.value, [0, 1], [0.85, 1]),
+    transform: [{ scale: interpolate(osc.value, [0, 1], [0.92, 1.08]) }],
+    opacity: interpolate(osc.value, [0, 1], [0.78, 1]),
   }));
   const rays = Array.from({ length: 8 }, (_, i) => {
     const a = (i / 8) * Math.PI * 2;
@@ -101,17 +116,18 @@ function ByungHwa({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function JungHwa({ s }: { s: number }) {
   const C = '#C75B4A';
-  const osc1 = useOsc(1800);
-  const osc2 = useOsc(2000, 500);
+  const osc1 = useOsc(1500);
+  const osc2 = useOsc(1800, 400);
   const style = useAnimatedStyle(() => ({
     transform: [
-      { rotate: `${interpolate(osc1.value, [0, 1], [-3, 3])}deg` },
-      { scaleX: interpolate(osc2.value, [0, 1], [0.95, 1.05]) },
+      { rotate: `${interpolate(osc1.value, [0, 1], [-5, 5])}deg` },
+      { scaleX: interpolate(osc2.value, [0, 1], [0.9, 1.1]) },
+      { translateY: interpolate(osc1.value, [0, 1], [1, -1]) },
     ],
   }));
-  const sparkOsc = useOsc(2000, 400);
+  const sparkOsc = useOsc(1600, 300);
   const sparkStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(sparkOsc.value, [0, 1], [0.2, 0.8]),
+    opacity: interpolate(sparkOsc.value, [0, 1], [0.1, 0.9]),
   }));
   return (
     <View style={{ width: s, height: s }}>
@@ -144,9 +160,15 @@ function JungHwa({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function MuTo({ s }: { s: number }) {
   const C = '#8B6E4E';
-  const osc = useOsc(3000);
+  const osc = useOsc(2800);
+  const osc2 = useOsc(4000, 800);
   const dotStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(osc.value, [0, 1], [0.3, 0.7]),
+    opacity: interpolate(osc.value, [0, 1], [0.2, 0.85]),
+    transform: [{ scale: interpolate(osc.value, [0, 1], [0.8, 1.2]) }],
+  }));
+  const hazeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(osc2.value, [0, 1], [0.05, 0.2]),
+    transform: [{ translateY: interpolate(osc2.value, [0, 1], [0, -2]) }],
   }));
   return (
     <View style={{ width: s, height: s }}>
@@ -154,6 +176,12 @@ function MuTo({ s }: { s: number }) {
         <Path d="M6 42 L24 10 L42 42 Z" fill="none" stroke={C} strokeWidth={1.8} strokeLinejoin="round" />
         <Path d="M14 42 L28 22 L42 42" fill="none" stroke={C} strokeWidth={1} opacity={0.3} strokeLinejoin="round" />
       </Svg>
+      {/* Animated haze around peak */}
+      <Animated.View style={[{ position: 'absolute', width: s, height: s }, hazeStyle]}>
+        <Svg width={s} height={s} viewBox="0 0 48 48">
+          <Ellipse cx={24} cy={14} rx={8} ry={3} fill={C} opacity={0.15} />
+        </Svg>
+      </Animated.View>
       <Animated.View style={[{ position: 'absolute', width: s, height: s }, dotStyle]}>
         <Svg width={s} height={s} viewBox="0 0 48 48">
           <Circle cx={24} cy={12} r={2.5} fill={C} />
@@ -168,13 +196,17 @@ function MuTo({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function GiTo({ s }: { s: number }) {
   const C = '#9A8460';
-  const cloudOsc = useOsc(5000);
-  const sproutOsc = useOsc(3000);
+  const cloudOsc = useOsc(4000);
+  const sproutOsc = useOsc(2500);
   const cloudStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(cloudOsc.value, [0, 1], [-3, 3]) }],
+    transform: [{ translateX: interpolate(cloudOsc.value, [0, 1], [-5, 5]) }],
+    opacity: interpolate(cloudOsc.value, [0, 0.5, 1], [0.7, 1, 0.7]),
   }));
   const sproutStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleY: interpolate(sproutOsc.value, [0, 1], [0.95, 1.05]) }],
+    transform: [
+      { scaleY: interpolate(sproutOsc.value, [0, 1], [0.92, 1.08]) },
+      { translateY: interpolate(sproutOsc.value, [0, 1], [1, -1]) },
+    ],
   }));
   return (
     <View style={{ width: s, height: s }}>
@@ -210,9 +242,10 @@ function GiTo({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function GyungGeum({ s }: { s: number }) {
   const C = '#6B7B8D';
-  const osc = useOsc(2000);
+  const osc = useOsc(1800);
   const sparkStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(osc.value, [0, 0.5, 1], [0.1, 0.6, 0.1]),
+    opacity: interpolate(osc.value, [0, 0.5, 1], [0.05, 0.8, 0.05]),
+    transform: [{ scale: interpolate(osc.value, [0, 0.5, 1], [0.9, 1.1, 0.9]) }],
   }));
   return (
     <View style={{ width: s, height: s }}>
@@ -238,11 +271,15 @@ function GyungGeum({ s }: { s: number }) {
 function ShinGeum({ s }: { s: number }) {
   const C = '#7B8B9D';
   const rot = useSharedValue(0);
+  const pulse = useOsc(2000);
   useEffect(() => {
-    rot.value = withRepeat(withTiming(360, { duration: 12000, easing: Easing.linear }), -1);
+    rot.value = withRepeat(withTiming(360, { duration: 9000, easing: Easing.linear }), -1);
   }, []);
   const rotStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rot.value}deg` }],
+    transform: [
+      { rotate: `${rot.value}deg` },
+      { scale: interpolate(pulse.value, [0, 1], [0.96, 1.04]) },
+    ],
   }));
   const r = 14;
   const pts = Array.from({ length: 8 }, (_, i) => {
@@ -272,13 +309,17 @@ function ShinGeum({ s }: { s: number }) {
 // ═══════════════════════════════════════
 function ImSu({ s }: { s: number }) {
   const C = '#3D6B8E';
-  const osc = useOsc(3000);
+  const osc = useOsc(2500);
   const waveStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(osc.value, [0, 1], [-4, 4]) }],
+    transform: [
+      { translateX: interpolate(osc.value, [0, 1], [-6, 6]) },
+      { translateY: interpolate(osc.value, [0, 1], [-1, 1]) },
+    ],
   }));
-  const dropOsc = useOsc(2000);
+  const dropOsc = useOsc(1800);
   const dropStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: interpolate(dropOsc.value, [0, 1], [-2, 2]) }],
+    transform: [{ translateY: interpolate(dropOsc.value, [0, 1], [-3, 3]) }],
+    opacity: interpolate(dropOsc.value, [0, 0.5, 1], [0.6, 1, 0.6]),
   }));
   return (
     <View style={{ width: s, height: s }}>
