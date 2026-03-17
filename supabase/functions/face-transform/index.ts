@@ -55,21 +55,25 @@ const ANALYSIS_SYSTEM = `당신은 동양 관상학(面相學) 40년 경력 최�
 
 ━━━ 위치 좌표 (position) 규칙 — 매우 중요 ━━━
 
-각 feature에 position:{x, y}를 반환. 사진 내 해당 부위의 **픽셀 기준 실제 위치**를 0.0~1.0 비율로 표시.
+각 feature에 position:{x, y}를 반환. 사진 내 해당 부위의 **실제 픽셀 위치**를 0.0~1.0 비율로 표시.
 - x: 0.0=이미지 왼쪽 끝, 1.0=이미지 오른쪽 끝
 - y: 0.0=이미지 위쪽 끝, 1.0=이미지 아래쪽 끝
 
-⚠️ 반드시 **사진 속 얼굴의 실제 픽셀 위치**를 정확히 계산하세요. 대충 중앙(0.5, 0.5) 근처로 때리지 마세요.
-- 일반적인 1:1 셀피에서 얼굴이 정중앙에 있다면:
-  · 이마(forehead): x≈0.50, y≈0.15~0.22
-  · 눈(eyes): 왼쪽 눈 x≈0.35~0.40, 오른쪽 눈 x≈0.60~0.65, y≈0.32~0.40 → 두 눈 중간점 반환
-  · 코(nose): x≈0.50, y≈0.45~0.52
-  · 입(mouth): x≈0.50, y≈0.55~0.62
-  · 턱(jawline): x≈0.50, y≈0.68~0.78
-  · 귀(ears): 왼쪽 귀 x≈0.12~0.22, y≈눈 높이와 비슷
-- 얼굴이 치우쳐 있으면 위 값을 그에 맞게 조정
-- 각 부위의 y좌표는 반드시 이마 < 눈 < 코 < 입 < 턱 순서여야 함
-- 귀의 x좌표는 반드시 코보다 왼쪽(작은 값)이어야 함
+⚠️ 반드시 **이 사진 속 얼굴을 직접 보고** 실제 위치를 정확히 측정하세요.
+대충 0.5 근처로 찍지 마세요. 사진마다 얼굴 위치가 다릅니다.
+
+각 부위의 정확한 타겟:
+  · 이마(forehead): 이마 중앙 (헤어라인과 눈썹 사이 정중앙)
+  · 눈(eyes): 두 눈 안쪽 끝 사이의 정확한 중간점 (미간)
+  · 코(nose): 코끝 (콧볼 아래 끝점)
+  · 입(mouth): 윗입술과 아랫입술의 정확한 중간점
+  · 턱(jawline): 턱 끝 가장 아래 중앙
+  · 귀(ears): 왼쪽 귀 중심 (귀가 안 보이면 얼굴 왼쪽 가장자리)
+
+검증 규칙:
+- y좌표 순서: 이마 < 눈 < 코 < 입 < 턱 (절대)
+- 귀 x좌표 < 코 x좌표 (귀는 코보다 왼쪽)
+- 각 부위 간 y 간격이 최소 0.04 이상 (겹치면 안 됨)
 
 ━━━ 톤 & 스타일 ━━━
 
@@ -340,39 +344,54 @@ hookLine 나쁜 예:
   }
 }
 
-// ─── 동양화 변환 — gpt-image-1 (90초 타임아웃) ───
+// ─── 동양화 변환 — gpt-image-1 (120초 타임아웃) ───
 const TRANSFORM_PROMPT =
-  'Convert this photo into a refined ink brush portrait — the style of a traditional East Asian master portrait painter (초상화가). ' +
+  'Create a premium fine-art ink brush portrait (수묵 초상화) of this person — in the style of a Korean/East Asian master portrait painter. ' +
+  'The result should be frame-worthy: something the person would proudly show friends and post on social media. ' +
   '\n\n' +
-  '## STYLE — PORTRAIT, NOT ILLUSTRATION ' +
-  '- This should look like a FINE ART portrait, not a cartoon or comic illustration. ' +
-  '- THICK, BOLD ink lines — heavier than typical illustration. Jawline and hair use very thick strokes. Eyes and eyebrows use medium-thick lines. Even fine details like lips and nose have visible ink weight. ' +
-  '- SKIN SHADING is important: apply soft gray ink wash (먹 번짐) to create REALISTIC facial dimension — ' +
-  '  shadows on the side of the nose, under the cheekbones, around eye sockets, under the lower lip, under the chin, and along the jaw. ' +
-  '  The face should have clear 3D depth from light and shadow, not be flat. ' +
-  '- EYES: detailed with clear iris, eyelid crease, and subtle shadow — they should feel alive and expressive. ' +
-  '- HAIR: bold black ink with visible brush stroke texture — thick, sweeping, confident strokes. ' +
+  '## ABSOLUTE RULES — NEVER BREAK THESE ' +
+  '- NEVER change the face size or proportions. The face MUST be the EXACT same size ratio as the original photo. Do NOT enlarge the face. ' +
+  '- NEVER shrink the eyes. Keep the EXACT same eye size, shape, and spacing relative to the face. Eyes are 관상의 핵심 — distorting them ruins everything. ' +
+  '- NEVER enlarge or reduce ANY facial feature. Nose width, mouth size, ear size, forehead height — ALL must match the original proportions exactly. ' +
+  '- The person MUST be immediately recognizable — 9 out of 10 friends would instantly say "that\'s you!" ' +
   '\n\n' +
-  '## BACKGROUND ' +
-  'Pure clean WHITE paper. No shading, no texture on background. ' +
+  '## INK LINE STYLE (먹선) ' +
+  '- Clean, confident, deliberate black ink lines. Every stroke is purposeful and beautiful — NOT sketchy. ' +
+  '- Natural line weight variation: THICK bold strokes for jawline outline and hair silhouette, MEDIUM for eyebrows and nose bridge, FINE for eyelids, lip contour, and nostrils. ' +
+  '- Lines should feel like a calligraphy master drew them — fluid, elegant, with natural thick-to-thin transitions. ' +
+  '- This is a PORTRAIT, not an illustration or cartoon. No hatching, no cross-hatching, no comic-style lines. ' +
   '\n\n' +
-  '## COLORS ' +
-  'Black ink, white paper, and a FULL RANGE of grays for skin shading. NO color. ' +
+  '## SHADING & DIMENSION ' +
+  '- Minimal but effective gray ink wash (담묵淡墨) for subtle 3D depth. ' +
+  '- Light wash shadows ONLY on: nose sides, under cheekbones, eye socket creases, under lower lip, jawline underside. ' +
+  '- The overall feel should be CLEAN and BRIGHT — mostly white skin with strategic shadow placement. ' +
+  '- Do NOT over-shade. Less is more. The beauty is in the clean lines, not heavy shading. ' +
   '\n\n' +
-  '## LIKENESS ' +
-  '8 out of 10 people must recognize this person. Preserve face shape, eye shape, nose, jawline, hairstyle exactly. ' +
+  '## EYES — MOST IMPORTANT FEATURE ' +
+  '- Eyes must be DETAILED and ALIVE: clear iris with light reflection, visible eyelid crease, natural lash suggestion. ' +
+  '- Keep the original eye size exactly. If the person has large eyes, draw large eyes. If small, draw small. ' +
+  '- A gentle, warm sparkle in the eyes — they should feel soulful and expressive. ' +
   '\n\n' +
-  '## EXPRESSION ' +
-  'A warm, friendly smile — naturally pleasant and inviting. Lips gently curved upward, eyes soft with a hint of warmth. The expression should make the viewer feel the person is kind and approachable. NO teeth showing, NO exaggerated grin — just a naturally beautiful smile. ' +
+  '## HAIR ' +
+  '- Bold black ink with visible brush stroke flow and texture. ' +
+  '- Confident, sweeping strokes that show natural hair direction. ' +
+  '- Hair should frame the face beautifully — it\'s part of the portrait\'s elegance. ' +
   '\n\n' +
-  '## FLATTERING — ATTRACTIVE BUT NATURAL ' +
-  '- Skin: smooth, clean, luminous — remove blemishes and dark circles. Healthy glow. ' +
-  '- Eyes: brighter with a gentle sparkle — slightly more defined and expressive. ' +
-  '- Face: subtly slimmer jawline, cleaner contours — like good lighting and angles. ' +
-  '- The person should look ATTRACTIVE and CHARMING — like a magazine portrait illustration. ' +
-  '- Think: "wow they look great" but still clearly the same person. 2-3 years younger. ' +
+  '## SKIN & BEAUTY ' +
+  '- Smooth, luminous skin — remove blemishes, acne, dark circles. Healthy glow. ' +
+  '- The person looks their absolute best — like perfect lighting on a perfect day. ' +
+  '- A warm, natural smile — lips gently curved, kind and approachable. NO teeth showing. ' +
+  '- NOT younger, NOT different proportions — just the best version of exactly who they are. ' +
   '\n\n' +
-  'COMPOSITION: Head and shoulders, face ~65% of frame. NO text, NO stamps, NO background objects.';
+  '## BACKGROUND & COMPOSITION ' +
+  '- Pure clean WHITE background. No texture, no stamps, no seal marks, no decorative elements. ' +
+  '- Head and shoulders, face approximately 60-65% of frame, centered. ' +
+  '- NO text, NO watermarks, NO background objects. Just the portrait on white. ' +
+  '\n\n' +
+  '## QUALITY STANDARD ' +
+  '- This should look like a premium art piece — something from a professional portrait studio. ' +
+  '- Black ink + white paper + full range of grays. Absolutely NO color. ' +
+  '- The person seeing this should think: "Wow, I look amazing — I need to share this right now."';
 
 async function transformToOrientalPainting(
   selfieBase64: string,
@@ -516,11 +535,31 @@ async function detectFeaturePositions(
           content: [
             {
               type: 'text',
-              text: 'This is a portrait drawing. Return the EXACT pixel positions of facial features as ratios (0.0 to 1.0) where 0,0 is top-left and 1,1 is bottom-right.\n\nReturn ONLY this JSON, nothing else:\n{"forehead":{"x":0.5,"y":0.15},"eyes":{"x":0.5,"y":0.35},"nose":{"x":0.5,"y":0.48},"mouth":{"x":0.5,"y":0.58},"jawline":{"x":0.5,"y":0.72},"ears":{"x":0.18,"y":0.36}}\n\nRules:\n- x,y must reflect the ACTUAL position in THIS specific image\n- forehead = center of forehead\n- eyes = midpoint between both eyes\n- nose = tip of nose\n- mouth = center of lips\n- jawline = center of chin\n- ears = left ear (or left side of face if ears not visible)\n- y values MUST be in order: forehead < eyes < nose < mouth < jawline\n- Be precise. Look at where each feature actually is in the image.',
+              text: `This is an ink brush portrait on white background. I need PRECISE facial feature positions for placing 관상 analysis dots.
+
+Return the exact center coordinates of each facial feature as ratios (0.0-1.0), where (0,0) is top-left corner and (1,1) is bottom-right corner of the image.
+
+CRITICAL: Do NOT guess generic center positions. Actually LOOK at this specific portrait and find where each feature is drawn.
+
+Return ONLY this JSON:
+{"forehead":{"x":...,"y":...},"eyes":{"x":...,"y":...},"nose":{"x":...,"y":...},"mouth":{"x":...,"y":...},"jawline":{"x":...,"y":...},"ears":{"x":...,"y":...}}
+
+Precise targeting:
+- forehead: center of the forehead area, between hairline and eyebrows
+- eyes: exact midpoint between the two eyes (between the inner corners)
+- nose: the tip/bottom of the nose
+- mouth: center point of the lips
+- jawline: bottom center of the chin
+- ears: center of the LEFT ear (or left edge of face if ear not visible)
+
+Validation:
+- y order MUST be: forehead < eyes < nose < mouth < jawline
+- ears x MUST be less than eyes x (ears are to the left)
+- All values 0.0-1.0`,
             },
             {
               type: 'image_url',
-              image_url: { url: `data:image/png;base64,${portraitBase64}`, detail: 'low' },
+              image_url: { url: `data:image/png;base64,${portraitBase64}`, detail: 'auto' },
             },
           ],
         },
