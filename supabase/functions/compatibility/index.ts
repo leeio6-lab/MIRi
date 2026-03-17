@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getUserFromRequest, createProcessingRecord, completeRecord, failRecord } from '../_shared/analysis-db.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 
@@ -48,6 +49,11 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // ─── 사용자 인증 정보 추출 ───
+  const userInfo = getUserFromRequest(req);
+  const isMember = userInfo != null && !userInfo.isAnonymous;
+  let analysisId: string | null = null;
+
   try {
     const { person1, person2, locale = 'ko', isPaid = false, pillarInfo1, pillarInfo2, name1, name2 } = await req.json();
     const lang = locale === 'ko' ? '한국어' : locale === 'ja' ? '日本語' : 'English';
@@ -63,6 +69,14 @@ serve(async (req) => {
     const yStemIdx = ((currentYear - 4) % 10 + 10) % 10;
     const yBranchIdx = ((currentYear - 4) % 12 + 12) % 12;
     const yearGanjiLabel = `${STEMS_KO[yStemIdx]}${BRANCHES_KO[yBranchIdx]}년(${STEMS_HANJA[yStemIdx]}${BRANCHES_HANJA[yBranchIdx]})`;
+
+    // ─── 회원: DB에 processing 레코드 생성 ───
+    if (isMember) {
+      analysisId = await createProcessingRecord(
+        userInfo!.userId, 'compatibility', isPaid,
+        { person1, person2, locale, name1, name2 },
+      );
+    }
 
     // 결정적 시드: 두 사람의 생년월일 조합
     const birthSeed = Math.abs(hashStr(
@@ -360,10 +374,18 @@ JSON 응답:
       if (tl.worstMonths) tl[`worstMonths${currentYear}`] = tl.worstMonths;
     }
 
-    return new Response(JSON.stringify(rawResult), {
+    // ─── 회원: 결과를 DB에 저장 ───
+    if (isMember && analysisId) {
+      await completeRecord(analysisId, rawResult);
+    }
+
+    return new Response(JSON.stringify({ ...rawResult, _analysisId: analysisId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    if (analysisId) {
+      await failRecord(analysisId, String(error));
+    }
     return new Response(
       JSON.stringify({ error: 'Compatibility analysis failed', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

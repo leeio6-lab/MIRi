@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SajuResult, FaceResult, DailyFortune, CompatibilityResult } from '../types/api';
-import type { AnalysisRecord } from '../services/api';
+import type { AnalysisRecord, AnalysisStatus } from '../services/api';
 import { api } from '../services/api';
+import { useAuthStore } from './authStore';
 
 interface FortuneState {
   sajuResult: SajuResult | null;
@@ -78,6 +79,8 @@ interface FortuneState {
   // History
   loadHistory: (type?: string) => Promise<void>;
   saveAndRecord: (type: 'saju' | 'face' | 'compatibility', isPaid: boolean, result: unknown, inputData?: unknown) => Promise<void>;
+  /** 앱 재시작 시 서버에서 처리 완료된 분석 복원 */
+  recoverPendingAnalyses: () => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   clearAllData: () => void;
 }
@@ -190,28 +193,21 @@ export const useFortuneStore = create<FortuneState>()(
       setFaceNoFace: (reason) => set({ faceNoFace: reason }),
 
       loadHistory: async (type?) => {
+        const { isGuest } = useAuthStore.getState();
+
+        // 비회원: 기록 없음
+        if (isGuest) {
+          set({ history: [] });
+          return;
+        }
+
         const records = await api.fetchHistory(type);
 
-        // 7일 이내 로컬 기록만 유지
-        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        const local = get().history.filter(
-          (r) => new Date(r.createdAt).getTime() >= sevenDaysAgo,
-        );
-
         if (records.length > 0) {
-          // Supabase 기록이 있으면 (로그인 상태) → Supabase 기준으로 교체
-          // 로컬 전용 기록(아직 sync 안 된 최근 것)만 병합
-          const remoteIds = new Set(records.map((r) => r.id));
-          const localUnsyncedRecent = local.filter(
-            (r) => !remoteIds.has(r.id) && !r.id.match(/^[0-9a-f-]{36}$/),
-          );
-          const merged = [...localUnsyncedRecent, ...records]
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 50);
-          set({ history: merged });
+          // 서버 기록 기준 (서버에서 관리됨)
+          set({ history: records.slice(0, 50) });
         } else {
-          // 게스트 또는 네트워크 에러 → 로컬 기록(7일 필터 적용)만 유지
-          set({ history: local });
+          set({ history: [] });
         }
       },
 
@@ -245,8 +241,16 @@ export const useFortuneStore = create<FortuneState>()(
         });
       },
 
-      saveAndRecord: async (type, isPaid, result, inputData?) => {
-        // face 결과는 히스토리에 경량 버전만 저장 (base64 제거)
+      saveAndRecord: async (type, isPaid, result, _inputData?) => {
+        const { isGuest } = useAuthStore.getState();
+
+        // 비회원: 저장하지 않음 (현재 세션에서만 보여줌)
+        if (isGuest) return;
+
+        // 서버 Edge Function이 이미 DB에 저장함 (_analysisId 포함)
+        // 로컬 히스토리에 경량 레코드만 추가 (즉시 UI 반영용)
+        const analysisId = (result as any)?._analysisId;
+
         const lightResult = type === 'face' ? {
           overallScore: (result as any).overallScore,
           shareTitle: (result as any).shareTitle,
@@ -256,36 +260,68 @@ export const useFortuneStore = create<FortuneState>()(
         } : result;
 
         const record: AnalysisRecord = {
-          id: Date.now().toString(),
+          id: analysisId || Date.now().toString(),
           type,
           isPaid,
           result: lightResult as any,
           createdAt: new Date().toISOString(),
+          status: 'completed',
         };
         const prev = get().history;
         set({ history: [record, ...prev].slice(0, 30) });
 
-        // Supabase에 저장 (실패해도 로컬은 이미 저장됨)
+        // 서버에 이미 저장됨 → 별도 saveAnalysis 호출 불필요
+      },
+
+      recoverPendingAnalyses: async () => {
+        const { isGuest } = useAuthStore.getState();
+        if (isGuest) return;
+
         try {
-          await api.saveAnalysis(type, isPaid, result, inputData);
+          // 서버에서 처리 완료되었지만 클라이언트가 수신 못한 분석 조회
+          const pending = await api.fetchPendingAnalyses();
+          if (pending.length === 0) return;
+
+          // 3초 간격으로 폴링 (최대 5회)
+          for (const record of pending) {
+            let attempts = 0;
+            while (attempts < 5) {
+              attempts++;
+              const updated = await api.fetchAnalysisById(record.id);
+              if (updated && updated.status === 'completed' && updated.result) {
+                // 완료된 분석을 히스토리에 추가
+                const prev = get().history;
+                if (!prev.find(r => r.id === updated.id)) {
+                  set({ history: [updated, ...prev].slice(0, 30) });
+                }
+                break;
+              }
+              if (updated && updated.status === 'failed') break;
+              // 아직 processing → 3초 대기 후 재시도
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+          }
         } catch (e) {
-          if (__DEV__) console.warn('[FortuneStore] saveAnalysis failed:', e);
+          if (__DEV__) console.warn('[FortuneStore] recoverPendingAnalyses error:', e);
         }
       },
     }),
     {
       name: 'miri-fortune',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
-        sajuResult: state.sajuResult,
-        faceResult: state.faceResult ? { ...state.faceResult, transformedImage: undefined } : null,
+      partialize: (state) => {
+        // 비회원: 분석 결과·히스토리 persist 안 함
+        const { isGuest } = useAuthStore.getState();
+
+        return {
+        sajuResult: isGuest ? null : state.sajuResult,
+        faceResult: isGuest ? null : (state.faceResult ? { ...state.faceResult, transformedImage: undefined } : null),
         transformedImageBase64: null, // persist 제외 (1MB+, 용량 초과 방지)
-        dailyFortune: state.dailyFortune,
-        compatibilityResult: state.compatibilityResult,
-        // 이미지 base64는 persist 제외 (용량 초과 방지, Supabase에서 복원)
-        history: state.history.slice(0, 15).map((r) => {
-          // face 결과에서 큰 필드 제거 (base64 이미지, 긴 텍스트)
+        dailyFortune: isGuest ? null : state.dailyFortune,
+        compatibilityResult: isGuest ? null : state.compatibilityResult,
+        // 히스토리는 서버에서 관리 — 로컬에는 최근 15개 경량 캐시만
+        history: isGuest ? [] : state.history.slice(0, 15).map((r) => {
           const result = r.type === 'face' && r.result ? {
             overallScore: (r.result as any).overallScore,
             shareTitle: (r.result as any).shareTitle,
@@ -313,11 +349,12 @@ export const useFortuneStore = create<FortuneState>()(
         quizResult: state.quizResult,
         rouletteDate: state.rouletteDate,
         rouletteResult: state.rouletteResult,
-      }),
+      };
+      },
       migrate: (persisted: any, version: number) => {
-        if (version < 2) {
-          // v1→v2: 캐시된 sajuResult/compatibilityResult 클리어 (mock 데이터 제거)
-          return { ...persisted, sajuResult: null, compatibilityResult: null };
+        if (version < 3) {
+          // v2→v3: 서버 기반 분석 관리 전환 — 로컬 캐시 클리어
+          return { ...persisted, sajuResult: null, compatibilityResult: null, history: [] };
         }
         return persisted;
       },

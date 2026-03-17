@@ -2,6 +2,7 @@
 // 병렬 실행: gpt-image-1 동양화 변환 + GPT-4o mini Vision 관상 분석
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getUserFromRequest, createProcessingRecord, completeRecord, failRecord } from '../_shared/analysis-db.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 
@@ -83,6 +84,11 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // ─── 사용자 인증 정보 추출 ───
+  const userInfo = getUserFromRequest(req);
+  const isMember = userInfo != null && !userInfo.isAnonymous;
+  let analysisId: string | null = null;
+
   // ─── API 키 검증 (최우선) ───
   if (!OPENAI_API_KEY) {
     console.error('[face-transform] OPENAI_API_KEY is not set!');
@@ -104,7 +110,7 @@ serve(async (req) => {
       );
     }
 
-    const { imageBase64, locale = 'ko' } = body;
+    const { imageBase64, locale = 'ko', isPaid = false } = body;
 
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       console.error('[face-transform] No imageBase64 in request. Keys:', Object.keys(body));
@@ -116,6 +122,14 @@ serve(async (req) => {
 
     const imgSizeKB = ((imageBase64 as string).length / 1024).toFixed(0);
     console.log(`[face-transform] Received image: ${imgSizeKB}KB base64, locale=${locale}`);
+
+    // ─── 회원: DB에 processing 레코드 생성 ───
+    if (isMember) {
+      // input_data에 이미지 저장하지 않음 (용량 초과 방지)
+      analysisId = await createProcessingRecord(
+        userInfo!.userId, 'face', isPaid, { locale },
+      );
+    }
 
     const lang = locale === 'ko' ? '한국어' : locale === 'ja' ? '日本語' : 'English';
 
@@ -172,12 +186,22 @@ serve(async (req) => {
       }
     }
 
-    const responseBody = JSON.stringify({
+    const result = {
       analysis,
       analysisError,
       transformedImage,
       transformError,
-    });
+    };
+
+    // ─── 회원: 결과를 DB에 저장 (이미지 제외 — 용량 초과 방지) ───
+    if (isMember && analysisId && analysis) {
+      await completeRecord(analysisId, {
+        ...analysis,
+        // transformedImage는 JSONB에 저장하기엔 너무 큼 → 제외
+      });
+    }
+
+    const responseBody = JSON.stringify({ ...result, _analysisId: analysisId });
 
     const respSizeKB = (responseBody.length / 1024).toFixed(0);
     console.log(`[face-transform] Response size: ${respSizeKB}KB (image: ${transformedImage ? (transformedImage.length / 1024).toFixed(0) + 'KB' : 'null'})`);
@@ -187,6 +211,9 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('[face-transform] Unhandled error:', error);
+    if (analysisId) {
+      await failRecord(analysisId, String(error));
+    }
     return new Response(
       JSON.stringify({ error: 'Face analysis failed', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

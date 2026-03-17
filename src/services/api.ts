@@ -265,12 +265,15 @@ export function formatPillarInfo(
 
 // ─── Analysis History ───
 
+export type AnalysisStatus = 'processing' | 'completed' | 'failed';
+
 export interface AnalysisRecord {
   id: string;
   type: 'saju' | 'face' | 'compatibility';
   isPaid: boolean;
   result: SajuResult | FaceResult | CompatibilityResult;
   createdAt: string;
+  status?: AnalysisStatus;
   /** 관상 분석용: 관상화 이미지 base64 */
   imageBase64?: string | null;
 }
@@ -357,8 +360,9 @@ async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promi
 
     let query = supabase
       .from('analyses')
-      .select('id, type, is_paid, result, created_at')
+      .select('id, type, is_paid, result, created_at, status')
       .eq('user_id', userId)
+      .in('status', ['completed', 'processing']) // failed 제외
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -374,10 +378,70 @@ async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promi
       isPaid: row.is_paid,
       result: row.result,
       createdAt: row.created_at,
+      status: row.status ?? 'completed',
     }));
   } catch (e) {
     if (__DEV__) console.warn('[API] fetchHistory error:', e);
     return [];
+  }
+}
+
+/** 서버에서 처리 중인 분석 조회 (앱 재시작 시 사용) */
+async function fetchPendingAnalyses(): Promise<AnalysisRecord[]> {
+  try {
+    const userId = await getCachedUserId();
+    if (!userId) return [];
+
+    const { data, error } = await supabase
+      .from('analyses')
+      .select('id, type, is_paid, result, created_at, status')
+      .eq('user_id', userId)
+      .eq('status', 'processing')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      type: row.type,
+      isPaid: row.is_paid,
+      result: row.result,
+      createdAt: row.created_at,
+      status: row.status,
+    }));
+  } catch (e) {
+    if (__DEV__) console.warn('[API] fetchPendingAnalyses error:', e);
+    return [];
+  }
+}
+
+/** 특정 분석 레코드 조회 (폴링용) */
+async function fetchAnalysisById(id: string): Promise<AnalysisRecord | null> {
+  try {
+    const userId = await getCachedUserId();
+    if (!userId) return null;
+
+    const { data, error } = await supabase
+      .from('analyses')
+      .select('id, type, is_paid, result, created_at, status')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      type: data.type,
+      isPaid: data.is_paid,
+      result: data.result,
+      createdAt: data.created_at,
+      status: data.status ?? 'completed',
+    };
+  } catch (e) {
+    if (__DEV__) console.warn('[API] fetchAnalysisById error:', e);
+    return null;
   }
 }
 
@@ -454,6 +518,8 @@ export const api = {
 
   saveAnalysis,
   fetchHistory,
+  fetchPendingAnalyses,
+  fetchAnalysisById,
   fetchAnalysisImage,
   deleteAnalysis,
 };

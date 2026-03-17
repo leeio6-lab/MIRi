@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getUserFromRequest, createProcessingRecord, completeRecord, failRecord } from '../_shared/analysis-db.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 
@@ -298,8 +299,22 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // ─── 사용자 인증 정보 추출 ───
+  const userInfo = getUserFromRequest(req);
+  const isMember = userInfo != null && !userInfo.isAnonymous;
+  let analysisId: string | null = null;
+
   try {
     const { input, locale = 'ko', isPaid = false, pillarInfo, _forceModel, userName } = await req.json();
+
+    // ─── 회원: DB에 processing 레코드 생성 (앱 종료 시에도 결과 보존) ───
+    if (isMember) {
+      analysisId = await createProcessingRecord(
+        userInfo!.userId, 'saju', isPaid,
+        { input, locale, pillarInfo, userName },
+      );
+    }
+
     const lang = locale === 'ko' ? '한국어로. overview 항목은 반말(~다/~중/~패턴/~유형)로 짧게. 상세 분석(personality.core, career.analysis 등)은 ~요 체로 친근하게.' : locale === 'ja' ? '日本語(丁寧語)で' : 'In English, warm but direct';
     const currentYear = new Date().getFullYear();
 
@@ -877,10 +892,19 @@ JSON만 출력.`;
       }
     }
 
-    return new Response(JSON.stringify(result), {
+    // ─── 회원: 결과를 DB에 저장 (status → completed) ───
+    if (isMember && analysisId) {
+      await completeRecord(analysisId, result);
+    }
+
+    return new Response(JSON.stringify({ ...result, _analysisId: analysisId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    // 실패 시 DB 레코드도 failed로 업데이트
+    if (analysisId) {
+      await failRecord(analysisId, String(error));
+    }
     return new Response(
       JSON.stringify({ error: 'Analysis failed', details: String(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
