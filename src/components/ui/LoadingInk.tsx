@@ -41,7 +41,6 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
   const [stepIndex, setStepIndex] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const [reachedFinal, setReachedFinal] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
 
   // Step messages — 마지막 단계는 estimatedSeconds 이후에 도달하도록 여유 있게 배분
   const stepCount = resolvedSteps.length;
@@ -63,12 +62,6 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
     return () => clearInterval(interval);
   }, [message, stepCount, stepInterval]);
 
-  // 경과 시간 카운터 (1초 간격)
-  useEffect(() => {
-    const timer = setInterval(() => setElapsed((p) => p + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // Shuffle tips once on mount, then rotate every 5s
   const [shuffledTips] = useState(() => {
     if (!tips?.length) return [];
@@ -88,22 +81,13 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
     return () => clearInterval(interval);
   }, [shuffledTips.length]);
 
-  // Progress bar — 점점 느려지는 구간별 진행. 절대 멈추지 않음.
-  // 0→50%: 빠름 (예상시간의 25%)
-  // 50→75%: 보통 (예상시간의 30%)
-  // 75→88%: 느림 (예상시간의 30%)
-  // 88→94%: 매우 느림 (예상시간의 15%)
-  // 94→99%: 초느림 (추가 60초 동안 계속 기어감 — API가 아무리 오래 걸려도 움직임)
+  // Progress bar — 60초 타이머 기준. 1분 동안 0→95%, 이후 초느림으로 계속 진행.
   useEffect(() => {
-    const t = estimatedSeconds * 1000;
     progressValue.value = withSequence(
-      withTiming(50, { duration: t * 0.25, easing: Easing.out(Easing.quad) }),
-      withTiming(75, { duration: t * 0.30, easing: Easing.linear }),
-      withTiming(88, { duration: t * 0.30, easing: Easing.in(Easing.quad) }),
-      withTiming(94, { duration: t * 0.15, easing: Easing.in(Easing.quad) }),
+      withTiming(95, { duration: 60000, easing: Easing.linear }),
       withTiming(99, { duration: 60000, easing: Easing.in(Easing.cubic) }),
     );
-  }, [estimatedSeconds]);
+  }, []);
 
   // Ink animations
   useEffect(() => {
@@ -157,11 +141,8 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
       </View>
 
       {/* Progress bar */}
-      <View style={styles.progressRow}>
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, progressStyle]} />
-        </View>
-        <Text style={styles.elapsedText}>{elapsed}초</Text>
+      <View style={styles.progressTrack}>
+        <Animated.View style={[styles.progressFill, progressStyle]} />
       </View>
 
       {/* Tip */}
@@ -215,25 +196,13 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
   },
   // Progress bar
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-    gap: 10,
-  },
   progressTrack: {
-    width: SCREEN_W - 140,
+    width: SCREEN_W - 100,
     height: 3,
     backgroundColor: 'rgba(0,0,0,0.06)',
     borderRadius: 2,
+    marginTop: 20,
     overflow: 'hidden',
-  },
-  elapsedText: {
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    fontWeight: '500',
-    minWidth: 30,
-    letterSpacing: 0.3,
   },
   progressFill: {
     height: '100%',
