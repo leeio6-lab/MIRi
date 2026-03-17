@@ -29,15 +29,30 @@ function checkRateLimit(functionName: string): void {
   rateLimitMap.set(functionName, recent);
 }
 
+// ─── Auth Token Cache (avoid async getSession on every API call) ───
+let _cachedToken: string | null = null;
+let _tokenFetchedAt = 0;
+const TOKEN_CACHE_MS = 60_000; // 1분 캐시
+
+async function getAuthToken(): Promise<string> {
+  const now = Date.now();
+  if (_cachedToken && now - _tokenFetchedAt < TOKEN_CACHE_MS) return _cachedToken;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      _cachedToken = session.access_token;
+      _tokenFetchedAt = now;
+      return _cachedToken;
+    }
+  } catch { /* use anon key */ }
+  return supabaseAnonKey;
+}
+
 const invokeFunction = async <T>(functionName: string, body: Record<string, unknown>): Promise<T> => {
   checkRateLimit(functionName);
 
-  // supabase.functions.invoke 대신 fetch 직접 사용 (401 문제 우회)
-  let token = supabaseAnonKey;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) token = session.access_token;
-  } catch { /* use anon key */ }
+  // 캐시된 토큰 사용 (매번 async getSession 호출 방지)
+  const token = await getAuthToken();
 
   if (__DEV__) console.log(`[API] ${functionName}: url=${supabaseUrl ? 'OK' : 'EMPTY'}, key=${supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'EMPTY'}, token=${token ? token.substring(0, 20) + '...' : 'EMPTY'}`);
 
@@ -263,6 +278,24 @@ export interface AnalysisRecord {
 /** input_data에 저장할 최대 base64 크기 (500KB) — 초과 시 저장 생략 */
 const MAX_INPUT_DATA_SIZE = 500_000;
 
+// ─── User ID Cache (saveAnalysis, fetchHistory 등에서 반복 getSession 방지) ───
+let _cachedUserId: string | null = null;
+let _userIdFetchedAt = 0;
+
+async function getCachedUserId(): Promise<string | null> {
+  const now = Date.now();
+  if (_cachedUserId && now - _userIdFetchedAt < TOKEN_CACHE_MS) return _cachedUserId;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      _cachedUserId = session.user.id;
+      _userIdFetchedAt = now;
+      return _cachedUserId;
+    }
+  } catch { /* guest */ }
+  return null;
+}
+
 async function saveAnalysis(
   type: 'saju' | 'face' | 'compatibility',
   isPaid: boolean,
@@ -270,14 +303,14 @@ async function saveAnalysis(
   inputData?: unknown,
 ): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return; // 게스트는 로컬만 저장
+    const userId = await getCachedUserId();
+    if (!userId) return; // 게스트는 로컬만 저장
 
     // Check if user row exists before inserting analysis
     const { data: userRow } = await supabase
       .from('users')
       .select('id')
-      .eq('id', session.user.id)
+      .eq('id', userId)
       .maybeSingle();
 
     if (!userRow) {
@@ -298,7 +331,7 @@ async function saveAnalysis(
     }
 
     const { error } = await supabase.from('analyses').insert({
-      user_id: session.user.id,
+      user_id: userId,
       type,
       is_paid: isPaid,
       input_data: safeInputData,
@@ -315,8 +348,8 @@ async function saveAnalysis(
 
 async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promise<AnalysisRecord[]> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return [];
+    const userId = await getCachedUserId();
+    if (!userId) return [];
 
     // 7일 이내 기록만 조회
     const since = new Date();
@@ -325,7 +358,7 @@ async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promi
     let query = supabase
       .from('analyses')
       .select('id, type, is_paid, result, created_at')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -350,14 +383,14 @@ async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promi
 
 async function fetchAnalysisImage(id: string): Promise<string | null> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return null;
+    const userId = await getCachedUserId();
+    if (!userId) return null;
 
     const { data, error } = await supabase
       .from('analyses')
       .select('input_data')
       .eq('id', id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (error || !data) return null;
@@ -370,14 +403,14 @@ async function fetchAnalysisImage(id: string): Promise<string | null> {
 
 async function deleteAnalysis(id: string): Promise<void> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
+    const userId = await getCachedUserId();
+    if (!userId) return;
 
     await supabase
       .from('analyses')
       .delete()
       .eq('id', id)
-      .eq('user_id', session.user.id);
+      .eq('user_id', userId);
   } catch (e) {
     if (__DEV__) console.warn('[API] deleteAnalysis error:', e);
   }

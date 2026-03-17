@@ -33,6 +33,7 @@ export default function AnalysisModeScreen() {
               activeOpacity={0.7}
             >
               <GlassCard
+               
                 gold={isActive}
                 style={isActive ? { ...styles.modeCard, ...styles.modeCardActive } : styles.modeCard}
               >

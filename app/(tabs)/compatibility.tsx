@@ -742,11 +742,11 @@ const st = StyleSheet.create({
     flex: 1,
   },
   myCompactLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.4)',
-    letterSpacing: 2,
-    marginBottom: 4,
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   myCompactInfo: {
     fontSize: 13,
@@ -774,7 +774,7 @@ const st = StyleSheet.create({
   },
   // Partner card (기존 유지)
   personCard: { marginBottom: theme.spacing.sm },
-  personLabel: { fontSize: 14, color: theme.colors.text.secondary, marginBottom: theme.spacing.sm },
+  personLabel: { fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, letterSpacing: 1, marginBottom: theme.spacing.sm },
   coupleConnector: { alignItems: 'center', marginVertical: 0 },
   connLine: { width: 0, height: 0 },
   nameInput: { backgroundColor: theme.colors.bg.primary, borderRadius: theme.radius.sm, paddingVertical: 14, paddingHorizontal: 14, color: theme.colors.text.primary, fontSize: 15, borderWidth: 1, borderColor: theme.colors.border.subtle, marginBottom: 12, letterSpacing: 0.5 },

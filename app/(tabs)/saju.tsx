@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { calculateFourPillars } from '../../src/utils/saju-calc';
 import { api, formatPillarInfo } from '../../src/services/api';
 import { CONFIG } from '../../src/constants/config';
 import { PremiumButton } from '../../src/components/ui/PremiumButton';
+import { startSajuAnalysis } from '../../src/services/backgroundAnalysis';
 
 export default function SajuScreen() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function SajuScreen() {
     { icon: t('saju.features.lucky_icon'), title: t('saju.features.lucky_title'), desc: t('saju.features.lucky_desc') },
   ], [t]);
   const { user } = useAuthStore();
-  const { setSajuResult, isLoading, setLoading, error, setError, saveAndRecord } = useFortuneStore();
+  const { setSajuResult, isLoading, setLoading, error, setError, saveAndRecord, sajuPending, sajuReady, setSajuReady } = useFortuneStore();
   const [showPaywall, setShowPaywall] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -46,12 +47,19 @@ export default function SajuScreen() {
     [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour]
   );
 
-  const handlePaidAnalyze = useCallback(async () => {
+  // 백그라운드 분석 완료 시 자동 이동
+  useEffect(() => {
+    if (sajuReady) {
+      setSajuReady(false);
+      router.push('/saju/result');
+    }
+  }, [sajuReady]);
+
+  const handlePaidAnalyze = useCallback(() => {
     console.log('[Saju] handlePaidAnalyze called, user:', user ? `${user.birthYear}.${user.birthMonth}.${user.birthDay}` : 'NULL');
     setLocalError(null);
 
     if (!user) {
-      // Web: use window.location for reliable navigation
       if (Platform.OS === 'web') {
         window.location.href = '/birth-input';
       } else {
@@ -60,45 +68,11 @@ export default function SajuScreen() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const pillarInfo = pillars
-        ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender)
-        : undefined;
-
-      console.log('[Saju] Calling API...');
-      const result = await api.analyzeSaju(
-        {
-          year: user.birthYear,
-          month: user.birthMonth,
-          day: user.birthDay,
-          hour: user.birthHour,
-          isLunar: user.isLunar,
-          gender: user.gender,
-        },
-        user.locale,
-        true,
-        'integrated',
-        pillarInfo,
-        user.name,
-      );
-      console.log('[Saju] API success, navigating to result');
-      setSajuResult(result);
-      saveAndRecord('saju', true, result);
-      router.push('/saju/result');
-    } catch (err) {
-      console.error('[Saju] Analysis error:', err);
-      const msg = err instanceof Error ? err.message : 'Analysis failed';
-      setError(msg);
-      setLocalError(msg);
-    } finally {
-      setLoading(false);
-    }
+    console.log('[Saju] Starting background analysis...');
+    startSajuAnalysis({ user, pillars });
   }, [user, pillars]);
 
-  if (isLoading) {
+  if (sajuPending || sajuReady) {
     return <LoadingInk steps={t('loading.sajuSteps', { returnObjects: true }) as string[]} tips={t('loading.sajuTips', { returnObjects: true }) as string[]} finalMessage={t('loading.sajuFinal')} estimatedSeconds={30} />;
   }
 

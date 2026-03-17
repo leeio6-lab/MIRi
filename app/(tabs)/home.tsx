@@ -293,7 +293,7 @@ function ElementDetailCard({ pillars }: { pillars: any }) {
   const weakest = sorted[sorted.length - 1][0];
 
   return (
-    <GlassCard style={ohStyles.card}>
+    <GlassCard cornersOnly style={ohStyles.card}>
       <ElementChart balance={balance} noCard />
       <TouchableOpacity
         onPress={() => setExpanded(!expanded)}
@@ -608,7 +608,7 @@ export default function HomeScreen() {
       {/* ── 일간 + 주 오행 ── */}
       {pillars && (
         <Animated.View entering={FadeInDown.delay(150).duration(500)}>
-          <GlassCard gold style={styles.identityCard}>
+          <GlassCard cornersOnly gold style={styles.identityCard}>
             <View style={styles.identityRow}>
               <View style={styles.dayMasterSide}>
                 <Text style={styles.dayMasterChar}>{pillars.dayMaster}</Text>
@@ -664,10 +664,10 @@ export default function HomeScreen() {
 
       <View style={styles.sectionDivider} />
 
-      {/* ── 이번 주 운세 (Weekly Line Chart) ── */}
+      {/* ── 이번 주 운세 (Weekly Line Chart + Extras) ── */}
       {weeklyData && (
         <Animated.View entering={FadeInDown.delay(500).duration(500)}>
-          <GlassCard style={styles.weeklyCard}>
+          <GlassCard cornersOnly style={styles.weeklyCard}>
             <View style={styles.weeklyHeader}>
               <View>
                 <Text style={styles.weeklyLabel}>WEEKLY</Text>
@@ -683,6 +683,70 @@ export default function HomeScreen() {
               )}
             </View>
             <WeeklyLineChart weeklyData={weeklyData} t={t} />
+
+            {/* ── 오늘의 한마디 ── */}
+            {dailyFortune?.headline && (
+              <View style={styles.wkQuoteBox}>
+                <Text style={styles.wkQuoteMark}>"</Text>
+                <Text style={styles.wkQuoteText}>{dailyFortune.headline}</Text>
+              </View>
+            )}
+
+            {/* ── 오늘의 럭키 아이템 + 액션팁 ── */}
+            {(dailyFortune?.luckyItem || dailyFortune?.luckyColor || dailyFortune?.actionTip) && (
+              <View style={styles.wkChipsRow}>
+                {dailyFortune.luckyColor && (
+                  <View style={styles.wkChip}>
+                    <Text style={styles.wkChipIcon}>彩</Text>
+                    <Text style={styles.wkChipText}>{dailyFortune.luckyColor}</Text>
+                  </View>
+                )}
+                {dailyFortune.luckyItem && (
+                  <View style={styles.wkChip}>
+                    <Text style={styles.wkChipIcon}>運</Text>
+                    <Text style={styles.wkChipText}>{dailyFortune.luckyItem}</Text>
+                  </View>
+                )}
+                {dailyFortune.luckyNumber != null && (
+                  <View style={styles.wkChip}>
+                    <Text style={styles.wkChipIcon}>數</Text>
+                    <Text style={styles.wkChipText}>{dailyFortune.luckyNumber}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* ── 오늘 할 일 ── */}
+            {dailyFortune?.actionTip && (
+              <View style={styles.wkActionRow}>
+                <Text style={styles.wkActionLabel}>TODAY</Text>
+                <Text style={styles.wkActionText}>{dailyFortune.actionTip}</Text>
+              </View>
+            )}
+
+            {/* ── 주의 ── */}
+            {dailyFortune?.warning && (
+              <View style={styles.wkWarnRow}>
+                <Text style={styles.wkWarnLabel}>!</Text>
+                <Text style={styles.wkWarnText}>{dailyFortune.warning}</Text>
+              </View>
+            )}
+
+            {/* ── 주간 평균 점수 ── */}
+            {(() => {
+              const avg = Math.round(weeklyData.days.reduce((s, d) => s + d.score, 0) / 7);
+              const todayScore = weeklyData.days.find(d => d.dayOfWeek === weeklyData.today)?.score ?? avg;
+              const diff = todayScore - avg;
+              return (
+                <View style={styles.wkAvgRow}>
+                  <Text style={styles.wkAvgLabel}>이번 주 평균</Text>
+                  <Text style={styles.wkAvgScore}>{avg}점</Text>
+                  <Text style={[styles.wkAvgDiff, { color: diff >= 0 ? theme.colors.success : theme.colors.error }]}>
+                    오늘 {diff >= 0 ? '+' : ''}{diff}
+                  </Text>
+                </View>
+              );
+            })()}
           </GlassCard>
         </Animated.View>
       )}
@@ -1654,6 +1718,127 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.gold.primary,
     marginTop: 1,
+  },
+
+  /* ── Weekly extras ── */
+  wkQuoteBox: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(212,168,75,0.05)',
+    borderRadius: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: theme.colors.gold.primary + '40',
+  },
+  wkQuoteMark: {
+    fontSize: 20,
+    fontWeight: '200',
+    color: theme.colors.gold.primary,
+    opacity: 0.5,
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  wkQuoteText: {
+    fontSize: 13,
+    color: theme.colors.text.primary,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  wkChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
+  },
+  wkChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(212,168,75,0.06)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  wkChipIcon: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: theme.colors.gold.primary,
+    opacity: 0.7,
+  },
+  wkChipText: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+  },
+  wkActionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(45,122,95,0.05)',
+    borderRadius: 10,
+  },
+  wkActionLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: theme.colors.success,
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  wkActionText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    lineHeight: 18,
+  },
+  wkWarnRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(184,84,80,0.04)',
+    borderRadius: 10,
+  },
+  wkWarnLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: theme.colors.error,
+    opacity: 0.6,
+    marginTop: 1,
+  },
+  wkWarnText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    lineHeight: 18,
+  },
+  wkAvgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(212,168,75,0.08)',
+  },
+  wkAvgLabel: {
+    fontSize: 11,
+    color: theme.colors.text.tertiary,
+    fontWeight: '500',
+  },
+  wkAvgScore: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  wkAvgDiff: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   /* ── 사주 해석 힌트 ── */

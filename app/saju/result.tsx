@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent, Share } from 'react-native';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -179,9 +179,12 @@ export default function SajuResultScreen() {
   const storeResult = useFortuneStore().sajuResult;
   const r: any = storeResult;
   const { user } = useAuthStore();
-  const pillars = user
-    ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar)
-    : (__DEV__ ? calculateFourPillars(1995, 8, 15, 10) : null);
+  const pillars = useMemo(
+    () => user
+      ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar)
+      : (__DEV__ ? calculateFourPillars(1995, 8, 15, 10) : null),
+    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour, user?.isLunar]
+  );
 
   if (!r) return (
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>
@@ -216,7 +219,7 @@ export default function SajuResultScreen() {
   const monthly: any[] | undefined = r.monthly2026 ?? r[`monthly${new Date().getFullYear()}`];
 
   let d = 0;
-  const nd = () => { d += 50; return d; };
+  const nd = () => { d += 30; return d; };
 
   return (
     <>
@@ -228,9 +231,11 @@ export default function SajuResultScreen() {
       onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const y = e.nativeEvent.contentOffset.y;
         scrollY.value = y;
-        setShowFloatingBtn(r.overview && y > overviewY.current + 300);
+        // 스크롤마다 state 업데이트 대신 값이 변경될 때만 업데이트
+        const shouldShow = !!(r.overview && y > overviewY.current + 300);
+        if (shouldShow !== showFloatingBtn) setShowFloatingBtn(shouldShow);
       }}
-      scrollEventThrottle={16}
+      scrollEventThrottle={32}
     >
       <View style={$.navBar}>
         <BackButton />

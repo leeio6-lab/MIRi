@@ -15,6 +15,13 @@ interface FortuneState {
   isLoading: boolean;
   error: string | null;
 
+  // Background analysis state
+  sajuPending: boolean;
+  sajuReady: boolean;
+  facePending: boolean;
+  faceReady: boolean;
+  faceNoFace: string | null;
+
   // Retention: yesterday score
   yesterdayScore: number;
   lastScoreDate: string | null;
@@ -57,6 +64,11 @@ interface FortuneState {
   setCompatibilityResult: (result: CompatibilityResult | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setSajuPending: (v: boolean) => void;
+  setSajuReady: (v: boolean) => void;
+  setFacePending: (v: boolean) => void;
+  setFaceReady: (v: boolean) => void;
+  setFaceNoFace: (reason: string | null) => void;
   clearStreakCelebration: () => void;
 
   // Streak & daily check
@@ -81,6 +93,12 @@ export const useFortuneStore = create<FortuneState>()(
       history: [],
       isLoading: false,
       error: null,
+
+      sajuPending: false,
+      sajuReady: false,
+      facePending: false,
+      faceReady: false,
+      faceNoFace: null,
 
       yesterdayScore: 0,
       lastScoreDate: null,
@@ -165,6 +183,11 @@ export const useFortuneStore = create<FortuneState>()(
       setCompatibilityResult: (result) => set({ compatibilityResult: result }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
+      setSajuPending: (v) => set({ sajuPending: v }),
+      setSajuReady: (v) => set({ sajuReady: v }),
+      setFacePending: (v) => set({ facePending: v }),
+      setFaceReady: (v) => set({ faceReady: v }),
+      setFaceNoFace: (reason) => set({ faceNoFace: reason }),
 
       loadHistory: async (type?) => {
         const records = await api.fetchHistory(type);
@@ -214,6 +237,11 @@ export const useFortuneStore = create<FortuneState>()(
           streakCount: 0,
           lastVisitDate: null,
           streakCelebration: null,
+          sajuPending: false,
+          sajuReady: false,
+          facePending: false,
+          faceReady: false,
+          faceNoFace: null,
         });
       },
 

@@ -20,6 +20,8 @@ export function MIRiLogo({ width = 130 }: { width?: number }) {
       <Path d="M82 28 L96 44" stroke={C} strokeWidth={1.5} strokeLinecap="round" />
       {/* i */}
       <Path d="M110 20 L110 44" stroke={C} strokeWidth={2.2} strokeLinecap="round" />
+      {/* i dot — 다이아몬드 + 인장 원 */}
+      <Circle cx={110} cy={9} r={8.5} stroke={G} strokeWidth={1.2} fill="none" opacity={0.5} />
       <Path d="M110 4 L113.5 9 L110 14 L106.5 9 Z" fill={G} opacity={0.85} />
     </Svg>
   );

@@ -26,9 +26,9 @@ export const CONSUMABLE_IDS = [
 
 // API 원가: 사주 ~$0.01, 관상 ~$0.09 (GPT-4o-mini + gpt-image-1), 궁합 ~$0.01
 export const PRODUCT_PRICES: Record<string, { ko: string; ja: string; en: string }> = {
-  [PRODUCT_IDS.SAJU_DETAIL]: { ko: '₩200', ja: '¥30', en: '$0.49' },
-  [PRODUCT_IDS.FACE_ANALYSIS]: { ko: '₩500', ja: '¥80', en: '$0.49' },
-  [PRODUCT_IDS.COMPATIBILITY]: { ko: '₩200', ja: '¥30', en: '$0.49' },
+  [PRODUCT_IDS.SAJU_DETAIL]: { ko: '₩770', ja: '¥100', en: '$0.99' },
+  [PRODUCT_IDS.FACE_ANALYSIS]: { ko: '₩770', ja: '¥100', en: '$0.99' },
+  [PRODUCT_IDS.COMPATIBILITY]: { ko: '₩770', ja: '¥100', en: '$0.99' },
 };
 
 export function getProductId(type: 'saju' | 'face' | 'compatibility'): string {

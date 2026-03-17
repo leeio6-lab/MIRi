@@ -7,7 +7,6 @@ import Animated, {
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { useFortuneStore } from '../../stores/fortuneStore';
 import { TAROT_POOL } from '../../constants/tarotData';
 import { BriefcaseIcon, CoinIcon, HeartIcon } from '../icons/AnalysisIcons';
 import { PremiumButton } from '../ui/PremiumButton';
@@ -49,7 +48,6 @@ const STEM_WEAK: Record<number, Element> = {
 };
 
 function getToday() { return new Date().toISOString().slice(0, 10); }
-function getPeriod(): 'morning' | 'afternoon' { return new Date().getHours() >= 12 ? 'afternoon' : 'morning'; }
 
 /* ─── Mandala ─── */
 function Mandala() {
@@ -322,7 +320,7 @@ function AnalysisContent({ element, variant, dayStemIdx, lang }: {
       <Text style={$.ctaQ}>
         {lang === 'ko' ? '내 사주에 맞는 정확한 분석은?' : lang === 'ja' ? '私の四柱に合った正確な分析は？' : 'Want analysis tailored to your birth chart?'}
       </Text>
-      <PremiumButton title={lang === 'ko' ? '내 사주 상세 분석' : lang === 'ja' ? '四柱詳細分析' : 'Detailed Saju Analysis'} price="₩500" onPress={() => router.push('/(tabs)/saju' as any)} variant="shimmer" style={{ marginTop: 12 }} />
+      <PremiumButton title={lang === 'ko' ? '내 사주 상세 분석' : lang === 'ja' ? '四柱詳細分析' : 'Detailed Saju Analysis'} price="₩770" onPress={() => router.push('/(tabs)/saju' as any)} variant="shimmer" style={{ marginTop: 12 }} />
     </View>
   );
 }
@@ -436,16 +434,6 @@ type Phase = 'pick' | 'selected' | 'fading' | 'centering' | 'flipping' | 'landed
 export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number; onCardSelect?: () => void }) {
   const { i18n } = useTranslation();
   const lang = (i18n.language || 'ko') as 'ko' | 'en' | 'ja';
-  const store = useFortuneStore();
-
-  const period = getPeriod();
-  const today = getToday();
-  const isAfternoon = period === 'afternoon';
-
-  const savedDate = isAfternoon ? store.tarotAfternoonDate : store.tarotMorningDate;
-  const savedElement = isAfternoon ? store.tarotAfternoonElement : store.tarotMorningElement;
-  const savedVariant = isAfternoon ? store.tarotAfternoonVariant : store.tarotMorningVariant;
-  const alreadyPicked = savedDate === today && !!savedElement;
 
   const [resetKey, setResetKey] = useState(0);
   const shuffled = useMemo(() => {
@@ -459,9 +447,7 @@ export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number;
 
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('pick');
-  const [result, setResult] = useState<{ element: string; variant: number } | null>(
-    alreadyPicked ? { element: savedElement!, variant: savedVariant ?? 0 } : null
-  );
+  const [result, setResult] = useState<{ element: string; variant: number } | null>(null);
   const [expanded, setExpanded] = useState(false);
 
   const pendingResult = React.useRef<{ element: string; variant: number } | null>(null);
@@ -485,55 +471,18 @@ export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number;
     setTimeout(() => setPhase('flipping'), 800);
     setTimeout(() => setPhase('landed'), 1300);
     setTimeout(() => {
-      if (pendingResult.current) {
-        store.setTarotResult(period, pendingResult.current.element, pendingResult.current.variant);
-        pendingResult.current = null;
-      }
+      pendingResult.current = null;
       setPhase('analysis');
     }, 1600);
-  }, [phase, shuffled, period, store, onCardSelect]);
+  }, [phase, shuffled, onCardSelect]);
 
   const handleReset = useCallback(() => {
-    if (isAfternoon) {
-      useFortuneStore.setState({ tarotAfternoonDate: null, tarotAfternoonElement: null, tarotAfternoonVariant: null });
-    } else {
-      useFortuneStore.setState({ tarotMorningDate: null, tarotMorningElement: null, tarotMorningVariant: null });
-    }
     setSelectedIdx(null);
     setPhase('pick');
     setResult(null);
     setExpanded(false);
     setResetKey(k => k + 1);
-  }, [isAfternoon]);
-
-  const rTheme = result ? EINFO[result.element] : null;
-  const selectedData = result ? TAROT_POOL[result.element]?.[result.variant] : null;
-
-  // ═══ 재방문 ═══
-  if (alreadyPicked && phase === 'pick' && result && selectedData && rTheme) {
-    const afternoonNotPicked = !isAfternoon && store.tarotAfternoonDate !== today;
-    return (
-      <View style={$.wrap}>
-        <TouchableOpacity style={$.summaryBar} onPress={() => setExpanded(!expanded)} activeOpacity={0.85}>
-          <View style={$.miniCard}>
-            <Text style={[$.miniHanja, { color: rTheme.primary }]}>{rTheme.hanja}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={$.summaryTitle}>
-              {lang === 'ko' ? `오늘의 ${rTheme.hanja} 기운` : lang === 'ja' ? `今日の${rTheme.hanja}の気` : `Today's ${rTheme.hanja} Energy`}
-            </Text>
-            <Text style={$.summaryKeyword}>{selectedData.keyword[lang] || selectedData.keyword.ko}</Text>
-          </View>
-          <Text style={$.expandIcon}>{expanded ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
-        {expanded && <AnalysisContent element={result.element} variant={result.variant} dayStemIdx={dayStemIdx} lang={lang} />}
-        {afternoonNotPicked && (
-          <Text style={$.afternoonHint}>{lang === 'ko' ? '오후의 오행이 기다리고 있어요 ✦' : lang === 'ja' ? '午後の五行が待っています ✦' : 'Your afternoon element awaits ✦'}</Text>
-        )}
-        {__DEV__ && <TouchableOpacity onPress={handleReset} style={$.devBtn}><Text style={$.devText}>다시 뽑기 (DEV)</Text></TouchableOpacity>}
-      </View>
-    );
-  }
+  }, []);
 
   // Compute variant data for selected card
   const variantData = result ? TAROT_POOL[result.element]?.[result.variant] : null;
@@ -579,11 +528,13 @@ export function ElementTarot({ dayStemIdx, onCardSelect }: { dayStemIdx: number;
       )}
 
       {/* Analysis */}
-      {phase === 'analysis' && result && selectedData && (
+      {phase === 'analysis' && result && variantData && (
         <AnalysisContent element={result.element} variant={result.variant} dayStemIdx={dayStemIdx} lang={lang} />
       )}
-      {__DEV__ && phase === 'analysis' && (
-        <TouchableOpacity onPress={handleReset} style={$.devBtn}><Text style={$.devText}>다시 뽑기 (DEV)</Text></TouchableOpacity>
+      {phase === 'analysis' && (
+        <TouchableOpacity onPress={handleReset} style={$.redrawBtn} activeOpacity={0.7}>
+          <Text style={$.redrawText}>{lang === 'ko' ? '다시 뽑기' : lang === 'ja' ? 'もう一度引く' : 'Draw again'}</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -682,6 +633,8 @@ const $ = StyleSheet.create({
   ctaNote: { fontSize: 12, color: '#AAA', textAlign: 'center' },
   ctaQ: { fontSize: 13, color: '#666', textAlign: 'center', fontWeight: '600', marginTop: 4 },
 
+  redrawBtn: { marginTop: 14, alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(212,168,75,0.25)' },
+  redrawText: { fontSize: 12, color: '#999', fontWeight: '500', letterSpacing: 0.5 },
   devBtn: { marginTop: 8, alignItems: 'center', padding: 6 },
   devText: { fontSize: 11, color: '#E85D4A', fontWeight: '600' },
 });

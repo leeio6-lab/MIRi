@@ -20,7 +20,9 @@ import { PaywallModal } from '../../src/components/ui/PaywallModal';
 import { FaceOverlay } from '../../src/components/face/FaceOverlay';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { usePurchaseStore } from '../../src/stores/purchaseStore';
-import { useFace } from '../../src/hooks/useFace';
+import { useAuthStore } from '../../src/stores/authStore';
+import { useUserStore } from '../../src/stores/userStore';
+import { startFaceAnalysis } from '../../src/services/backgroundAnalysis';
 import { detectFaceLocal } from '../../src/utils/face-detect';
 
 const { width } = Dimensions.get('window');
@@ -139,12 +141,17 @@ function FeatureExpandCard({
 
 export default function FaceScreen() {
   const { t } = useTranslation();
-  const { faceResult, transformedImageBase64, analyze, isLoading, error, clearError, noFaceDetected, noFaceReason, clearNoFace, transformError } = useFace();
-  const { setFaceResult, setTransformedImage, saveAndRecord } = useFortuneStore();
-  const { hasFaceTicket, useFaceTicket } = usePurchaseStore();
+  const {
+    faceResult, transformedImageBase64, error,
+    setFaceResult, setTransformedImage, setError,
+    facePending, faceReady, setFaceReady, faceNoFace, setFaceNoFace,
+  } = useFortuneStore();
+  const { hasFaceTicket } = usePurchaseStore();
+  const { analysisMode } = useUserStore();
+  const { user } = useAuthStore();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [analyzed, setAnalyzed] = useState(false);
+  const analyzed = faceReady && faceResult !== null;
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const [photoStatus, setPhotoStatus] = useState<'none' | 'ok' | 'noface'>('none');
   const scrollRef = useRef<ScrollView>(null);
@@ -167,9 +174,9 @@ export default function FaceScreen() {
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
       setImageUri(uri);
-      clearNoFace();
-      clearError();
-      setAnalyzed(false);
+      setFaceNoFace(null);
+      setError(null);
+      setFaceReady(false);
       setFaceResult(null);
       setTransformedImage(null);
 
@@ -187,25 +194,24 @@ export default function FaceScreen() {
   const startAnalysis = async () => {
     if (!imageUri) return;
 
-    // 1단계: 클라이언트 사이드 얼굴 검증 (무료, 즉시)
-    const faceCheck = await detectFaceLocal(imageUri);
-    if (!faceCheck.hasFace && faceCheck.confidence !== 'skip') {
-      Alert.alert(
-        t('face.noFaceTitle') || '얼굴을 찾을 수 없어요',
-        t('face.noFaceLocal') || '사람 얼굴이 포함된 정면 사진을 선택해주세요.',
-      );
-      return;
+    // pickImage에서 이미 검증된 경우 스킵, 아닌 경우만 재검증
+    if (photoStatus !== 'ok') {
+      const faceCheck = await detectFaceLocal(imageUri);
+      if (!faceCheck.hasFace && faceCheck.confidence !== 'skip') {
+        Alert.alert(
+          t('face.noFaceTitle') || '얼굴을 찾을 수 없어요',
+          t('face.noFaceLocal') || '사람 얼굴이 포함된 정면 사진을 선택해주세요.',
+        );
+        return;
+      }
     }
 
-    // 2단계: 서버 API 호출
-    const faceRes = await analyze(imageUri);
-    if (faceRes) {
-      useFaceTicket();
-      setAnalyzed(true);
-      // 관상화 이미지도 함께 저장 (기록에서 다시 볼 수 있도록)
-      const img = useFortuneStore.getState().transformedImageBase64;
-      saveAndRecord('face', true, faceRes, img ? { imageBase64: img } : undefined);
-    }
+    // 백그라운드 서버 API 호출 (화면 이탈해도 계속 실행)
+    startFaceAnalysis({
+      imageUri,
+      locale: user?.locale ?? 'ko',
+      analysisMode,
+    });
   };
 
   const handleAnalyzePress = async () => {
@@ -217,18 +223,19 @@ export default function FaceScreen() {
   };
 
   const handleRetry = () => {
-    clearError();
-    clearNoFace();
+    setError(null);
+    setFaceNoFace(null);
     startAnalysis();
   };
 
   const resetAnalysis = () => {
-    setAnalyzed(false);
+    setFaceReady(false);
     setImageUri(null);
     setFaceResult(null);
     setTransformedImage(null);
     setExpandedFeature(null);
     setPhotoStatus('none');
+    setFaceNoFace(null);
   };
 
   // Image URIs
@@ -237,7 +244,7 @@ export default function FaceScreen() {
     : null;
   const displayImageUri = transformedUri ?? imageUri;
 
-  if (isLoading) {
+  if (facePending) {
     return (
       <LoadingInk
         steps={t('loading.faceSteps', { returnObjects: true }) as string[]}
@@ -495,7 +502,7 @@ export default function FaceScreen() {
       </Animated.View>
 
       {/* ── 사진 선택 버튼 ── */}
-      {!error && !noFaceDetected && !imageUri && (
+      {!error && !faceNoFace && !imageUri && (
         <Animated.View entering={FadeInDown.delay(300).duration(400)}>
           <View style={cs.actionRow}>
             <TouchableOpacity style={cs.actionBtn} onPress={() => pickImage(true)} activeOpacity={0.7}>
@@ -512,7 +519,7 @@ export default function FaceScreen() {
       )}
 
       {/* ── 사진 선택 완료 + 진행 버튼 ── */}
-      {!error && !noFaceDetected && imageUri && (
+      {!error && !faceNoFace && imageUri && (
         <Animated.View entering={FadeInDown.delay(150).springify()}>
           <View style={[cs.readyCard, photoStatus === 'noface' && cs.readyCardWarn]}>
             <Text style={[cs.readyChar, photoStatus === 'ok' && cs.readyCharOk, photoStatus === 'noface' && cs.readyCharWarn]}>面</Text>
@@ -566,23 +573,23 @@ export default function FaceScreen() {
       )}
 
       {/* ── No Face / Error ── */}
-      {noFaceDetected && (
+      {faceNoFace && (
         <Animated.View entering={FadeInDown.springify()} style={cs.noFaceCard}>
           <Text style={cs.noFaceChar}>面</Text>
           <Text style={cs.noFaceTitle}>{t('face.noFaceTitle')}</Text>
-          <Text style={cs.noFaceDesc}>{noFaceReason}</Text>
+          <Text style={cs.noFaceDesc}>{faceNoFace}</Text>
           <View style={cs.noFaceTips}>
             <Text style={cs.noFaceTipItem}>{'\u2022'} 정면을 바라보는 얼굴 사진</Text>
             <Text style={cs.noFaceTipItem}>{'\u2022'} 밝은 조명, 가림 없는 사진</Text>
           </View>
           <Text style={cs.noFaceReassure}>{t('face.ticketPreserved')}</Text>
-          <TouchableOpacity style={cs.retryActionBtn} onPress={() => { clearNoFace(); setImageUri(null); }}>
+          <TouchableOpacity style={cs.retryActionBtn} onPress={() => { setFaceNoFace(null); setImageUri(null); }}>
             <Text style={cs.retryActionText}>다른 사진 선택</Text>
           </TouchableOpacity>
         </Animated.View>
       )}
 
-      {error && !noFaceDetected && (
+      {error && !faceNoFace && (
         <Animated.View entering={FadeInDown.springify()} style={cs.errorCard}>
           <Text style={cs.errorTitle}>{t('face.analysisFailed')}</Text>
           <Text style={cs.errorDesc}>{error}</Text>

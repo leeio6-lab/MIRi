@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -6,6 +6,7 @@ import Animated, {
   withRepeat,
   withTiming,
   withSequence,
+  withDelay,
   Easing,
   FadeIn,
   FadeOut,
@@ -36,9 +37,9 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
   const opacity3 = useSharedValue(0.4);
   const dotOpacity = useSharedValue(0.3);
 
+  const progressValue = useSharedValue(0);
   const [stepIndex, setStepIndex] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [reachedFinal, setReachedFinal] = useState(false);
 
   // Step messages — spaced across estimated time
@@ -79,15 +80,12 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
     return () => clearInterval(interval);
   }, [shuffledTips.length]);
 
-  // Progress bar — smooth fill over estimated time
+  // Progress bar — single Reanimated tween, no re-renders
   useEffect(() => {
-    const totalMs = estimatedSeconds * 1000;
-    const tick = 200;
-    const increment = (tick / totalMs) * 95; // max 95% until done
-    const interval = setInterval(() => {
-      setProgress((prev) => Math.min(prev + increment, 95));
-    }, tick);
-    return () => clearInterval(interval);
+    progressValue.value = withTiming(95, {
+      duration: estimatedSeconds * 1000,
+      easing: Easing.out(Easing.quad),
+    });
   }, [estimatedSeconds]);
 
   // Ink animations
@@ -122,6 +120,7 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
   const animStyle2 = useAnimatedStyle(() => ({ transform: [{ scale: scale2.value }], opacity: opacity2.value }));
   const animStyle3 = useAnimatedStyle(() => ({ transform: [{ scale: scale3.value }], opacity: opacity3.value }));
   const dotStyle = useAnimatedStyle(() => ({ opacity: dotOpacity.value }));
+  const progressStyle = useAnimatedStyle(() => ({ width: `${progressValue.value}%` }));
 
   const displayText = message ?? (reachedFinal ? resolvedFinal : resolvedSteps[stepIndex]);
   const currentTip = shuffledTips[tipIndex];
@@ -142,7 +141,7 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
 
       {/* Progress bar */}
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress}%` }]} />
+        <Animated.View style={[styles.progressFill, progressStyle]} />
       </View>
 
       {/* Tip */}
@@ -153,8 +152,8 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
         </Animated.View>
       )}
 
-      {/* Don't leave warning */}
-      <Text style={styles.warning}>화면을 벗어나지 마세요</Text>
+      {/* Background analysis note */}
+      <Text style={styles.warning}>다른 화면을 둘러봐도 분석이 계속됩니다</Text>
     </View>
   );
 }

@@ -100,6 +100,7 @@ export default function YearlyScreen() {
                 entering={FadeInDown.delay(i * 80).springify()}
               >
                 <GlassCard
+                 
                   style={isCurrentMonth ? { ...styles.monthCard, ...styles.monthCardActive } : styles.monthCard}
                   gold={isCurrentMonth}
                 >
