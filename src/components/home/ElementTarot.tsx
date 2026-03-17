@@ -203,50 +203,50 @@ function CardFront({ element, keyword, message, label, revealed }: {
   const msgAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.6, 0.8], [0, 0, 1]) }));
   const bottomAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.8, 1], [0, 0, 1]) }));
 
-  const ink = '#3A2E1E'; // 먹색 (고풍 통일)
+  const c = info.primary; // 오행별 테마색 유지
 
   return (
-    <View style={[$.cardFront, { backgroundColor: '#FFFDF8' }]}>
-      {/* Decorative frame — 먹색 */}
+    <View style={[$.cardFront]}>
+      {/* Decorative frame — 오행 테마색 */}
       <Animated.View style={[StyleSheet.absoluteFill, frameAnim]}>
-        <InnerFrame w={CARD_W} h={CARD_H} color={ink} />
+        <InnerFrame w={CARD_W} h={CARD_H} color={c} />
       </Animated.View>
 
       <View style={$.frontContent}>
-        {/* Illustration */}
+        {/* Illustration — 오행 테마색 */}
         <Animated.View style={[$.frontIllustWrap, illustAnim]}>
-          <View style={[$.illustGlow, { backgroundColor: ink + '08' }]} />
-          {Illust && <Illust width={40} height={40} color={ink + 'CC'} />}
+          <View style={[$.illustGlow, { backgroundColor: c + '0C' }]} />
+          {Illust && <Illust width={40} height={40} color={c} />}
         </Animated.View>
 
-        {/* Hanja — 먹색 큰 글씨 */}
+        {/* Hanja — 오행 테마색 */}
         <Animated.View style={[{ alignItems: 'center', marginTop: 3 }, hanjaAnim]}>
-          <Text style={[$.fHanja, { color: ink }]}>{info.hanja}</Text>
+          <Text style={[$.fHanja, { color: c }]}>{info.hanja}</Text>
         </Animated.View>
 
         {/* Divider */}
         <Animated.View style={[{ alignItems: 'center', marginTop: 1 }, dividerAnim]}>
-          <DiamondDivider w={50} color={ink + '60'} />
+          <DiamondDivider w={50} color={c + '80'} />
         </Animated.View>
 
         {/* Keyword */}
         <Animated.View style={[$.fKwRow, kwAnim]}>
-          <View style={[$.fKwLine, { backgroundColor: ink + '20' }]} />
-          <Text style={[$.fKw, { color: ink + 'CC' }]}>{keyword || ''}</Text>
-          <View style={[$.fKwLine, { backgroundColor: ink + '20' }]} />
+          <View style={[$.fKwLine, { backgroundColor: c + '30' }]} />
+          <Text style={[$.fKw, { color: c }]}>{keyword || ''}</Text>
+          <View style={[$.fKwLine, { backgroundColor: c + '30' }]} />
         </Animated.View>
 
         {/* Message */}
         <Animated.View style={[{ marginTop: 1, paddingHorizontal: 5 }, msgAnim]}>
-          <Text style={[$.fMsg, { color: ink + '99' }]}>{message || ''}</Text>
+          <Text style={[$.fMsg, { color: '#555' }]}>{message || ''}</Text>
         </Animated.View>
 
         {/* Bottom: label + icon */}
         <Animated.View style={[$.frontBottom, bottomAnim]}>
-          <View style={[$.fBottomLine, { backgroundColor: ink + '12' }]} />
+          <View style={[$.fBottomLine, { backgroundColor: c + '18' }]} />
           <View style={$.fBottomRow}>
-            {ElemIcon && <ElemIcon size={7} color={ink + '40'} />}
-            <Text style={[$.fBottomLabel, { color: ink + '55' }]}>{label || info.label.ko}</Text>
+            {ElemIcon && <ElemIcon size={7} color={c + '60'} />}
+            <Text style={[$.fBottomLabel, { color: c + '80' }]}>{label || info.label.ko}</Text>
           </View>
         </Animated.View>
       </View>
@@ -515,9 +515,9 @@ export function ElementTarot({ dayStemIdx, onCardSelect, onPurchase }: { dayStem
         ))}
       </View>
 
-      {/* Spacer for scaled card */}
+      {/* Spacer for scaled card — 확대된 카드가 아래 콘텐츠를 가리지 않도록 */}
       {phase !== 'pick' && phase !== 'selected' && phase !== 'fading' && (
-        <View style={{ height: 4 }} />
+        <View style={{ height: CARD_H * 1.2 }} />
       )}
 
       {/* Analysis */}
@@ -556,10 +556,12 @@ const $ = StyleSheet.create({
 
   // Card front (premium)
   cardFront: {
-    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden', borderWidth: 0.6, borderColor: 'rgba(58,46,30,0.10)',
+    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden',
+    backgroundColor: '#FFFDF8',
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
-      web: { boxShadow: '0 4px 18px rgba(58,46,30,0.18)' },
-      default: { shadowColor: '#3A2E1E', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 14, elevation: 8 },
+      web: { boxShadow: '0 4px 18px rgba(0,0,0,0.12)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 14, elevation: 8 },
     }),
   } as any,
   frontContent: {
