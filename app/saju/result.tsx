@@ -244,13 +244,25 @@ export default function SajuResultScreen() {
 
       {/* ═══ Overview (990사주 스타일) ═══ */}
       {r.overview && (() => {
-        // AI가 overview 항목을 빠뜨릴 경우 상세 섹션에서 fallback
+        // 상세 분석 내용에서 요약 파생 — AI overview와 상세 섹션 간 불일치 방지
+        const firstSentence = (s?: string, max = 40) => {
+          if (!s) return '';
+          // 첫 문장 또는 max자 추출
+          const end = s.search(/[.。!]\s|$/);
+          const sentence = end > 0 && end <= max + 10 ? s.slice(0, end + 1) : s.slice(0, max);
+          return sentence.length < s.length ? sentence + '…' : sentence;
+        };
         const ov = { ...r.overview };
-        if (!ov.love && love?.title) ov.love = love.title;
-        if (!ov.career && career?.title) ov.career = career.title;
-        if (!ov.wealth && wealth?.title) ov.wealth = wealth.title;
-        if (!ov.health && health?.title) ov.health = health.title;
-        if (!ov.personality && personality?.core) ov.personality = personality.core.slice(0, 40) + '...';
+        // 상세 섹션의 title/핵심 내용으로 보정 (AI overview가 있어도 상세와 매칭)
+        if (career?.title) ov.career = career.title;
+        if (wealth?.title) ov.wealth = wealth.title;
+        if (love?.title) ov.love = love.title;
+        if (health?.title) ov.health = health.title;
+        if (personality?.core && !ov.personality) ov.personality = firstSentence(personality.core);
+        if (relationship?.title && !ov.social) ov.social = relationship.title;
+        if (family?.parentFortune && !ov.family) ov.family = firstSentence(family.parentFortune);
+        if (yearly?.overview && !ov.yearly) ov.yearly = firstSentence(yearly.overview, 50);
+        if (daeun?.lifePeak && !ov.lifePeak) ov.lifePeak = firstSentence(daeun.lifePeak);
         return (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { overviewY.current = e.nativeEvent.layout.y; }}>
           <SajuOverviewCard
