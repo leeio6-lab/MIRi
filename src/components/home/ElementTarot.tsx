@@ -216,7 +216,7 @@ function CardFront({ element, keyword, message, label, revealed }: {
         {/* Illustration — 오행 테마색 */}
         <Animated.View style={[$.frontIllustWrap, illustAnim]}>
           <View style={[$.illustGlow, { backgroundColor: c + '0C' }]} />
-          {Illust && <Illust width={40} height={40} color={c} />}
+          {Illust && <Illust width={48} height={48} color={c} />}
         </Animated.View>
 
         {/* Hanja — 오행 테마색 */}
@@ -517,7 +517,7 @@ export function ElementTarot({ dayStemIdx, onCardSelect, onPurchase }: { dayStem
 
       {/* Spacer for scaled card — 확대된 카드가 아래 콘텐츠를 가리지 않도록 */}
       {phase !== 'pick' && phase !== 'selected' && phase !== 'fading' && (
-        <View style={{ height: CARD_H * 1.2 }} />
+        <View style={{ height: CARD_H * 0.55 }} />
       )}
 
       {/* Analysis */}
