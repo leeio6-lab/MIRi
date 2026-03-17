@@ -346,7 +346,7 @@ const TRANSFORM_PROMPT =
   '\n\n' +
   '## STYLE — PORTRAIT, NOT ILLUSTRATION ' +
   '- This should look like a FINE ART portrait, not a cartoon or comic illustration. ' +
-  '- INK LINES with VARYING thickness: thin delicate lines around eyes and lips, medium lines for nose and eyebrows, thicker bold strokes for jawline and hair. ' +
+  '- THICK, BOLD ink lines — heavier than typical illustration. Jawline and hair use very thick strokes. Eyes and eyebrows use medium-thick lines. Even fine details like lips and nose have visible ink weight. ' +
   '- SKIN SHADING is important: apply soft gray ink wash (먹 번짐) to create REALISTIC facial dimension — ' +
   '  shadows on the side of the nose, under the cheekbones, around eye sockets, under the lower lip, under the chin, and along the jaw. ' +
   '  The face should have clear 3D depth from light and shadow, not be flat. ' +
@@ -363,10 +363,14 @@ const TRANSFORM_PROMPT =
   '8 out of 10 people must recognize this person. Preserve face shape, eye shape, nose, jawline, hairstyle exactly. ' +
   '\n\n' +
   '## EXPRESSION ' +
-  'A faint, gentle smile — just barely there. Corners of the mouth slightly lifted, eyes soft and warm. Like a Mona Lisa smile. Absolutely NO teeth, NO wide grin. ' +
+  'A warm, friendly smile — naturally pleasant and inviting. Lips gently curved upward, eyes soft with a hint of warmth. The expression should make the viewer feel the person is kind and approachable. NO teeth showing, NO exaggerated grin — just a naturally beautiful smile. ' +
   '\n\n' +
-  '## FLATTERING ' +
-  'Clear smooth skin, bright lively eyes, defined jawline. Best version of themselves, 2-3 years younger. ' +
+  '## FLATTERING — ATTRACTIVE BUT NATURAL ' +
+  '- Skin: smooth, clean, luminous — remove blemishes and dark circles. Healthy glow. ' +
+  '- Eyes: brighter with a gentle sparkle — slightly more defined and expressive. ' +
+  '- Face: subtly slimmer jawline, cleaner contours — like good lighting and angles. ' +
+  '- The person should look ATTRACTIVE and CHARMING — like a magazine portrait illustration. ' +
+  '- Think: "wow they look great" but still clearly the same person. 2-3 years younger. ' +
   '\n\n' +
   'COMPOSITION: Head and shoulders, face ~65% of frame. NO text, NO stamps, NO background objects.';
 

@@ -146,6 +146,7 @@ export default function FaceScreen() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
+  const [photoStatus, setPhotoStatus] = useState<'none' | 'ok' | 'noface'>('none');
   const scrollRef = useRef<ScrollView>(null);
 
   const portraitSize = Math.min(width - 32, 420);
@@ -164,12 +165,21 @@ export default function FaceScreen() {
       ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 })
       : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setImageUri(uri);
       clearNoFace();
       clearError();
       setAnalyzed(false);
       setFaceResult(null);
       setTransformedImage(null);
+
+      // 즉시 얼굴 사전 검증 → 상태 피드백
+      const faceCheck = await detectFaceLocal(uri);
+      if (!faceCheck.hasFace && faceCheck.confidence !== 'skip') {
+        setPhotoStatus('noface');
+      } else {
+        setPhotoStatus('ok');
+      }
     }
   };
 
@@ -218,6 +228,7 @@ export default function FaceScreen() {
     setFaceResult(null);
     setTransformedImage(null);
     setExpandedFeature(null);
+    setPhotoStatus('none');
   };
 
   // Image URIs
@@ -503,25 +514,53 @@ export default function FaceScreen() {
       {/* ── 사진 선택 완료 + 진행 버튼 ── */}
       {!error && !noFaceDetected && imageUri && (
         <Animated.View entering={FadeInDown.delay(150).springify()}>
-          <View style={cs.readyCard}>
-            <Text style={cs.readyChar}>面</Text>
-            <Text style={cs.readyTitle}>사진이 준비되었습니다</Text>
-            <Text style={cs.readyDesc}>아래 버튼을 눌러 관상 분석을 시작하세요</Text>
-            <TouchableOpacity style={cs.changePhotoBtn} onPress={() => setImageUri(null)} activeOpacity={0.7}>
+          <View style={[cs.readyCard, photoStatus === 'noface' && cs.readyCardWarn]}>
+            <Text style={[cs.readyChar, photoStatus === 'ok' && cs.readyCharOk, photoStatus === 'noface' && cs.readyCharWarn]}>面</Text>
+            {photoStatus === 'ok' && (
+              <>
+                <View style={cs.statusRow}>
+                  <Text style={cs.statusCheckIcon}>{'\u2713'}</Text>
+                  <Text style={cs.statusOkText}>사진이 첨부되었습니다</Text>
+                </View>
+                <Text style={cs.readyDesc}>아래 버튼을 눌러 관상 분석을 시작하세요</Text>
+              </>
+            )}
+            {photoStatus === 'noface' && (
+              <>
+                <View style={cs.statusRow}>
+                  <Text style={cs.statusWarnIcon}>!</Text>
+                  <Text style={cs.statusWarnText}>얼굴이 감지되지 않았습니다</Text>
+                </View>
+                <Text style={cs.readyDescWarn}>
+                  {'정면을 바라보는 얼굴이 잘 보이는 사진을\n다시 선택해주세요'}
+                </Text>
+              </>
+            )}
+            {photoStatus === 'none' && (
+              <>
+                <Text style={cs.readyTitle}>사진이 준비되었습니다</Text>
+                <Text style={cs.readyDesc}>아래 버튼을 눌러 관상 분석을 시작하세요</Text>
+              </>
+            )}
+            <TouchableOpacity style={cs.changePhotoBtn} onPress={() => { setImageUri(null); setPhotoStatus('none'); }} activeOpacity={0.7}>
               <Text style={cs.changePhotoText}>다른 사진 선택</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={cs.analyzeBtn} onPress={handleAnalyzePress} activeOpacity={0.8}>
-            <Text style={cs.analyzeBtnText}>
-              {hasFaceTicket() ? t('face.startAnalysis') : '관상 분석하기'}
-            </Text>
-            {!hasFaceTicket() && (
-              <Text style={cs.analyzeBtnPrice}>{t('paywall.facePrice')}</Text>
-            )}
-          </TouchableOpacity>
+          {photoStatus !== 'noface' && (
+            <TouchableOpacity style={cs.analyzeBtn} onPress={handleAnalyzePress} activeOpacity={0.8}>
+              <Text style={cs.analyzeBtnText}>
+                {hasFaceTicket() ? t('face.startAnalysis') : '관상 분석하기'}
+              </Text>
+              {!hasFaceTicket() && (
+                <Text style={cs.analyzeBtnPrice}>{t('paywall.facePrice')}</Text>
+              )}
+            </TouchableOpacity>
+          )}
           <Text style={cs.statusHint}>
-            {hasFaceTicket() ? t('face.ticketHint') : '분석권 구매 후 관상을 풀어드려요'}
+            {photoStatus === 'noface'
+              ? '얼굴이 잘 보이는 다른 사진을 선택해주세요'
+              : hasFaceTicket() ? t('face.ticketHint') : '분석권 구매 후 관상을 풀어드려요'}
           </Text>
         </Animated.View>
       )}
@@ -1151,12 +1190,56 @@ const cs = StyleSheet.create({
     marginBottom: 8,
     ...theme.shadow.card,
   },
+  readyCardWarn: {
+    borderColor: 'rgba(220, 60, 60, 0.20)',
+  },
   readyChar: {
     fontSize: 36,
     fontWeight: '200',
     color: theme.colors.text.tertiary,
     letterSpacing: 2,
     marginBottom: 12,
+  },
+  readyCharOk: {
+    color: '#2E7D32',
+  },
+  readyCharWarn: {
+    color: '#C62828',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  statusCheckIcon: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2E7D32',
+  },
+  statusOkText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2E7D32',
+    letterSpacing: 0.5,
+  },
+  statusWarnIcon: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#C62828',
+    width: 20,
+    height: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(198, 40, 40, 0.10)',
+    overflow: 'hidden',
+  },
+  statusWarnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#C62828',
+    letterSpacing: 0.5,
   },
   readyTitle: {
     fontSize: 16,
@@ -1170,6 +1253,14 @@ const cs = StyleSheet.create({
     color: theme.colors.text.secondary,
     letterSpacing: 0.3,
     lineHeight: 22,
+  },
+  readyDescWarn: {
+    fontSize: 13,
+    color: '#C62828',
+    letterSpacing: 0.3,
+    lineHeight: 22,
+    textAlign: 'center',
+    opacity: 0.8,
   },
   changePhotoBtn: {
     marginTop: 14,
