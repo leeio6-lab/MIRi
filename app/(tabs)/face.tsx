@@ -268,6 +268,29 @@ export default function FaceScreen() {
     }
   };
 
+  const handleDownloadPainting = async () => {
+    if (!transformedImageBase64) return;
+
+    if (Platform.OS === 'web') {
+      const link = document.createElement('a');
+      link.href = `data:image/png;base64,${transformedImageBase64}`;
+      link.download = `MIRi_portrait_${Date.now()}.png`;
+      link.click();
+    } else {
+      try {
+        const FS = require('expo-file-system');
+        const Share = require('expo-sharing');
+        const fileUri = `${FS.cacheDirectory}MIRi_portrait_${Date.now()}.png`;
+        await FS.writeAsStringAsync(fileUri, transformedImageBase64, {
+          encoding: FS.EncodingType.Base64,
+        });
+        await Share.shareAsync(fileUri, { mimeType: 'image/png' });
+      } catch (e) {
+        console.warn('[Face] Download failed:', e);
+      }
+    }
+  };
+
   if (analyzed && faceResult) {
     return (
       <ScrollView
@@ -449,6 +472,12 @@ export default function FaceScreen() {
         </Animated.View>
 
         {/* ─── 7. BOTTOM ─── */}
+        {transformedImageBase64 && (
+          <TouchableOpacity style={rs.downloadBtn} onPress={handleDownloadPainting} activeOpacity={0.8}>
+            <Text style={rs.downloadIcon}>畵</Text>
+            <Text style={rs.downloadText}>관상화 저장하기</Text>
+          </TouchableOpacity>
+        )}
         <View style={rs.bottomActions}>
           <TouchableOpacity style={rs.bottomShareBtn} onPress={handleShare} activeOpacity={0.8}>
             <Text style={rs.bottomShareText}>{t('common.share')}</Text>
@@ -1021,10 +1050,32 @@ const rs = StyleSheet.create({
   },
 
   // ── 7. Bottom Actions ──
+  downloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#1A1A1A',
+    borderRadius: theme.radius.md,
+    paddingVertical: 16,
+    marginTop: 24,
+  },
+  downloadIcon: {
+    fontSize: 18,
+    fontWeight: '200',
+    color: theme.colors.gold.primary,
+    letterSpacing: 2,
+  },
+  downloadText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
   bottomActions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 24,
+    marginTop: 10,
     marginBottom: theme.spacing.md,
   },
   bottomShareBtn: {
