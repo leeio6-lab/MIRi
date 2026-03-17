@@ -203,51 +203,50 @@ function CardFront({ element, keyword, message, label, revealed }: {
   const msgAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.6, 0.8], [0, 0, 1]) }));
   const bottomAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.8, 1], [0, 0, 1]) }));
 
-  return (
-    <View style={[$.cardFront, { backgroundColor: info.bg }]}>
-      {/* Subtle element-tinted top gradient */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: info.primary + '06' }]} />
+  const ink = '#3A2E1E'; // 먹색 (고풍 통일)
 
-      {/* Decorative frame */}
+  return (
+    <View style={[$.cardFront, { backgroundColor: '#FFFDF8' }]}>
+      {/* Decorative frame — 먹색 */}
       <Animated.View style={[StyleSheet.absoluteFill, frameAnim]}>
-        <InnerFrame w={CARD_W} h={CARD_H} color={info.primary} />
+        <InnerFrame w={CARD_W} h={CARD_H} color={ink} />
       </Animated.View>
 
       <View style={$.frontContent}>
-        {/* Illustration — slightly larger, with soft glow */}
+        {/* Illustration */}
         <Animated.View style={[$.frontIllustWrap, illustAnim]}>
-          <View style={[$.illustGlow, { backgroundColor: info.primary + '10' }]} />
-          {Illust && <Illust width={40} height={40} color={info.primary} />}
+          <View style={[$.illustGlow, { backgroundColor: ink + '08' }]} />
+          {Illust && <Illust width={40} height={40} color={ink + 'CC'} />}
         </Animated.View>
 
-        {/* Hanja — prominent */}
+        {/* Hanja — 먹색 큰 글씨 */}
         <Animated.View style={[{ alignItems: 'center', marginTop: 3 }, hanjaAnim]}>
-          <Text style={[$.fHanja, { color: info.primary }]}>{info.hanja}</Text>
+          <Text style={[$.fHanja, { color: ink }]}>{info.hanja}</Text>
         </Animated.View>
 
         {/* Divider */}
         <Animated.View style={[{ alignItems: 'center', marginTop: 1 }, dividerAnim]}>
-          <DiamondDivider w={50} color={info.primary} />
+          <DiamondDivider w={50} color={ink + '60'} />
         </Animated.View>
 
-        {/* Keyword with side lines */}
+        {/* Keyword */}
         <Animated.View style={[$.fKwRow, kwAnim]}>
-          <View style={[$.fKwLine, { backgroundColor: info.primary + '30' }]} />
-          <Text style={[$.fKw, { color: info.primary }]}>{keyword || ''}</Text>
-          <View style={[$.fKwLine, { backgroundColor: info.primary + '30' }]} />
+          <View style={[$.fKwLine, { backgroundColor: ink + '20' }]} />
+          <Text style={[$.fKw, { color: ink + 'CC' }]}>{keyword || ''}</Text>
+          <View style={[$.fKwLine, { backgroundColor: ink + '20' }]} />
         </Animated.View>
 
         {/* Message */}
         <Animated.View style={[{ marginTop: 1, paddingHorizontal: 5 }, msgAnim]}>
-          <Text style={[$.fMsg, { color: info.primary + 'BB' }]}>{message || ''}</Text>
+          <Text style={[$.fMsg, { color: ink + '99' }]}>{message || ''}</Text>
         </Animated.View>
 
         {/* Bottom: label + icon */}
         <Animated.View style={[$.frontBottom, bottomAnim]}>
-          <View style={[$.fBottomLine, { backgroundColor: info.primary + '18' }]} />
+          <View style={[$.fBottomLine, { backgroundColor: ink + '12' }]} />
           <View style={$.fBottomRow}>
-            {ElemIcon && <ElemIcon size={7} color={info.primary + '60'} />}
-            <Text style={[$.fBottomLabel, { color: info.primary + '80' }]}>{label || info.label.ko}</Text>
+            {ElemIcon && <ElemIcon size={7} color={ink + '40'} />}
+            <Text style={[$.fBottomLabel, { color: ink + '55' }]}>{label || info.label.ko}</Text>
           </View>
         </Animated.View>
       </View>
@@ -557,10 +556,10 @@ const $ = StyleSheet.create({
 
   // Card front (premium)
   cardFront: {
-    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(212,168,75,0.12)',
+    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden', borderWidth: 0.6, borderColor: 'rgba(58,46,30,0.10)',
     ...Platform.select({
-      web: { boxShadow: '0 4px 16px rgba(212,168,75,0.3)' },
-      default: { shadowColor: '#D4A84B', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+      web: { boxShadow: '0 4px 18px rgba(58,46,30,0.18)' },
+      default: { shadowColor: '#3A2E1E', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 14, elevation: 8 },
     }),
   } as any,
   frontContent: {
