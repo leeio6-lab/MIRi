@@ -173,7 +173,7 @@ export function LoadingInk({ message, steps, tips, finalMessage, estimatedSecond
       )}
 
       {/* Background analysis note */}
-      <Text style={styles.warning}>다른 화면을 둘러봐도 분석이 계속됩니다</Text>
+      <Text style={styles.warning}>약 1분 소요 · 다른 화면을 둘러봐도 분석이 계속됩니다</Text>
     </View>
   );
 }
