@@ -16,8 +16,8 @@ import { MetalIllust } from '../icons/tarot/MetalIllust';
 import { EarthIllust } from '../icons/tarot/EarthIllust';
 import { MetalIcon, WoodIcon, WaterIcon, FireIcon, EarthIcon } from '../icons/ElementIcons';
 
-const CARD_W = 96;
-const CARD_H = 156;
+const CARD_W = 82;
+const CARD_H = 134;
 const G = '#D4A84B';
 const ELEMENTS = ['metal', 'wood', 'water', 'fire', 'earth'] as const;
 type Element = typeof ELEMENTS[number];
@@ -50,8 +50,8 @@ function getToday() { return new Date().toISOString().slice(0, 10); }
 
 /* ─── Mandala ─── */
 function Mandala() {
-  const s = 64, c = 32;
-  const r1 = 26, r2 = 18, r3 = 10;
+  const s = 54, c = 27;
+  const r1 = 22, r2 = 15, r3 = 8;
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`}>
       {/* Outer ring */}
@@ -192,58 +192,63 @@ function CardFront({ element, keyword, message, label, revealed }: {
   const frameAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.1, 0.2], [0, 0, 1]) }));
   const illustAnim = useAnimatedStyle(() => ({
     opacity: interpolate(prog.value, [0, 0.08, 0.35], [0, 0, 1]),
-    transform: [{ scale: interpolate(prog.value, [0, 0.08, 0.35, 1], [0.92, 0.92, 1, 1]) }],
+    transform: [{ scale: interpolate(prog.value, [0, 0.08, 0.35, 1], [0.88, 0.88, 1, 1]) }],
   }));
   const dividerAnim = useAnimatedStyle(() => ({
     opacity: interpolate(prog.value, [0, 0.3, 0.5], [0, 0, 1]),
     transform: [{ scaleX: interpolate(prog.value, [0, 0.3, 0.5, 1], [0, 0, 1, 1]) }],
   }));
-  const hanjaAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.45, 0.6], [0, 0, 1]) }));
+  const hanjaAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.4, 0.55], [0, 0, 1]) }));
   const kwAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.5, 0.65], [0, 0, 1]) }));
   const msgAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.6, 0.8], [0, 0, 1]) }));
   const bottomAnim = useAnimatedStyle(() => ({ opacity: interpolate(prog.value, [0, 0.8, 1], [0, 0, 1]) }));
 
   return (
-    <View style={[$.cardFront, { backgroundColor: '#FFFFFF' }]}>
+    <View style={[$.cardFront, { backgroundColor: info.bg }]}>
+      {/* Subtle element-tinted top gradient */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: info.primary + '06' }]} />
+
       {/* Decorative frame */}
       <Animated.View style={[StyleSheet.absoluteFill, frameAnim]}>
-        <InnerFrame w={CARD_W} h={CARD_H} color={G} />
+        <InnerFrame w={CARD_W} h={CARD_H} color={info.primary} />
       </Animated.View>
 
       <View style={$.frontContent}>
-        {/* Illustration */}
+        {/* Illustration — slightly larger, with soft glow */}
         <Animated.View style={[$.frontIllustWrap, illustAnim]}>
-          {Illust && <Illust width={48} height={48} color={info.primary} />}
+          <View style={[$.illustGlow, { backgroundColor: info.primary + '10' }]} />
+          {Illust && <Illust width={40} height={40} color={info.primary} />}
+        </Animated.View>
+
+        {/* Hanja — prominent */}
+        <Animated.View style={[{ alignItems: 'center', marginTop: 3 }, hanjaAnim]}>
+          <Text style={[$.fHanja, { color: info.primary }]}>{info.hanja}</Text>
         </Animated.View>
 
         {/* Divider */}
-        <Animated.View style={[{ alignItems: 'center', marginTop: 3 }, dividerAnim]}>
-          <DiamondDivider w={60} color={info.primary} />
-        </Animated.View>
-
-        {/* Hanja + label */}
-        <Animated.View style={[{ alignItems: 'center', marginTop: 2 }, hanjaAnim]}>
-          <Text style={[$.fHanja, { color: info.primary }]}>{info.hanja}</Text>
-          <Text style={[$.fLabel, { color: info.primary }]}>{label || info.label.ko}</Text>
+        <Animated.View style={[{ alignItems: 'center', marginTop: 1 }, dividerAnim]}>
+          <DiamondDivider w={50} color={info.primary} />
         </Animated.View>
 
         {/* Keyword with side lines */}
         <Animated.View style={[$.fKwRow, kwAnim]}>
-          <View style={[$.fKwLine, { backgroundColor: info.primary + '33' }]} />
-          <View style={[$.fKwDot, { backgroundColor: info.primary + '40' }]} />
+          <View style={[$.fKwLine, { backgroundColor: info.primary + '30' }]} />
           <Text style={[$.fKw, { color: info.primary }]}>{keyword || ''}</Text>
-          <View style={[$.fKwDot, { backgroundColor: info.primary + '40' }]} />
-          <View style={[$.fKwLine, { backgroundColor: info.primary + '33' }]} />
+          <View style={[$.fKwLine, { backgroundColor: info.primary + '30' }]} />
         </Animated.View>
 
         {/* Message */}
-        <Animated.View style={[{ marginTop: 2, paddingHorizontal: 6 }, msgAnim]}>
-          <Text style={$.fMsg}>{message || ''}</Text>
+        <Animated.View style={[{ marginTop: 1, paddingHorizontal: 5 }, msgAnim]}>
+          <Text style={[$.fMsg, { color: info.primary + 'BB' }]}>{message || ''}</Text>
         </Animated.View>
 
-        {/* Bottom symbol */}
-        <Animated.View style={[{ alignItems: 'center', marginTop: 4 }, bottomAnim]}>
-          {ElemIcon && <ElemIcon size={10} color={info.primary + '50'} />}
+        {/* Bottom: label + icon */}
+        <Animated.View style={[$.frontBottom, bottomAnim]}>
+          <View style={[$.fBottomLine, { backgroundColor: info.primary + '18' }]} />
+          <View style={$.fBottomRow}>
+            {ElemIcon && <ElemIcon size={7} color={info.primary + '60'} />}
+            <Text style={[$.fBottomLabel, { color: info.primary + '80' }]}>{label || info.label.ko}</Text>
+          </View>
         </Animated.View>
       </View>
     </View>
@@ -343,11 +348,11 @@ function AnimCard({ element, isMe, isOther, phase, onPress, resetKey, centerOffs
         liftY.value = withTiming(0, { duration: 500, easing: Easing.out(Easing.cubic) });
         moveX.value = withTiming(centerOffsetX, { duration: 600, easing: Easing.inOut(Easing.cubic) });
         moveY.value = withTiming(centerOffsetY, { duration: 600, easing: Easing.inOut(Easing.cubic) });
-        scale.value = withTiming(2.3, { duration: 600, easing: Easing.inOut(Easing.cubic) });
+        scale.value = withTiming(2.65, { duration: 600, easing: Easing.inOut(Easing.cubic) });
       } else if (phase === 'flipping') {
         flipProg.value = withTiming(1, { duration: 900, easing: Easing.inOut(Easing.cubic) });
       } else if (phase === 'landed') {
-        scale.value = withSpring(2.15, { damping: 22, stiffness: 100 });
+        scale.value = withSpring(2.5, { damping: 22, stiffness: 100 });
         try { const H = require('expo-haptics'); H.impactAsync(H.ImpactFeedbackStyle.Light); } catch {}
       }
     }
@@ -539,36 +544,39 @@ const $ = StyleSheet.create({
 
   // Card back
   cardBack: {
-    width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden',
-    borderWidth: 1.2, borderColor: G + 'AA',
+    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden',
+    borderWidth: 1, borderColor: G + 'AA',
     ...Platform.select({
-      web: { boxShadow: '0 6px 20px rgba(139,117,48,0.25)' },
-      default: { shadowColor: '#8B7530', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 8 },
+      web: { boxShadow: '0 4px 16px rgba(139,117,48,0.25)' },
+      default: { shadowColor: '#8B7530', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8 },
     }),
   } as any,
-  outerBorder: { flex: 1, margin: 5, borderRadius: 10, borderWidth: 0.4, borderColor: G + '40', overflow: 'hidden' },
-  innerFrame: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 6 },
-  backLabel: { fontSize: 11, color: G, opacity: 0.45, letterSpacing: 6, fontWeight: '300', marginTop: 6 },
+  outerBorder: { flex: 1, margin: 4, borderRadius: 8, borderWidth: 0.4, borderColor: G + '40', overflow: 'hidden' },
+  innerFrame: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 5 },
+  backLabel: { fontSize: 9, color: G, opacity: 0.45, letterSpacing: 5, fontWeight: '300', marginTop: 4 },
 
   // Card front (premium)
   cardFront: {
-    width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(212,168,75,0.15)',
+    width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden', borderWidth: 0.5, borderColor: 'rgba(212,168,75,0.12)',
     ...Platform.select({
-      web: { boxShadow: '0 6px 20px rgba(212,168,75,0.35)' },
-      default: { shadowColor: '#D4A84B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 8 },
+      web: { boxShadow: '0 4px 16px rgba(212,168,75,0.3)' },
+      default: { shadowColor: '#D4A84B', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
     }),
   } as any,
   frontContent: {
     flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, paddingHorizontal: 4,
   },
-  frontIllustWrap: { marginTop: 0 },
-  fHanja: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
-  fLabel: { fontSize: 5, opacity: 0.6, marginTop: 0 },
+  frontIllustWrap: { alignItems: 'center', justifyContent: 'center' },
+  illustGlow: { position: 'absolute', width: 52, height: 52, borderRadius: 26 },
+  fHanja: { fontSize: 16, fontWeight: '800', letterSpacing: 2 },
   fKwRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  fKwLine: { width: 10, height: 0.5 },
-  fKwDot: { width: 2, height: 2, borderRadius: 1 },
-  fKw: { fontSize: 7, fontWeight: '700', letterSpacing: 0.5 },
-  fMsg: { fontSize: 5, color: '#555', lineHeight: 7.5, textAlign: 'center' },
+  fKwLine: { width: 8, height: 0.4 },
+  fKw: { fontSize: 6.5, fontWeight: '700', letterSpacing: 0.3 },
+  fMsg: { fontSize: 4.5, lineHeight: 7, textAlign: 'center' },
+  frontBottom: { marginTop: 3, alignItems: 'center' },
+  fBottomLine: { width: 24, height: 0.4, marginBottom: 2 },
+  fBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  fBottomLabel: { fontSize: 4, letterSpacing: 0.5, fontWeight: '500' },
 
   // Summary (revisit)
   summaryBar: {
