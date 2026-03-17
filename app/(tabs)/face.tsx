@@ -328,6 +328,11 @@ export default function FaceScreen() {
               isTransformed={!!transformedUri}
               onFeatureSelect={(area) => setExpandedFeature(area)}
             />
+            {transformedImageBase64 && (
+              <TouchableOpacity style={rs.downloadOverlay} onPress={handleDownloadPainting} activeOpacity={0.7}>
+                <Text style={rs.downloadOverlayText}>畵 저장</Text>
+              </TouchableOpacity>
+            )}
           </View>
           <Text style={rs.tapHint}>{t('face.tapHint')}</Text>
         </Animated.View>
@@ -472,12 +477,6 @@ export default function FaceScreen() {
         </Animated.View>
 
         {/* ─── 7. BOTTOM ─── */}
-        {transformedImageBase64 && (
-          <TouchableOpacity style={rs.downloadBtn} onPress={handleDownloadPainting} activeOpacity={0.8}>
-            <Text style={rs.downloadIcon}>畵</Text>
-            <Text style={rs.downloadText}>관상화 저장하기</Text>
-          </TouchableOpacity>
-        )}
         <View style={rs.bottomActions}>
           <TouchableOpacity style={rs.bottomShareBtn} onPress={handleShare} activeOpacity={0.8}>
             <Text style={rs.bottomShareText}>{t('common.share')}</Text>
@@ -1049,33 +1048,28 @@ const rs = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // ── 7. Bottom Actions ──
-  downloadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#1A1A1A',
-    borderRadius: theme.radius.md,
-    paddingVertical: 16,
-    marginTop: 24,
+  // ── Download overlay on portrait ──
+  downloadOverlay: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    zIndex: 20,
   },
-  downloadIcon: {
-    fontSize: 18,
-    fontWeight: '200',
-    color: theme.colors.gold.primary,
-    letterSpacing: 2,
-  },
-  downloadText: {
-    fontSize: 14,
-    fontWeight: '700',
+  downloadOverlayText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
+  // ── 7. Bottom Actions ──
   bottomActions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 10,
+    marginTop: 24,
     marginBottom: theme.spacing.md,
   },
   bottomShareBtn: {

@@ -113,17 +113,20 @@ function FeaturePoint({
 
   return (
     <>
-      {/* 연결선 + 라벨 (얼굴 밖으로) */}
+      {/* 연결선 + 라벨 (얼굴 밖으로) — 터치하면 상세 패널 열림 */}
       {showLabel && lineLength > 30 && (
-        <View
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onPress}
           style={[
             styles.labelLine,
             {
-              top: py - 0.5,
+              top: py - 8,
               ...(side === 'right'
                 ? { left: px + dotSize / 2 + 2 }
                 : { right: imageSize - px + dotSize / 2 + 2 }),
               width: Math.min(lineLength, 80),
+              height: 20,
               flexDirection: side === 'right' ? 'row' : 'row-reverse',
             },
           ]}
@@ -133,7 +136,7 @@ function FeaturePoint({
             <Text style={styles.labelTagText}>{meta.shortLabel}</Text>
             <Text style={styles.labelScore}>{score}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* 터치 영역 + 점 */}
@@ -243,15 +246,25 @@ export function FaceOverlay({
   const centerX = imageSize / 2;
   const centerY = imageSize / 2;
 
-  // AI가 관상화에서 감지한 좌표만 사용 (하드코딩 폴백 없음)
+  // 관상화용 기본 좌표 (AI 좌표 실패 시 폴백)
+  const DEFAULT_POINTS: Record<string, { x: number; y: number }> = {
+    forehead: { x: 0.50, y: 0.18 },
+    eyes:     { x: 0.50, y: 0.36 },
+    nose:     { x: 0.50, y: 0.48 },
+    mouth:    { x: 0.50, y: 0.60 },
+    jawline:  { x: 0.50, y: 0.73 },
+    ears:     { x: 0.20, y: 0.36 },
+  };
+
   const getPoint = useCallback(
     (f: FeatureData) => {
+      // AI 좌표가 있으면 우선 사용
       if (f.position && typeof f.position.x === 'number' && typeof f.position.y === 'number'
           && f.position.x > 0.01 && f.position.x < 0.99 && f.position.y > 0.01 && f.position.y < 0.99) {
         return f.position;
       }
-      // AI 좌표가 없으면 표시하지 않음
-      return null;
+      // 없으면 고정 위치 사용
+      return DEFAULT_POINTS[f.area] ?? null;
     },
     [],
   );
