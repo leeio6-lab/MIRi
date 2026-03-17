@@ -42,181 +42,214 @@ import { DAILY_INSIGHTS } from '../../src/constants/dailyInsights';
 import { TEN_GOD_TIPS, getTodayBranchIdx, getTodayZodiacMatch, getFortuneGrade } from '../../src/constants/dailyCuriosity';
 import { ElementQuiz } from '../../src/components/home/ElementQuiz';
 import { ElementTarot } from '../../src/components/home/ElementTarot';
+import { PremiumButton } from '../../src/components/ui/PremiumButton';
+import { DayMasterAnim } from '../../src/components/icons/DayMasterAnim';
+import { DAILY_DETAILS } from '../../src/constants/dailyDetails';
+import { WEEKLY_MESSAGES } from '../../src/constants/weeklyMessages';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 // Element descriptions are now in i18n files under home.elementDesc.*
 
-// ─── Weekly Line Chart Component ───
-const GRAPH_H = 120;
-const GRAPH_PAD_TOP = 22;
-const GRAPH_PAD_BOT = 8;
-const DOT_R = 5;
-const DOT_R_TODAY = 7;
+// ─── Weekly Interactive Bar Chart ───
+const BAR_MIN_H = 28;
+const BAR_MAX_H = 72;
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-function WeeklyLineChart({ weeklyData, t }: { weeklyData: { days: any[]; today: number; bestDay: any }; t: any }) {
-  const [chartWidth, setChartWidth] = useState(0);
+function WeeklyBarChart({ weeklyData, selectedIdx, onSelect, t, lang }: {
+  weeklyData: { days: any[]; today: number; bestDay: any; worstDay: any };
+  selectedIdx: number;
+  onSelect: (i: number) => void;
+  t: any;
+  lang: string;
+}) {
   const days = weeklyData.days;
   const scores = days.map((d: any) => d.score);
-  const minScore = Math.min(...scores) - 5;
-  const maxScore = Math.max(...scores) + 5;
-  const range = maxScore - minScore || 1;
-
-  const getX = (i: number) => {
-    if (chartWidth === 0) return 0;
-    const colW = chartWidth / 7;
-    return colW / 2 + colW * i;
-  };
-  const getY = (score: number) => {
-    return GRAPH_PAD_TOP + (1 - (score - minScore) / range) * (GRAPH_H - GRAPH_PAD_TOP - GRAPH_PAD_BOT);
-  };
-
-  // Build smooth path
-  const points = days.map((d: any, i: number) => ({ x: getX(i), y: getY(d.score) }));
-  let linePath = '';
-  let areaPath = '';
-  if (chartWidth > 0 && points.length > 0) {
-    linePath = `M${points[0].x},${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const cx = (points[i - 1].x + points[i].x) / 2;
-      linePath += ` C${cx},${points[i - 1].y} ${cx},${points[i].y} ${points[i].x},${points[i].y}`;
-    }
-    areaPath = linePath + ` L${points[points.length - 1].x},${GRAPH_H} L${points[0].x},${GRAPH_H} Z`;
-  }
-
-  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  // 높낮이 차이를 더 크게 보이도록 범위 축소
+  const minS = Math.min(...scores) - 8;
+  const maxS = Math.max(...scores) + 3;
+  const range = maxS - minS || 1;
 
   return (
-    <View onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}>
-      {chartWidth > 0 && (
-        <Svg width={chartWidth} height={GRAPH_H} style={{ marginBottom: 6 }}>
-          <Defs>
-            <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={theme.colors.gold.primary} stopOpacity="0.15" />
-              <Stop offset="1" stopColor={theme.colors.gold.primary} stopOpacity="0.01" />
-            </LinearGradient>
-          </Defs>
-          {/* area fill */}
-          {areaPath ? <Path d={areaPath} fill="url(#areaGrad)" /> : null}
-          {/* line */}
-          {linePath ? <Path d={linePath} fill="none" stroke={theme.colors.gold.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /> : null}
-          {/* dots */}
-          {points.map((p, i) => {
-            const isToday = days[i].dayOfWeek === weeklyData.today;
-            const isBest = days[i].date === weeklyData.bestDay.date;
-            const r = isToday ? DOT_R_TODAY : DOT_R;
-            return (
-              <React.Fragment key={i}>
-                {isToday && (
-                  <Circle cx={p.x} cy={p.y} r={r + 4} fill={theme.colors.gold.primary + '15'} />
-                )}
-                <Circle
-                  cx={p.x} cy={p.y} r={r}
-                  fill={isToday ? theme.colors.gold.primary : isBest ? theme.colors.gold.light : '#D4D4D4'}
-                  stroke="#FFFFFF" strokeWidth={2}
-                />
-              </React.Fragment>
-            );
-          })}
-        </Svg>
-      )}
-      {/* 십성 + 간지 행 */}
-      <View style={wkStyles.infoRow}>
-        {days.map((d: any, i: number) => {
-          const isToday = d.dayOfWeek === weeklyData.today;
-          const isBest = d.date === weeklyData.bestDay.date;
-          return (
-            <View key={`info-${i}`} style={wkStyles.infoCell}>
-              <Text style={[wkStyles.tenGod, isToday && wkStyles.tenGodToday]}>{d.tenStar}</Text>
-              <Text style={[wkStyles.pillar, isToday && wkStyles.pillarToday]}>{d.dayPillar}</Text>
-              {isBest && <Text style={wkStyles.bestTag}>BEST</Text>}
-            </View>
-          );
-        })}
-      </View>
-      {/* 요일 행 */}
-      <View style={wkStyles.dayRow}>
-        {days.map((d: any, i: number) => {
-          const isToday = d.dayOfWeek === weeklyData.today;
-          return (
-            <View key={`day-${i}`} style={wkStyles.dayCell}>
-              <Text style={[wkStyles.dayText, isToday && wkStyles.dayTextToday]}>
-                {t(`days.${dayKeys[d.dayOfWeek]}`)}
-              </Text>
-              {isToday && <View style={wkStyles.todayDot} />}
-            </View>
-          );
-        })}
-      </View>
+    <View style={bk.row}>
+      {days.map((d: any, i: number) => {
+        const isToday = d.dayOfWeek === weeklyData.today;
+        const isBest = d.date === weeklyData.bestDay.date;
+        const isWorst = d.date === weeklyData.worstDay.date;
+        const isSelected = i === selectedIdx;
+        const barH = BAR_MIN_H + ((d.score - minS) / range) * (BAR_MAX_H - BAR_MIN_H);
+
+        // 색감 분리: 오늘=진골드, 베스트=밝은골드, 선택=중골드, 워스트=연회색, 기본=연골드
+        const barColor = isToday
+          ? theme.colors.gold.primary
+          : isBest
+            ? '#D4A84B'
+            : isWorst
+              ? '#E0DDD6'
+              : isSelected
+                ? 'rgba(212,168,75,0.45)'
+                : 'rgba(212,168,75,0.2)';
+
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[bk.col, isSelected && bk.colSelected]}
+            onPress={() => onSelect(i)}
+            activeOpacity={0.7}
+          >
+            {/* Best star — 점수 위에 별도 표시 */}
+            {isBest && (
+              <View style={bk.bestBadge}>
+                <Svg width={8} height={8} viewBox="0 0 10 10">
+                  <Path d="M5 0.5 L6.2 3.5 L9.5 3.8 L7 6 L7.8 9.3 L5 7.5 L2.2 9.3 L3 6 L0.5 3.8 L3.8 3.5 Z"
+                    fill={theme.colors.gold.primary} />
+                </Svg>
+              </View>
+            )}
+
+            {/* Score */}
+            <Text style={[bk.score, isToday && bk.scoreToday, isSelected && bk.scoreSelected]}>{d.score}</Text>
+
+            {/* Bar */}
+            <View style={[bk.bar, { height: barH, backgroundColor: barColor }]} />
+
+            {/* Today dot */}
+            {isToday && <View style={bk.todayDot} />}
+
+            {/* Day label */}
+            <Text style={[bk.dayLabel, isToday && bk.dayLabelToday, isSelected && bk.dayLabelSelected]}>
+              {t(`days.${DAY_KEYS[d.dayOfWeek]}`)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
-const wkStyles = StyleSheet.create({
-  infoRow: {
-    flexDirection: 'row',
-  },
-  infoCell: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 1,
-    paddingVertical: 4,
-  },
-  tenGod: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
-  },
-  tenGodToday: {
-    color: theme.colors.gold.primary,
-    fontWeight: '700',
-  },
-  pillar: {
-    fontSize: 10,
-    fontWeight: '400',
-    color: theme.colors.text.tertiary,
-  },
-  pillarToday: {
-    color: theme.colors.gold.dark,
-    fontWeight: '500',
-  },
-  bestTag: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: theme.colors.gold.primary,
-    backgroundColor: theme.colors.gold.primary + '12',
-    borderRadius: 3,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    overflow: 'hidden',
-    marginTop: 1,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    marginTop: 6,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(212,168,75,0.12)',
-  },
-  dayCell: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 3,
-  },
-  dayText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: theme.colors.text.tertiary,
-  },
-  dayTextToday: {
-    fontWeight: '700',
-    color: theme.colors.gold.primary,
-  },
-  todayDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: theme.colors.gold.primary,
-  },
+// ─── Day Detail Card ───
+function DayDetailCard({ day, weeklyData, lang, onPurchase }: {
+  day: any;
+  weeklyData: { days: any[]; today: number; bestDay: any; worstDay: any };
+  lang: 'ko' | 'en' | 'ja';
+  onPurchase: () => void;
+}) {
+  const detail = DAILY_DETAILS[day.tenStar];
+  if (!detail) return null;
+
+  const isToday = day.dayOfWeek === weeklyData.today;
+  const isBest = day.date === weeklyData.bestDay.date;
+  const isWorst = day.date === weeklyData.worstDay.date;
+  const dayName = ['일', '월', '화', '수', '목', '금', '토'][day.dayOfWeek];
+  const dayNameEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day.dayOfWeek];
+  const dayNameJa = ['日', '月', '火', '水', '木', '金', '土'][day.dayOfWeek];
+  const dn = lang === 'ko' ? `${dayName}요일` : lang === 'ja' ? `${dayNameJa}曜日` : dayNameEn;
+
+  // CTA text based on context
+  let ctaText = '';
+  let ctaVariant: 'shimmer' | 'pulse' = 'shimmer';
+  if (isToday) {
+    ctaText = lang === 'ko' ? '내 사주에 딱 맞는 오늘의 운세는?' : lang === 'ja' ? '私の四柱に合った今日の運勢は？' : 'Want today\'s fortune tailored to your birth chart?';
+    ctaVariant = 'shimmer';
+  } else if (isBest) {
+    ctaText = lang === 'ko' ? '이번 주 최고의 날! 이 기운을 200% 활용하는 법은?' : lang === 'ja' ? '今週最高の日！この気を200%活用する方法は？' : 'Best day this week! How to harness 200% of this energy?';
+    ctaVariant = 'shimmer';
+  } else if (isWorst) {
+    ctaText = lang === 'ko' ? '주의가 필요한 날. 피해야 할 것과 대처법은?' : lang === 'ja' ? '注意が必要な日。避けるべきことと対処法は？' : 'A day that needs caution. What to avoid and how to cope?';
+    ctaVariant = 'pulse';
+  } else {
+    ctaText = lang === 'ko' ? `${dn} 운세를 미리 알고 대비하고 싶다면?` : lang === 'ja' ? `${dn}の運勢を事前に知りたいなら？` : `Want to prepare by knowing ${dn}'s fortune in advance?`;
+    ctaVariant = 'pulse';
+  }
+
+  const adviceItems = [
+    { label: lang === 'ko' ? '직장' : lang === 'ja' ? '仕事' : 'Work', text: detail.work[lang] },
+    { label: lang === 'ko' ? '재물' : lang === 'ja' ? '財運' : 'Money', text: detail.money[lang] },
+    { label: lang === 'ko' ? '관계' : lang === 'ja' ? '関係' : 'Relations', text: detail.relation[lang] },
+  ];
+
+  return (
+    <Animated.View entering={FadeInDown.duration(300)} style={dk.wrap}>
+      {/* Header */}
+      <Text style={dk.header}>
+        {dn} · {day.tenStar}
+      </Text>
+
+      {/* Divider */}
+      <View style={dk.divider}>
+        <View style={dk.divLine} />
+        <View style={dk.divDot} />
+        <View style={dk.divLine} />
+      </View>
+
+      {/* Message */}
+      <Text style={dk.message}>{detail.message[lang]}</Text>
+
+      {/* Advice items */}
+      {adviceItems.map((item, i) => (
+        <View key={i} style={dk.adviceRow}>
+          <View style={dk.adviceBar} />
+          <Text style={dk.adviceLabel}>{item.label}</Text>
+          <Text style={dk.adviceText}>{item.text}</Text>
+        </View>
+      ))}
+
+      {/* Lucky hour */}
+      <View style={dk.luckyRow}>
+        <Text style={dk.luckyLabel}>{lang === 'ko' ? '행운시간' : lang === 'ja' ? '幸運時間' : 'Lucky hour'}</Text>
+        <Text style={dk.luckyValue}>{detail.luckyHour[lang]}</Text>
+      </View>
+
+      {/* CTA */}
+      <View style={dk.ctaWrap}>
+        <View style={dk.ctaDivider}>
+          <View style={dk.divLine} />
+          <View style={dk.divDot} />
+          <View style={dk.divLine} />
+        </View>
+        <Text style={dk.ctaText}>{ctaText}</Text>
+        <PremiumButton
+          title={lang === 'ko' ? '상세 운세 보기 · ₩770' : lang === 'ja' ? '詳細運勢を見る · ¥770' : 'View detailed fortune · $0.99'}
+          onPress={onPurchase}
+          variant={ctaVariant}
+          style={{ marginTop: 12 }}
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
+const bk = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 0, marginBottom: 4 },
+  col: { flex: 1, alignItems: 'center', paddingVertical: 4, paddingHorizontal: 2, borderRadius: 8 },
+  colSelected: { backgroundColor: 'rgba(212,168,75,0.06)' },
+  bestBadge: { marginBottom: 2 },
+  score: { fontSize: 11, fontWeight: '500', color: theme.colors.text.tertiary, marginBottom: 4 },
+  scoreToday: { fontWeight: '700', color: theme.colors.gold.primary },
+  scoreSelected: { fontWeight: '600', color: theme.colors.text.secondary },
+  bar: { width: 22, borderRadius: 5 },
+  todayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.colors.gold.primary, marginTop: 4 },
+  dayLabel: { fontSize: 11, fontWeight: '500', color: theme.colors.text.tertiary, marginTop: 4 },
+  dayLabelToday: { fontWeight: '700', color: theme.colors.gold.primary },
+  dayLabelSelected: { fontWeight: '600', color: theme.colors.text.secondary },
+});
+
+const dk = StyleSheet.create({
+  wrap: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(212,168,75,0.08)' },
+  header: { fontSize: 14, fontWeight: '600', color: theme.colors.text.primary, letterSpacing: 1.5 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 12 },
+  divLine: { flex: 1, height: 1, backgroundColor: 'rgba(212,168,75,0.12)' },
+  divDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.gold.primary, opacity: 0.4 },
+  message: { fontSize: 13, fontWeight: '500', color: theme.colors.text.secondary, lineHeight: 22, letterSpacing: 0.3 },
+  adviceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 12 },
+  adviceBar: { width: 2, height: 14, borderRadius: 1, backgroundColor: theme.colors.gold.primary, opacity: 0.5, marginTop: 3 },
+  adviceLabel: { fontSize: 12, fontWeight: '700', color: theme.colors.gold.dark, width: 32, letterSpacing: 0.5 },
+  adviceText: { flex: 1, fontSize: 12, color: theme.colors.text.secondary, lineHeight: 18 },
+  luckyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: 'rgba(212,168,75,0.04)', borderRadius: 8 },
+  luckyLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.gold.primary, letterSpacing: 1 },
+  luckyValue: { fontSize: 12, fontWeight: '500', color: theme.colors.text.secondary },
+  ctaWrap: { marginTop: 16, alignItems: 'center' },
+  ctaDivider: { flexDirection: 'row', alignItems: 'center', gap: 6, width: '100%', marginBottom: 12 },
+  ctaText: { fontSize: 12, color: theme.colors.text.tertiary, textAlign: 'center' as const, lineHeight: 18 },
 });
 
 function PulseHint() {
@@ -427,7 +460,8 @@ export default function HomeScreen() {
     )[0];
   }, [pillars]);
 
-  const elementColor = theme.colors.elements[dominantElement as keyof typeof theme.colors.elements] ?? theme.colors.gold.primary;
+  const dayMasterElementColor = theme.colors.elements[pillars?.dayMasterElement as keyof typeof theme.colors.elements] ?? theme.colors.gold.primary;
+  const elementColor = dayMasterElementColor;
 
   // ── Yesterday score comparison ──
   const scoreChange = (dailyFortune?.overallScore ?? 0) - yesterdayScore;
@@ -488,8 +522,16 @@ export default function HomeScreen() {
     const days = calculateWeeklyFortune(pillars.day.stemIdx);
     const today = new Date().getDay(); // 0=Sun
     const bestDay = days.reduce((best, d) => d.score > best.score ? d : best, days[0]);
-    return { days, today, bestDay };
+    const worstDay = days.reduce((worst, d) => d.score < worst.score ? d : worst, days[0]);
+    return { days, today, bestDay, worstDay };
   }, [pillars]);
+
+  // Weekly bar chart: selected day index (default = today)
+  const [selectedDayIdx, setSelectedDayIdx] = useState(() => {
+    if (!weeklyData) return 0;
+    const todayIdx = weeklyData.days.findIndex(d => d.dayOfWeek === weeklyData.today);
+    return todayIdx >= 0 ? todayIdx : 0;
+  });
 
   const handlePaidAnalyze = useCallback(async () => {
     if (!user) {
@@ -611,7 +653,7 @@ export default function HomeScreen() {
           <GlassCard cornersOnly gold style={styles.identityCard}>
             <View style={styles.identityRow}>
               <View style={styles.dayMasterSide}>
-                <Text style={styles.dayMasterChar}>{pillars.dayMaster}</Text>
+                <DayMasterAnim dayStem={pillars.dayMaster} size={52} />
                 <Text style={styles.dayMasterYY}>
                   {pillars.dayMasterYinYang === '양' ? '陽' : '陰'}
                 </Text>
@@ -647,7 +689,10 @@ export default function HomeScreen() {
               <Text style={styles.manseryeokCardTitle}>{t('home.manseryeok')}</Text>
               <Text style={styles.manseryeokCardSub}>사주 원국 · 대운 · 세운</Text>
             </View>
-            <Text style={styles.manseryeokArrow}>›</Text>
+            <View style={styles.manseryeokCta}>
+              <Text style={styles.manseryeokCtaText}>내 만세력 보기</Text>
+              <Text style={styles.manseryeokCtaArrow}>›</Text>
+            </View>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -658,95 +703,61 @@ export default function HomeScreen() {
           entering={FadeInDown.delay(200).duration(500)}
           onLayout={(e) => { tarotY.current = e.nativeEvent.layout.y; }}
         >
-          <ElementTarot dayStemIdx={pillars.day.stemIdx} onCardSelect={handleTarotSelect} />
+          <ElementTarot dayStemIdx={pillars.day.stemIdx} onCardSelect={handleTarotSelect} onPurchase={() => setShowPaywall(true)} />
         </Animated.View>
       )}
 
       <View style={styles.sectionDivider} />
 
-      {/* ── 이번 주 운세 (Weekly Line Chart + Extras) ── */}
+      {/* ── 이번 주 운세 (Interactive Bar + Detail Card) ── */}
       {weeklyData && (
         <Animated.View entering={FadeInDown.delay(500).duration(500)}>
           <GlassCard cornersOnly style={styles.weeklyCard}>
+            {/* Layer 1: 주간 헤더 + 한 줄 요약 */}
             <View style={styles.weeklyHeader}>
               <View>
                 <Text style={styles.weeklyLabel}>WEEKLY</Text>
                 <Text style={styles.weeklyTitle}>{t('home.weeklyTitle')}</Text>
               </View>
-              {weeklyData.bestDay && (
-                <View style={styles.weeklyBest}>
-                  <Text style={styles.weeklyBestLabel}>BEST</Text>
-                  <Text style={styles.weeklyBestDay}>
-                    {t(`days.${['sun','mon','tue','wed','thu','fri','sat'][weeklyData.bestDay.dayOfWeek]}`)}
-                  </Text>
-                </View>
-              )}
+              <View style={styles.weeklyBest}>
+                <Text style={styles.weeklyBestLabel}>BEST</Text>
+                <Text style={styles.weeklyBestDay}>
+                  {t(`days.${DAY_KEYS[weeklyData.bestDay.dayOfWeek]}`)}
+                </Text>
+              </View>
             </View>
-            <WeeklyLineChart weeklyData={weeklyData} t={t} />
+            {/* 주간 한 줄 요약 */}
+            <Text style={styles.weeklySummary}>
+              {(() => {
+                const bestTen = weeklyData.bestDay.tenStar;
+                const worstTen = weeklyData.worstDay.tenStar;
+                const key = `${bestTen}_${worstTen}`;
+                const msg = WEEKLY_MESSAGES[key] ?? WEEKLY_MESSAGES['_default'];
+                const bestDayName = t(`days.${DAY_KEYS[weeklyData.bestDay.dayOfWeek]}`);
+                const worstDayName = t(`days.${DAY_KEYS[weeklyData.worstDay.dayOfWeek]}`);
+                const raw = msg[i18n.language as 'ko' | 'en' | 'ja'] ?? msg.ko;
+                return raw.replace('{best}', bestDayName).replace('{worst}', worstDayName);
+              })()}
+            </Text>
 
-            {/* ── 오늘의 한마디 ── */}
-            {dailyFortune?.headline && (
-              <View style={styles.wkQuoteBox}>
-                <Text style={styles.wkQuoteMark}>"</Text>
-                <Text style={styles.wkQuoteText}>{dailyFortune.headline}</Text>
-              </View>
+            {/* Layer 2: Interactive Bar Chart */}
+            <WeeklyBarChart
+              weeklyData={weeklyData}
+              selectedIdx={selectedDayIdx}
+              onSelect={setSelectedDayIdx}
+              t={t}
+              lang={i18n.language}
+            />
+
+            {/* Layer 3 + 4: Detail Card + CTA */}
+            {weeklyData.days[selectedDayIdx] && (
+              <DayDetailCard
+                day={weeklyData.days[selectedDayIdx]}
+                weeklyData={weeklyData}
+                lang={(i18n.language || 'ko') as 'ko' | 'en' | 'ja'}
+                onPurchase={() => setShowPaywall(true)}
+              />
             )}
-
-            {/* ── 오늘의 럭키 아이템 + 액션팁 ── */}
-            {(dailyFortune?.luckyItem || dailyFortune?.luckyColor || dailyFortune?.actionTip) && (
-              <View style={styles.wkChipsRow}>
-                {dailyFortune.luckyColor && (
-                  <View style={styles.wkChip}>
-                    <Text style={styles.wkChipIcon}>彩</Text>
-                    <Text style={styles.wkChipText}>{dailyFortune.luckyColor}</Text>
-                  </View>
-                )}
-                {dailyFortune.luckyItem && (
-                  <View style={styles.wkChip}>
-                    <Text style={styles.wkChipIcon}>運</Text>
-                    <Text style={styles.wkChipText}>{dailyFortune.luckyItem}</Text>
-                  </View>
-                )}
-                {dailyFortune.luckyNumber != null && (
-                  <View style={styles.wkChip}>
-                    <Text style={styles.wkChipIcon}>數</Text>
-                    <Text style={styles.wkChipText}>{dailyFortune.luckyNumber}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* ── 오늘 할 일 ── */}
-            {dailyFortune?.actionTip && (
-              <View style={styles.wkActionRow}>
-                <Text style={styles.wkActionLabel}>TODAY</Text>
-                <Text style={styles.wkActionText}>{dailyFortune.actionTip}</Text>
-              </View>
-            )}
-
-            {/* ── 주의 ── */}
-            {dailyFortune?.warning && (
-              <View style={styles.wkWarnRow}>
-                <Text style={styles.wkWarnLabel}>!</Text>
-                <Text style={styles.wkWarnText}>{dailyFortune.warning}</Text>
-              </View>
-            )}
-
-            {/* ── 주간 평균 점수 ── */}
-            {(() => {
-              const avg = Math.round(weeklyData.days.reduce((s, d) => s + d.score, 0) / 7);
-              const todayScore = weeklyData.days.find(d => d.dayOfWeek === weeklyData.today)?.score ?? avg;
-              const diff = todayScore - avg;
-              return (
-                <View style={styles.wkAvgRow}>
-                  <Text style={styles.wkAvgLabel}>이번 주 평균</Text>
-                  <Text style={styles.wkAvgScore}>{avg}점</Text>
-                  <Text style={[styles.wkAvgDiff, { color: diff >= 0 ? theme.colors.success : theme.colors.error }]}>
-                    오늘 {diff >= 0 ? '+' : ''}{diff}
-                  </Text>
-                </View>
-              );
-            })()}
           </GlassCard>
         </Animated.View>
       )}
@@ -1638,10 +1649,27 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
     marginTop: 2,
   },
-  manseryeokArrow: {
-    fontSize: 18,
-    color: theme.colors.text.tertiary,
-    fontWeight: '300',
+  manseryeokCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: theme.colors.gold.primary + '10',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.gold.primary + '20',
+  },
+  manseryeokCtaText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.gold.dark,
+    letterSpacing: 0.3,
+  },
+  manseryeokCtaArrow: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.gold.dark,
   },
 
   /* ── 만세력 버튼 (레거시) ── */
@@ -1720,125 +1748,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  /* ── Weekly extras ── */
-  wkQuoteBox: {
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(212,168,75,0.05)',
-    borderRadius: 12,
-    borderLeftWidth: 2,
-    borderLeftColor: theme.colors.gold.primary + '40',
-  },
-  wkQuoteMark: {
-    fontSize: 20,
-    fontWeight: '200',
-    color: theme.colors.gold.primary,
-    opacity: 0.5,
-    lineHeight: 20,
-    marginBottom: 2,
-  },
-  wkQuoteText: {
+  weeklySummary: {
     fontSize: 13,
-    color: theme.colors.text.primary,
+    fontWeight: '500',
+    color: theme.colors.text.secondary,
     lineHeight: 20,
-    fontWeight: '500',
-  },
-  wkChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 14,
-  },
-  wkChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(212,168,75,0.06)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  wkChipIcon: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: theme.colors.gold.primary,
-    opacity: 0.7,
-  },
-  wkChipText: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    fontWeight: '500',
-  },
-  wkActionRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(45,122,95,0.05)',
-    borderRadius: 10,
-  },
-  wkActionLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: theme.colors.success,
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  wkActionText: {
-    flex: 1,
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-  },
-  wkWarnRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(184,84,80,0.04)',
-    borderRadius: 10,
-  },
-  wkWarnLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: theme.colors.error,
-    opacity: 0.6,
-    marginTop: 1,
-  },
-  wkWarnText: {
-    flex: 1,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    lineHeight: 18,
-  },
-  wkAvgRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(212,168,75,0.08)',
-  },
-  wkAvgLabel: {
-    fontSize: 11,
-    color: theme.colors.text.tertiary,
-    fontWeight: '500',
-  },
-  wkAvgScore: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-  },
-  wkAvgDiff: {
-    fontSize: 11,
-    fontWeight: '600',
+    marginBottom: 16,
+    letterSpacing: 0.3,
   },
 
   /* ── 사주 해석 힌트 ── */
