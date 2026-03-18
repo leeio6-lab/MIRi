@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -111,6 +111,8 @@ export default function CompatibilityScreen() {
   }, [isPartnerValid, partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum]);
 
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   const handleAnalyze = async () => {
     if (__DEV__) console.log('[Compat] handleAnalyze called', { myEffectiveYear, myEffectiveMonth, myEffectiveDay, isPartnerValid });
@@ -130,15 +132,17 @@ export default function CompatibilityScreen() {
         formatPillarInfo(partnerPillars, partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender),
         myDisplayName, ptName,
       );
+      if (!mountedRef.current) return;
       if (__DEV__) console.log('[Compat] API success');
       setResult(apiResult);
       setCompatibilityResult(apiResult);
       saveAndRecord('compatibility', true, apiResult);
     } catch (err) {
+      if (!mountedRef.current) return;
       if (__DEV__) console.error('[Compatibility] error:', err);
       setAnalyzeError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 

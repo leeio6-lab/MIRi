@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -129,6 +129,9 @@ export default function CompatibilityScreen() {
     conflictPoints: Array.isArray(r.conflictPoints) ? r.conflictPoints : [],
   });
 
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+
   const handleAnalyze = async (isPaid = false) => {
     if (!isPartnerValid || !myEffectiveYear || !myEffectiveMonth || !myEffectiveDay) return;
 
@@ -141,6 +144,7 @@ export default function CompatibilityScreen() {
           editingMy ? false : user?.isLunar, false,
         );
         const safeLocal = sanitizeResult(localResult);
+        if (!mountedRef.current) return;
         setResult(safeLocal);
         setCompatibilityResult(safeLocal);
         saveAndRecord('compatibility', false, safeLocal);
@@ -163,12 +167,14 @@ export default function CompatibilityScreen() {
           user?.locale ?? 'ko', true, myPillarInfo, partnerPillarInfo,
           myName, ptName,
         );
+        if (!mountedRef.current) return;
         const safeApi = sanitizeResult(apiResult);
         setResult(safeApi);
         setCompatibilityResult(safeApi);
         saveAndRecord('compatibility', true, safeApi);
       }
     } catch (err) {
+      if (!mountedRef.current) return;
       if (__DEV__) console.error('[Compatibility] error:', err);
       const fallback = calculateLocalCompatibility(
         myEffectiveYear!, myEffectiveMonth!, myEffectiveDay!, myEffectiveHour, myEffectiveGender,
@@ -177,7 +183,7 @@ export default function CompatibilityScreen() {
       );
       setResult(sanitizeResult(fallback));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
