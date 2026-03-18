@@ -31,10 +31,10 @@ export function useFace() {
       const base64 = await compressImageToBase64(imageUri);
       const locale = user?.locale ?? 'ko';
 
-      console.log(`[Face] image size: ${(base64.length / 1024).toFixed(0)}KB`);
+      if (__DEV__) console.log(`[Face] image size: ${(base64.length / 1024).toFixed(0)}KB`);
 
       const response = await api.analyzeFace(base64, locale, true, analysisMode);
-      console.log('[Face] response OK');
+      if (__DEV__) console.log('[Face] response OK');
 
       if (__DEV__) {
         console.log('[Face] response keys:', Object.keys(response));
@@ -57,7 +57,7 @@ export function useFace() {
         setTransformedImage(response.transformedImage);
         if (__DEV__) console.log('[Face] setTransformedImage done');
       } else if (response.transformError) {
-        console.warn('[Face] Transform failed:', response.transformError);
+        if (__DEV__) console.warn('[Face] Transform failed:', response.transformError);
         setTransformError(response.transformError);
       }
 
@@ -94,7 +94,7 @@ export function useFace() {
 
       throw new Error('분석 결과를 받지 못했습니다. 다시 시도해주세요.');
     } catch (err) {
-      console.error('[Face] FULL ERROR:', err);
+      if (__DEV__) console.error('[Face] FULL ERROR:', err);
       const message = err instanceof Error ? err.message : '관상 분석에 실패했습니다.';
       setFaceResult(null);
       setError(message);

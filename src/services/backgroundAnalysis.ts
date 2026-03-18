@@ -43,7 +43,7 @@ export function startSajuAnalysis({ user, pillars }: SajuParams) {
     ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender)
     : undefined;
 
-  console.log('[BackgroundAnalysis] Saju: calling API...');
+  if (__DEV__) console.log('[BackgroundAnalysis] Saju: calling API...');
 
   api.analyzeSaju(
     {
@@ -62,7 +62,7 @@ export function startSajuAnalysis({ user, pillars }: SajuParams) {
   )
     .then((result) => {
       if (gen !== sajuGen) return;
-      console.log('[BackgroundAnalysis] Saju: success');
+      if (__DEV__) console.log('[BackgroundAnalysis] Saju: success');
       const s = useFortuneStore.getState();
       s.setSajuResult(result);
       s.saveAndRecord('saju', true, result);
@@ -70,7 +70,7 @@ export function startSajuAnalysis({ user, pillars }: SajuParams) {
     })
     .catch((err) => {
       if (gen !== sajuGen) return;
-      console.error('[BackgroundAnalysis] Saju error:', err);
+      if (__DEV__) console.error('[BackgroundAnalysis] Saju error:', err);
       useFortuneStore.getState().setError(
         err instanceof Error ? err.message : 'Analysis failed',
       );
@@ -99,19 +99,19 @@ export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams
   store.setFaceNoFace(null);
   store.setError(null);
 
-  console.log('[BackgroundAnalysis] Face: compressing image...');
+  if (__DEV__) console.log('[BackgroundAnalysis] Face: compressing image...');
 
   compressImageToBase64(imageUri)
     .then((base64) => {
       if (gen !== faceGen) return Promise.reject(new Error('_cancelled'));
-      console.log(
+      if (__DEV__) console.log(
         `[BackgroundAnalysis] Face: image ${(base64.length / 1024).toFixed(0)}KB, calling API...`,
       );
       return api.analyzeFace(base64, locale, true, analysisMode);
     })
     .then((response) => {
       if (gen !== faceGen) return;
-      console.log('[BackgroundAnalysis] Face: API success');
+      if (__DEV__) console.log('[BackgroundAnalysis] Face: API success');
       const s = useFortuneStore.getState();
 
       // 얼굴 미감지
@@ -162,7 +162,7 @@ export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams
     .catch((err) => {
       if (gen !== faceGen) return;
       if (err instanceof Error && err.message === '_cancelled') return;
-      console.error('[BackgroundAnalysis] Face error:', err);
+      if (__DEV__) console.error('[BackgroundAnalysis] Face error:', err);
       useFortuneStore.getState().setError(
         err instanceof Error ? err.message : '관상 분석에 실패했습니다.',
       );

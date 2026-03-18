@@ -1,5 +1,5 @@
 // Supabase Edge Function: Face Transform + Analysis
-// 병렬 실행: gpt-image-1 동양화 변환 + GPT-4o mini Vision 관상 분석
+// 순차 실행: (1) gpt-image-1 동양화 변환 → (2) GPT-4o-mini Vision 관상 분석 + 좌표 감지
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { getUserFromRequest, createProcessingRecord, completeRecord, failRecord } from '../_shared/analysis-db.ts';
@@ -136,62 +136,59 @@ serve(async (req) => {
     // 이미지 MIME 타입 자동 감지
     const mimeType = (imageBase64 as string).startsWith('iVBOR') ? 'image/png' : 'image/jpeg';
 
-    // ─── 병렬 실행: 관상 분석 + 동양화 변환 ───
-    console.log('[face-transform] Starting parallel: analysis + transform');
-    const [analysisRaw, transformResult] = await Promise.allSettled([
-      analyzePhysiognomy(imageBase64 as string, lang, mimeType),
-      transformToOrientalPainting(imageBase64 as string, mimeType),
-    ]);
+    // ─── Step 1: 동양화 변환 (120초) ───
+    console.log('[face-transform] Step 1: transform');
+    let transformedImage: string | null = null;
+    try {
+      transformedImage = await transformToOrientalPainting(imageBase64 as string, mimeType);
+      console.log(`[face-transform] Transform OK: ${transformedImage ? (transformedImage.length / 1024).toFixed(0) + 'KB' : 'null'}`);
+    } catch (e) {
+      console.warn('[face-transform] Transform failed, will analyze original selfie:', String(e).substring(0, 200));
+    }
 
-    const analysisData = analysisRaw.status === 'fulfilled' ? analysisRaw.value : null;
-    const analysisError = analysisRaw.status === 'rejected' ? String(analysisRaw.reason) : null;
+    // ─── Step 2: 관상 분석 — 동양화 성공 시 동양화로, 실패 시 원본 셀카로 ───
+    const analyzeImage = transformedImage || (imageBase64 as string);
+    const analyzeMime = transformedImage ? 'image/png' : mimeType;
+    const includePositions = !!transformedImage; // 동양화가 있을 때만 좌표 포함
 
-    if (analysisError) console.error('[face-transform] Analysis failed:', analysisError);
-    if (transformResult.status === 'rejected') console.error('[face-transform] Transform failed:', String(transformResult.reason));
-    console.log(`[face-transform] Analysis: ${analysisData ? 'OK' : 'FAIL'}, Transform: ${transformResult.status}`);
+    console.log(`[face-transform] Step 2: analysis (includePositions=${includePositions})`);
+    let analysisData: Record<string, unknown> | null = null;
+    try {
+      analysisData = await analyzePhysiognomy(analyzeImage, lang, analyzeMime, includePositions);
+      console.log(`[face-transform] Analysis OK: ${analysisData ? 'has data' : 'null'}`);
+    } catch (e) {
+      console.error('[face-transform] Analysis failed:', String(e).substring(0, 200));
+    }
 
     // 얼굴 미감지
     if (analysisData?.noFace) {
       return new Response(JSON.stringify({
-        transformedImage: null,
-        analysis: null,
-        transformError: null,
-        noFace: true,
-        reason: analysisData.reason ?? '정면 얼굴이 잘 보이는 사진을 사용해주세요.',
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        transformedImage: null, analysis: null, transformError: null,
+        noFace: true, reason: analysisData.reason ?? '정면 얼굴이 잘 보이는 사진을 사용해주세요.',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const analysis = analysisData ? normalizeAnalysis(analysisData) : null;
-    const transformedImage = transformResult.status === 'fulfilled' ? transformResult.value : null;
-    const transformError = transformResult.status === 'rejected' ? String(transformResult.reason) : null;
 
-    // ─── 관상화에서 이목구비 좌표 감지 (gpt-4o) ───
-    if (transformedImage && analysis && Array.isArray(analysis.features)) {
-      try {
-        const coords = await detectFeaturePositions(transformedImage);
-        if (coords) {
-          console.log('[face-transform] Coord detection OK');
-          for (const feat of analysis.features as any[]) {
-            if (coords[feat.area]) {
-              feat.position = coords[feat.area];
-            }
+    // 분석 결과에서 positions 추출 → features에 적용
+    if (analysis && includePositions && analysisData?.positions) {
+      const coords = analysisData.positions as Record<string, { x: number; y: number }>;
+      if (Array.isArray(analysis.features)) {
+        for (const feat of analysis.features as any[]) {
+          if (coords[feat.area]) {
+            feat.position = {
+              x: Math.max(0.02, Math.min(0.98, coords[feat.area].x)),
+              y: Math.max(0.02, Math.min(0.98, coords[feat.area].y)),
+            };
           }
-        } else {
-          console.log('[face-transform] Coord detection returned null — client will use default positions');
         }
-      } catch (e) {
-        console.warn('[face-transform] Coord detection failed — client will use default positions:', e);
       }
     }
 
-    const result = {
-      analysis,
-      analysisError,
-      transformedImage,
-      transformError,
-    };
+    const analysisError = analysisData ? null : 'Analysis failed';
+    const transformError = transformedImage ? null : 'Transform failed (analyzed original selfie)';
+
+    const result = { analysis, analysisError, transformedImage, transformError };
 
     // ─── 회원: 결과를 DB에 저장 (이미지 제외 — 용량 초과 방지) ───
     if (isMember && analysisId && analysis) {
@@ -259,7 +256,12 @@ async function analyzePhysiognomy(
   selfieBase64: string,
   lang: string,
   mimeType: string,
+  includePositions: boolean = false,
 ): Promise<Record<string, unknown>> {
+  const positionSuffix = includePositions
+    ? `\n\nAlso detect each facial feature's position in the image as ratios (0.0-1.0). (0,0)=top-left. Add to JSON as "positions" object with keys: forehead, eyes, nose, mouth, jawline, ears. Each value is {"x": ratio, "y": ratio}.`
+    : '';
+
   const analysisPrompt = `이 얼굴을 전통 관상학(面相學) 최고 전문가 관점에서 정밀 분석. 응답 언어: ${lang}.
 
 얼굴 없으면: {"noFace": true, "reason": "사유"}
@@ -315,7 +317,7 @@ hookLine 나쁜 예:
         {
           role: 'user',
           content: [
-            { type: 'text', text: analysisPrompt },
+            { type: 'text', text: analysisPrompt + positionSuffix },
             {
               type: 'image_url',
               image_url: { url: `data:${mimeType};base64,${selfieBase64}`, detail: 'auto' },
@@ -525,97 +527,3 @@ async function tryImagesGenerations(selfieBase64: string, mimeType: string): Pro
   return b64;
 }
 
-// ─── 생성된 관상화에서 이목구비 좌표 추출 — GPT-4o Vision (30초 타임아웃) ───
-async function detectFeaturePositions(
-  portraitBase64: string,
-): Promise<Record<string, { x: number; y: number }> | null> {
-  const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Look at this portrait and return the EXACT position of each facial feature.
-
-Coordinates are ratios (0.0 to 1.0). (0,0)=top-left, (1,1)=bottom-right.
-
-Return JSON only:
-{"forehead":{"x":0.5,"y":...},"eyes":{"x":0.5,"y":...},"nose":{"x":0.5,"y":...},"mouth":{"x":0.5,"y":...},"jawline":{"x":0.5,"y":...},"ears":{"x":...,"y":...}}
-
-Where to point:
-- forehead = center between hairline and eyebrows
-- eyes = midpoint between both eyes
-- nose = tip of nose
-- mouth = center of lips
-- jawline = bottom of chin
-- ears = left ear center`,
-            },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/png;base64,${portraitBase64}`, detail: 'low' },
-            },
-          ],
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.1,
-      max_tokens: 200,
-    }),
-  }, 30_000);
-
-  if (!response.ok) {
-    console.warn('[face-transform] Coord detection API error:', response.status);
-    return null;
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) return null;
-
-  try {
-    const coords = JSON.parse(content);
-    const areas = ['forehead', 'eyes', 'nose', 'mouth', 'jawline'];
-
-    // 기본 필드 존재 여부만 체크
-    for (const area of areas) {
-      if (!coords[area] || typeof coords[area].x !== 'number' || typeof coords[area].y !== 'number') {
-        console.warn(`[face-transform] Coords missing field: ${area}`);
-        return null;
-      }
-      // 범위 클램핑 (0.02~0.98)
-      coords[area].x = Math.max(0.02, Math.min(0.98, coords[area].x));
-      coords[area].y = Math.max(0.02, Math.min(0.98, coords[area].y));
-    }
-
-    // y순서 보정 — 폐기하지 않고 강제로 올바른 순서로 재배치
-    const yOrder = ['forehead', 'eyes', 'nose', 'mouth', 'jawline'];
-    for (let i = 1; i < yOrder.length; i++) {
-      if (coords[yOrder[i]].y <= coords[yOrder[i - 1]].y) {
-        // 이전 부위보다 아래에 있도록 최소 0.04 간격 보장
-        coords[yOrder[i]].y = coords[yOrder[i - 1]].y + 0.04;
-        console.warn(`[face-transform] Coords y-order fixed: ${yOrder[i]} pushed to ${coords[yOrder[i]].y.toFixed(3)}`);
-      }
-    }
-
-    // ears 보정 (없으면 기본값)
-    if (!coords.ears || typeof coords.ears.x !== 'number') {
-      coords.ears = { x: 0.20, y: coords.eyes?.y ?? 0.36 };
-    }
-    coords.ears.x = Math.max(0.02, Math.min(0.98, coords.ears.x));
-    coords.ears.y = Math.max(0.02, Math.min(0.98, coords.ears.y));
-
-    console.log('[face-transform] Coords OK:', JSON.stringify(coords));
-    return coords;
-  } catch (e) {
-    console.warn('[face-transform] Coord JSON parse failed:', e);
-    return null;
-  }
-}

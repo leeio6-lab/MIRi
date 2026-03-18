@@ -53,7 +53,7 @@ export default function MyPageScreen() {
     : null;
 
   const performLogout = async () => {
-    try { clearAllData(); await logout(); } catch (e) { console.warn('[Logout]', e); }
+    try { clearAllData(); await logout(); } catch (e) { if (__DEV__) console.warn('[Logout]', e); }
     router.replace('/(auth)/onboarding');
   };
 

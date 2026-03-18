@@ -169,7 +169,7 @@ export default function CompatibilityScreen() {
         saveAndRecord('compatibility', true, safeApi);
       }
     } catch (err) {
-      console.error('[Compatibility] error:', err);
+      if (__DEV__) console.error('[Compatibility] error:', err);
       const fallback = calculateLocalCompatibility(
         myEffectiveYear!, myEffectiveMonth!, myEffectiveDay!, myEffectiveHour, myEffectiveGender,
         partnerYearNum, partnerMonthNum, partnerDayNum, 12, partnerGender,

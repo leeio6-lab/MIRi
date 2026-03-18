@@ -39,14 +39,14 @@ import { api, formatPillarInfo } from '../../src/services/api';
 import { CITIES, type City } from '../../src/constants/cities';
 import { HOURLY_INSIGHTS } from '../../src/constants/hourlyInsights';
 import { DAILY_INSIGHTS } from '../../src/constants/dailyInsights';
-import { TEN_GOD_TIPS, getTodayBranchIdx, getTodayZodiacMatch, getFortuneGrade } from '../../src/constants/dailyCuriosity';
+import { TEN_GOD_TIPS, getTodayBranchIdx, getTodayZodiacMatch } from '../../src/constants/dailyCuriosity';
 import { ElementQuiz } from '../../src/components/home/ElementQuiz';
 import { ElementTarot } from '../../src/components/home/ElementTarot';
 import { PremiumButton } from '../../src/components/ui/PremiumButton';
 import { DayMasterAnim } from '../../src/components/icons/DayMasterAnim';
 import { DAILY_DETAILS } from '../../src/constants/dailyDetails';
 import { WEEKLY_MESSAGES } from '../../src/constants/weeklyMessages';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 
 // Element descriptions are now in i18n files under home.elementDesc.*
 

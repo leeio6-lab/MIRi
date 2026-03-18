@@ -56,7 +56,7 @@ export default function SajuScreen() {
   }, [sajuReady]);
 
   const handlePaidAnalyze = useCallback(() => {
-    console.log('[Saju] handlePaidAnalyze called, user:', user ? `${user.birthYear}.${user.birthMonth}.${user.birthDay}` : 'NULL');
+    if (__DEV__) console.log('[Saju] handlePaidAnalyze called, user:', user ? `${user.birthYear}.${user.birthMonth}.${user.birthDay}` : 'NULL');
     setLocalError(null);
 
     if (!user) {
@@ -68,7 +68,7 @@ export default function SajuScreen() {
       return;
     }
 
-    console.log('[Saju] Starting background analysis...');
+    if (__DEV__) console.log('[Saju] Starting background analysis...');
     startSajuAnalysis({ user, pillars });
   }, [user, pillars]);
 

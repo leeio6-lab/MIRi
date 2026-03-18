@@ -259,7 +259,7 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
     }
 
     if (!session) {
-      console.warn('[Auth] No session found after login');
+      if (__DEV__) console.warn('[Auth] No session found after login');
       return profile;
     }
 
@@ -311,20 +311,20 @@ export async function fetchGoogleProfile(providerTokenOverride?: string): Promis
             if (birthday.date.day) profile.birthDay = birthday.date.day;
             if (__DEV__) console.log('[Auth] Birthday extracted:', birthday.date);
           } else {
-            console.warn('[Auth] No birthday.date in response');
+            if (__DEV__) console.warn('[Auth] No birthday.date in response');
           }
         } else {
           const body = await res.text();
-          console.warn('[Auth] People API error:', res.status, body.substring(0, 200));
+          if (__DEV__) console.warn('[Auth] People API error:', res.status, body.substring(0, 200));
         }
       } catch (e) {
-        console.warn('[Auth] People API fetch failed:', e);
+        if (__DEV__) console.warn('[Auth] People API fetch failed:', e);
       }
     } else {
-      console.warn('[Auth] No provider_token available — birthday/name fetch skipped.');
+      if (__DEV__) console.warn('[Auth] No provider_token available — birthday/name fetch skipped.');
     }
   } catch (e) {
-    console.warn('[Auth] fetchGoogleProfile error:', e);
+    if (__DEV__) console.warn('[Auth] fetchGoogleProfile error:', e);
   }
 
   if (__DEV__) console.log('[Auth] Final profile:', JSON.stringify(profile));

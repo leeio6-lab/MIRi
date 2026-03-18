@@ -286,7 +286,7 @@ export default function FaceScreen() {
         });
         await Share.shareAsync(fileUri, { mimeType: 'image/png' });
       } catch (e) {
-        console.warn('[Face] Download failed:', e);
+        if (__DEV__) console.warn('[Face] Download failed:', e);
       }
     }
   };

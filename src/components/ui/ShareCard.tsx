@@ -73,7 +73,7 @@ export function ShareCard({ type, score, summary, title, items }: ShareCardProps
       if (err?.message?.includes('cancel') || err?.message?.includes('dismiss')) {
         // silently ignore
       } else {
-        console.error('Share failed:', err);
+        if (__DEV__) console.error('Share failed:', err);
       }
     } finally {
       setSharing(false);

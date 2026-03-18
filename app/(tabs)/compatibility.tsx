@@ -113,7 +113,7 @@ export default function CompatibilityScreen() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
-    console.log('[Compat] handleAnalyze called', { myEffectiveYear, myEffectiveMonth, myEffectiveDay, isPartnerValid });
+    if (__DEV__) console.log('[Compat] handleAnalyze called', { myEffectiveYear, myEffectiveMonth, myEffectiveDay, isPartnerValid });
     if (!isPartnerValid || !myEffectiveYear || !myEffectiveMonth || !myEffectiveDay) return;
     setLoading(true);
     setAnalyzeError(null);
@@ -121,7 +121,7 @@ export default function CompatibilityScreen() {
       // useMemo로 이미 계산된 pillar 재활용 (중복 계산 방지)
       const myPillars = myPillarsData ?? calculateFourPillars(myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, undefined, undefined, undefined, myEffectiveIsLunar);
       const partnerPillars = partnerPillarsData ?? calculateFourPillars(partnerYearNum, partnerMonthNum, partnerDayNum, partnerHourNum, undefined, undefined, undefined, partnerIsLunar);
-      console.log('[Compat] Calling API...');
+      if (__DEV__) console.log('[Compat] Calling API...');
       const apiResult = await api.analyzeCompatibility(
         { year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay, hour: myEffectiveHour, isLunar: myEffectiveIsLunar, gender: myEffectiveGender },
         { year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum, hour: partnerHourNum, isLunar: partnerIsLunar, gender: partnerGender },
@@ -130,12 +130,12 @@ export default function CompatibilityScreen() {
         formatPillarInfo(partnerPillars, partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender),
         myDisplayName, ptName,
       );
-      console.log('[Compat] API success');
+      if (__DEV__) console.log('[Compat] API success');
       setResult(apiResult);
       setCompatibilityResult(apiResult);
       saveAndRecord('compatibility', true, apiResult);
     } catch (err) {
-      console.error('[Compatibility] error:', err);
+      if (__DEV__) console.error('[Compatibility] error:', err);
       setAnalyzeError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);

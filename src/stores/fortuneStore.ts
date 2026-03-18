@@ -5,6 +5,7 @@ import type { SajuResult, FaceResult, DailyFortune, CompatibilityResult } from '
 import type { AnalysisRecord, AnalysisStatus } from '../services/api';
 import { api } from '../services/api';
 import { useAuthStore } from './authStore';
+import { getTodayString } from '../utils/date';
 
 interface FortuneState {
   sajuResult: SajuResult | null;
@@ -122,7 +123,7 @@ export const useFortuneStore = create<FortuneState>()(
       tarotAfternoonElement: null,
       tarotAfternoonVariant: null,
       setTarotResult: (period, element, variant) => {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayString();
         if (period === 'morning') {
           set({ tarotMorningDate: today, tarotMorningElement: element, tarotMorningVariant: variant });
         } else {
@@ -141,7 +142,7 @@ export const useFortuneStore = create<FortuneState>()(
       clearStreakCelebration: () => set({ streakCelebration: null }),
 
       checkDailyScore: (todayScore: number) => {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayString();
         const state = get();
         if (state.lastScoreDate === today) return; // already checked today
         // Move current todayScore to yesterdayScore
@@ -151,7 +152,7 @@ export const useFortuneStore = create<FortuneState>()(
       },
 
       checkStreak: () => {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayString();
         const state = get();
         if (state.lastVisitDate === today) return; // already checked today
 

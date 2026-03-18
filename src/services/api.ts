@@ -65,6 +65,7 @@ const invokeFunction = async <T>(functionName: string, body: Record<string, unkn
       'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
@@ -349,6 +350,17 @@ async function saveAnalysis(
   }
 }
 
+function mapRowToRecord(row: any): AnalysisRecord {
+  return {
+    id: row.id,
+    type: row.type,
+    isPaid: row.is_paid,
+    result: row.result,
+    createdAt: row.created_at,
+    status: row.status ?? 'completed',
+  };
+}
+
 async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promise<AnalysisRecord[]> {
   try {
     const userId = await getCachedUserId();
@@ -372,14 +384,7 @@ async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promi
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data ?? []).map((row: any) => ({
-      id: row.id,
-      type: row.type,
-      isPaid: row.is_paid,
-      result: row.result,
-      createdAt: row.created_at,
-      status: row.status ?? 'completed',
-    }));
+    return (data ?? []).map(mapRowToRecord);
   } catch (e) {
     if (__DEV__) console.warn('[API] fetchHistory error:', e);
     return [];
@@ -402,14 +407,7 @@ async function fetchPendingAnalyses(): Promise<AnalysisRecord[]> {
 
     if (error) throw error;
 
-    return (data ?? []).map((row: any) => ({
-      id: row.id,
-      type: row.type,
-      isPaid: row.is_paid,
-      result: row.result,
-      createdAt: row.created_at,
-      status: row.status,
-    }));
+    return (data ?? []).map(mapRowToRecord);
   } catch (e) {
     if (__DEV__) console.warn('[API] fetchPendingAnalyses error:', e);
     return [];
@@ -431,14 +429,7 @@ async function fetchAnalysisById(id: string): Promise<AnalysisRecord | null> {
 
     if (error || !data) return null;
 
-    return {
-      id: data.id,
-      type: data.type,
-      isPaid: data.is_paid,
-      result: data.result,
-      createdAt: data.created_at,
-      status: data.status ?? 'completed',
-    };
+    return mapRowToRecord(data);
   } catch (e) {
     if (__DEV__) console.warn('[API] fetchAnalysisById error:', e);
     return null;
