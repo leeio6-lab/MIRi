@@ -253,16 +253,16 @@ export default function SajuResultScreen() {
           return sentence.length < s.length ? sentence + '…' : sentence;
         };
         const ov = { ...r.overview };
-        // 상세 섹션의 title/핵심 내용으로 보정 (AI overview가 있어도 상세와 매칭)
-        if (career?.title) ov.career = career.title;
-        if (wealth?.title) ov.wealth = wealth.title;
-        if (love?.title) ov.love = love.title;
-        if (health?.title) ov.health = health.title;
-        if (personality?.core && !ov.personality) ov.personality = firstSentence(personality.core);
-        if (relationship?.title && !ov.social) ov.social = relationship.title;
-        if (family?.parentFortune && !ov.family) ov.family = firstSentence(family.parentFortune);
-        if (yearly?.overview && !ov.yearly) ov.yearly = firstSentence(yearly.overview, 50);
-        if (daeun?.lifePeak && !ov.lifePeak) ov.lifePeak = firstSentence(daeun.lifePeak);
+        // 상세 분석 본문에서 요약 파생 — title(캐치프레이즈)과 상세 풀이 간 불일치 방지
+        if (personality?.core) ov.personality = firstSentence(personality.core);
+        if (career?.analysis) ov.career = firstSentence(career.analysis);
+        if (wealth?.pattern) ov.wealth = firstSentence(wealth.pattern);
+        if (love?.idealPartner) ov.love = firstSentence(love.idealPartner);
+        if (health?.advice) ov.health = firstSentence(health.advice);
+        if (relationship?.socialStyle) ov.social = firstSentence(relationship.socialStyle);
+        if (family?.parentFortune) ov.family = firstSentence(family.parentFortune);
+        if (yearly?.overview) ov.yearly = firstSentence(yearly.overview, 50);
+        if (daeun?.lifePeak) ov.lifePeak = firstSentence(daeun.lifePeak);
         return (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { overviewY.current = e.nativeEvent.layout.y; }}>
           <SajuOverviewCard
