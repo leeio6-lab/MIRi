@@ -57,16 +57,23 @@ const invokeFunction = async <T>(functionName: string, body: Record<string, unkn
   if (__DEV__) console.log(`[API] ${functionName}: url=${supabaseUrl ? 'OK' : 'EMPTY'}, key=${supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'EMPTY'}, token=${token ? token.substring(0, 20) + '...' : 'EMPTY'}`);
 
   const url = `${supabaseUrl}/functions/v1/${functionName}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseAnonKey,
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120_000);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!response.ok) {
     let serverMsg = '';
