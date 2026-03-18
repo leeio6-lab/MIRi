@@ -244,29 +244,11 @@ export default function SajuResultScreen() {
 
       {/* ═══ Overview (990사주 스타일) ═══ */}
       {r.overview && (() => {
-        // 상세 분석 내용에서 요약 파생 — AI overview와 상세 섹션 간 불일치 방지
-        const firstSentence = (s?: string, max = 40) => {
-          if (!s) return '';
-          // 첫 문장 또는 max자 추출
-          const end = s.search(/[.。!]\s|$/);
-          const sentence = end > 0 && end <= max + 10 ? s.slice(0, end + 1) : s.slice(0, max);
-          return sentence.length < s.length ? sentence + '…' : sentence;
-        };
-        const ov = { ...r.overview };
-        // 상세 분석 본문에서 요약 파생 — title(캐치프레이즈)과 상세 풀이 간 불일치 방지
-        if (personality?.core) ov.personality = firstSentence(personality.core);
-        if (career?.analysis) ov.career = firstSentence(career.analysis);
-        if (wealth?.pattern) ov.wealth = firstSentence(wealth.pattern);
-        if (love?.idealPartner) ov.love = firstSentence(love.idealPartner);
-        if (health?.advice) ov.health = firstSentence(health.advice);
-        if (relationship?.socialStyle) ov.social = firstSentence(relationship.socialStyle);
-        if (family?.parentFortune) ov.family = firstSentence(family.parentFortune);
-        if (yearly?.overview) ov.yearly = firstSentence(yearly.overview, 50);
-        if (daeun?.lifePeak) ov.lifePeak = firstSentence(daeun.lifePeak);
+        // AI가 바이럴 규칙(축약형 반말, 12-22자, 행동 묘사)으로 생성한 overview를 그대로 사용
         return (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { overviewY.current = e.nativeEvent.layout.y; }}>
           <SajuOverviewCard
-            overview={ov}
+            overview={r.overview}
             accentColor={pillars ? EL_COLORS[STEM_EL[pillars.day.stem] ?? 'earth'] : undefined}
             onItemPress={(key) => {
               const y = sectionY.current[key];
