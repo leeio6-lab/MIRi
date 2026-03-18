@@ -56,6 +56,8 @@ const invokeFunction = async <T>(functionName: string, body: Record<string, unkn
 
   if (__DEV__) console.log(`[API] ${functionName}: url=${supabaseUrl ? 'OK' : 'EMPTY'}, key=${supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'EMPTY'}, token=${token ? token.substring(0, 20) + '...' : 'EMPTY'}`);
 
+  if (!supabaseUrl) throw new Error('서버 설정 오류: URL이 없습니다.');
+
   const url = `${supabaseUrl}/functions/v1/${functionName}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
@@ -71,6 +73,11 @@ const invokeFunction = async <T>(functionName: string, body: Record<string, unkn
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+  } catch (e: any) {
+    clearTimeout(timer);
+    if (e?.name === 'AbortError') throw new Error('서버 응답 시간이 초과되었습니다. 다시 시도해주세요.');
+    if (__DEV__) console.error(`[API] ${functionName} fetch error:`, e);
+    throw new Error('네트워크 연결에 실패했습니다. 인터넷 연결을 확인해주세요.');
   } finally {
     clearTimeout(timer);
   }
