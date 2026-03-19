@@ -14,7 +14,8 @@ import { HelpButton } from '../../src/components/ui/HelpButton';
 import { TermTip, SajuText } from '../../src/components/ui/TermTip';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { useAuthStore } from '../../src/stores/authStore';
-import { calculateFourPillars } from '../../src/utils/saju-calc';
+import { calculateFourPillars, getTenGod, getTenGodForBranch, getSpiritStar } from '../../src/utils/saju-calc';
+import { getOverviewFromTenGods } from '../../src/utils/overviewMatcher';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 import { DayMasterAnim } from '../../src/components/icons/DayMasterAnim';
 
@@ -139,6 +140,28 @@ export default function SajuResultScreen() {
     [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour, user?.isLunar]
   );
 
+  const templateOverview = useMemo(() => {
+    if (!pillars) return null;
+    const dmIdx = pillars.day.stemIdx;
+    const tenGods = {
+      yearStem: getTenGod(dmIdx, pillars.year.stemIdx),
+      monthStem: getTenGod(dmIdx, pillars.month.stemIdx),
+      dayStem: '비견',
+      hourStem: getTenGod(dmIdx, pillars.hour.stemIdx),
+      yearBranch: getTenGodForBranch(dmIdx, pillars.year.branchIdx),
+      monthBranch: getTenGodForBranch(dmIdx, pillars.month.branchIdx),
+      dayBranch: getTenGodForBranch(dmIdx, pillars.day.branchIdx),
+      hourBranch: getTenGodForBranch(dmIdx, pillars.hour.branchIdx),
+    };
+    const spiritStars = {
+      yearBranch: getSpiritStar(pillars.day.branchIdx, pillars.year.branchIdx),
+      monthBranch: getSpiritStar(pillars.day.branchIdx, pillars.month.branchIdx),
+      dayBranch: getSpiritStar(pillars.day.branchIdx, pillars.day.branchIdx),
+      hourBranch: getSpiritStar(pillars.day.branchIdx, pillars.hour.branchIdx),
+    };
+    return getOverviewFromTenGods(tenGods, spiritStars);
+  }, [pillars]);
+
   if (!r) return (
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>
   );
@@ -146,21 +169,22 @@ export default function SajuResultScreen() {
   const handleShare = async () => {
     const hookTitle = r.overview?.poeticTitle || r.headline || '사주 분석 결과';
     const lines: string[] = [];
-    if (r.overview?.personality) lines.push(`성격: ${r.overview.personality}`);
-    if (r.overview?.career) lines.push(`직업: ${r.overview.career}`);
-    if (r.overview?.wealth) lines.push(`재물: ${r.overview.wealth}`);
-    if (r.overview?.love) lines.push(`연애: ${r.overview.love}`);
+    const ov = templateOverview ?? r.overview;
+    if (ov?.personality) lines.push(`성격: ${ov.personality}`);
+    if (ov?.career) lines.push(`직업: ${ov.career}`);
+    if (ov?.wealth) lines.push(`재물: ${ov.wealth}`);
+    if (ov?.love) lines.push(`연애: ${ov.love}`);
     const params = new URLSearchParams();
     params.set('type', 'saju');
     if (hookTitle) params.set('title', encodeURIComponent(hookTitle));
     if (lines[0]) params.set('summary', encodeURIComponent(lines[0]));
     const shareUrl = `${SHARE_BASE_URL}?${params.toString()}`;
-    const shareText = `[MIRi 사주]\n\n${hookTitle}\n\n${lines.slice(0, 3).join('\n')}\n\n나도 보러가기 → ${shareUrl}`;
+    const shareText = `[명리 사주]\n\n${hookTitle}\n\n${lines.slice(0, 3).join('\n')}\n\n나도 보러가기 → ${shareUrl}`;
     try {
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
-        await (navigator as any).share({ title: 'MIRi 사주', text: shareText });
+        await (navigator as any).share({ title: '명리 사주', text: shareText });
       } else if (Platform.OS !== 'web') {
-        await Share.share({ message: shareText, title: 'MIRi 사주' });
+        await Share.share({ message: shareText, title: '명리 사주' });
       }
     } catch {}
   };
@@ -193,7 +217,7 @@ export default function SajuResultScreen() {
       <View style={$.navBar}>
         <BackButton />
         <View style={$.navBrand}>
-          <Text style={$.navLogo}>MIRi</Text>
+          <Text style={$.navLogo}>명리</Text>
           <Text style={$.navTagline}>사주 풀이</Text>
         </View>
         <View style={$.navSpacer} />
@@ -204,8 +228,8 @@ export default function SajuResultScreen() {
         <View style={$.hookHero}>
           {(() => {
             // poeticTitle=정의(큰글씨), hookQuestion=보충(서브). 질문이 title에 오면 swap
-            let title = r.overview?.poeticTitle || r.headline || '';
-            let sub = r.overview?.hookQuestion || '';
+            let title = r.overview?.poeticTitle || (templateOverview as any)?.poeticTitle || r.headline || '';
+            let sub = r.overview?.hookQuestion || (templateOverview as any)?.hookQuestion || '';
             if (title.includes('?') || title.includes('？')) {
               [title, sub] = [sub || title, title];
             }
@@ -243,12 +267,13 @@ export default function SajuResultScreen() {
       })()}
 
       {/* ═══ Overview (990사주 스타일) ═══ */}
-      {r.overview && (() => {
-        // AI가 바이럴 규칙(축약형 반말, 12-22자, 행동 묘사)으로 생성한 overview를 그대로 사용
+      {(r.overview || templateOverview) && (() => {
+        const ov = r.overview || templateOverview || {};
         return (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { overviewY.current = e.nativeEvent.layout.y; }}>
           <SajuOverviewCard
-            overview={r.overview}
+            overview={ov}
+            templateOverview={templateOverview ?? undefined}
             accentColor={pillars ? EL_COLORS[STEM_EL[pillars.day.stem] ?? 'earth'] : undefined}
             onItemPress={(key) => {
               const y = sectionY.current[key];
@@ -462,13 +487,14 @@ export default function SajuResultScreen() {
 
           <Text style={$.shareCta}>{'이 사주,\n혼자만 볼 거야?'}</Text>
 
-          {r.overview && (() => {
+          {(r.overview || templateOverview) && (() => {
             const items: { kanji: string; val: string }[] = [];
-            if (r.overview.personality) items.push({ kanji: '性', val: r.overview.personality });
-            if (r.overview.career) items.push({ kanji: '業', val: r.overview.career });
-            if (r.overview.wealth) items.push({ kanji: '財', val: r.overview.wealth });
-            if (r.overview.love) items.push({ kanji: '緣', val: r.overview.love });
-            if (r.overview.health) items.push({ kanji: '體', val: r.overview.health });
+            const ov = templateOverview ?? r.overview;
+            if (ov?.personality) items.push({ kanji: '性', val: ov.personality });
+            if (ov?.career) items.push({ kanji: '業', val: ov.career });
+            if (ov?.wealth) items.push({ kanji: '財', val: ov.wealth });
+            if (ov?.love) items.push({ kanji: '緣', val: ov.love });
+            if (ov?.health) items.push({ kanji: '體', val: ov.health });
             const top3 = items.slice(0, 3);
             return top3.length > 0 ? (
               <View style={$.sharePreview}>
