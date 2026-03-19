@@ -243,13 +243,8 @@ export const useFortuneStore = create<FortuneState>()(
       },
 
       saveAndRecord: async (type, isPaid, result, _inputData?) => {
-        const { isGuest } = useAuthStore.getState();
-
-        // 비회원: 저장하지 않음 (현재 세션에서만 보여줌)
-        if (isGuest) return;
-
-        // 서버 Edge Function이 이미 DB에 저장함 (_analysisId 포함)
-        // 로컬 히스토리에 경량 레코드만 추가 (즉시 UI 반영용)
+        // 로컬 히스토리에 경량 레코드 추가 (게스트 포함, 즉시 UI 반영용)
+        // 서버 Edge Function이 회원은 DB에도 저장함 (_analysisId 포함)
         const analysisId = (result as any)?._analysisId;
 
         const lightResult = type === 'face' ? {
@@ -308,7 +303,7 @@ export const useFortuneStore = create<FortuneState>()(
       },
     }),
     {
-      name: 'miri-fortune',
+      name: 'myeongri-fortune',
       version: 3,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => {
