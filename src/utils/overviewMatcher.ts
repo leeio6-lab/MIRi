@@ -1,0 +1,151 @@
+import { OVERVIEW_TEMPLATES, OverviewCategory, SipsinTag } from '../constants/overviewTemplates';
+
+interface SipsinStrength {
+  비겁: number;
+  식상: number;
+  재성: number;
+  관성: number;
+  인성: number;
+  겁재있음: boolean;
+  도화살있음: boolean;
+}
+
+/**
+ * FullSajuAnalysis.tenGods에서 십신 강약을 산출.
+ * tenGods: { yearStem, monthStem, dayStem, hourStem, yearBranch, monthBranch, dayBranch, hourBranch }
+ * 모두 한글 (비견, 겁재, 식신, 상관, 편재, 정재, 편관, 정관, 편인, 정인)
+ */
+export function getSipsinStrength(tenGods: Record<string, string>, spiritStars?: Record<string, string>): SipsinStrength {
+  const allGods = Object.values(tenGods).filter(Boolean);
+
+  const count = (names: string[]) => allGods.filter(t => names.includes(t)).length;
+
+  // 도화살 체크: spiritStars 값 중 '도화' 포함 여부
+  let 도화살 = false;
+  if (spiritStars) {
+    도화살 = Object.values(spiritStars).some(v => typeof v === 'string' && v.includes('도화'));
+  }
+
+  return {
+    비겁: count(['비견', '겁재']),
+    식상: count(['식신', '상관']),
+    재성: count(['편재', '정재']),
+    관성: count(['편관', '정관']),
+    인성: count(['편인', '정인']),
+    겁재있음: allGods.includes('겁재'),
+    도화살있음: 도화살,
+  };
+}
+
+/**
+ * 십신 강약에서 카테고리별 최적 태그 결정
+ */
+export function determineTags(strength: SipsinStrength): Record<OverviewCategory, SipsinTag> {
+  const { 비겁, 식상, 재성, 관성, 인성, 겁재있음, 도화살있음 } = strength;
+
+  const 비겁강 = 비겁 >= 2;
+  const 비겁약 = 비겁 === 0;
+  const 식상강 = 식상 >= 2;
+  const 식상약 = 식상 === 0;
+  const 재성강 = 재성 >= 2;
+  const 재성약 = 재성 === 0;
+  const 관성강 = 관성 >= 2;
+  const 관성약 = 관성 === 0;
+  const 인성강 = 인성 >= 2;
+  const 인성약 = 인성 === 0;
+
+  function pickTag(category: OverviewCategory): SipsinTag {
+    // 도화살은 love, social에서 우선
+    if (도화살있음 && (category === 'love' || category === 'social')) {
+      return '도화살있음';
+    }
+
+    // 복합 태그 (더 구체적 = 더 정확)
+    if (비겁강 && 식상강) return '비겁강+식상강';
+    if (비겁강 && 재성약) return '비겁강+재성약';
+    if (비겁강 && 관성강) return '비겁강+관성강';
+    if (식상강 && 재성강) return '식상강+재성강';
+    if (식상강 && 관성약) return '식상강+관성약';
+    if (재성강 && 겁재있음) return '재성강+겁재있음';
+    if (재성강 && 관성강) return '재성강+관성강';
+    if (관성강 && 인성강) return '관성강+인성강';
+    if (인성강 && 비겁강) return '인성강+비겁강';
+    if (인성강 && 식상약) return '인성강+식상약';
+    if (식상강 && 인성약) return '식상강+인성약';
+    if (비겁약 && 관성강) return '비겁약+관성강';
+    if (재성약 && 식상강) return '재성약+식상강';
+    if (관성약 && 재성강) return '관성약+재성강';
+
+    // 단일 태그
+    const singles: [boolean, SipsinTag][] = [
+      [비겁강, '비겁강'], [식상강, '식상강'], [재성강, '재성강'],
+      [관성강, '관성강'], [인성강, '인성강'],
+      [비겁약, '비겁약'], [식상약, '식상약'], [재성약, '재성약'],
+      [관성약, '관성약'], [인성약, '인성약'],
+    ];
+    for (const [cond, tag] of singles) {
+      if (cond) return tag;
+    }
+
+    // 폴백: 가장 많은 십신
+    const max = Math.max(비겁, 식상, 재성, 관성, 인성);
+    if (비겁 === max) return '비겁강';
+    if (식상 === max) return '식상강';
+    if (재성 === max) return '재성강';
+    if (관성 === max) return '관성강';
+    return '인성강';
+  }
+
+  const categories: OverviewCategory[] = ['personality', 'career', 'wealth', 'love', 'health', 'family', 'social'];
+  const result = {} as Record<OverviewCategory, SipsinTag>;
+  for (const cat of categories) {
+    result[cat] = pickTag(cat);
+  }
+  return result;
+}
+
+/**
+ * 십신 태그에 맞는 문장을 결정적 랜덤으로 선택.
+ * 같은 날 + 같은 사주 = 같은 결과.
+ */
+export function getOverviewFromTenGods(
+  tenGods: Record<string, string>,
+  spiritStars?: Record<string, string>,
+): Record<OverviewCategory, string> {
+  const strength = getSipsinStrength(tenGods, spiritStars);
+  const tags = determineTags(strength);
+
+  // 사주별 고유 seed: 십신 문자열을 해시해서 사주마다 다른 결과
+  const godStr = Object.values(tenGods).join('');
+  let sajuHash = 0;
+  for (let i = 0; i < godStr.length; i++) {
+    sajuHash = ((sajuHash << 5) - sajuHash + godStr.charCodeAt(i)) | 0;
+  }
+
+  const result = {} as Record<OverviewCategory, string>;
+  for (const [category, tag] of Object.entries(tags)) {
+    const cat = category as OverviewCategory;
+    const pool = OVERVIEW_TEMPLATES[cat][tag];
+    if (pool && pool.length > 0) {
+      const idx = Math.abs(sajuHash + cat.charCodeAt(0)) % pool.length;
+      result[cat] = pool[idx];
+    } else {
+      // 폴백: 복합태그의 첫 번째 부분으로 재시도
+      const fallbackTag = tag.split('+')[0] as SipsinTag;
+      const fallbackPool = OVERVIEW_TEMPLATES[cat][fallbackTag];
+      result[cat] = fallbackPool?.[0] ?? '';
+    }
+  }
+  return result;
+}
+
+/**
+ * sipsinSummary 문자열 생성 (서버 프롬프트용)
+ */
+export function getSipsinSummary(tenGods: Record<string, string>, spiritStars?: Record<string, string>): string {
+  const s = getSipsinStrength(tenGods, spiritStars);
+  let summary = `비겁${s.비겁}개, 식상${s.식상}개, 재성${s.재성}개, 관성${s.관성}개, 인성${s.인성}개`;
+  if (s.겁재있음) summary += ', 겁재있음';
+  if (s.도화살있음) summary += ', 도화살있음';
+  return summary;
+}
