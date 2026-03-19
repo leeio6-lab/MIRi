@@ -162,6 +162,18 @@ export default function SajuResultScreen() {
     return getOverviewFromTenGods(tenGods, spiritStars);
   }, [pillars]);
 
+  // overview가 서버에서 안 왔으면 templateOverview를 overview로 사용
+  if (r && !r.overview && templateOverview) {
+    r.overview = {
+      poeticTitle: r.headline || '',
+      hookQuestion: '',
+      ...templateOverview,
+      yearly: '',
+      lifePeak: '',
+      lifeDirection: '',
+    };
+  }
+
   if (!r) return (
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>
   );
