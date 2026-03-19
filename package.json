@@ -10,7 +10,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:dev-ios": "eas build --profile development-device --platform ios",
-    "build:preview-ios": "eas build --profile preview --platform ios"
+    "build:preview-ios": "eas build --profile preview --platform ios",
+    "deploy:web": "npx expo export --platform web && echo '{\"rewrites\":[{\"source\":\"/(.*)\",\"destination\":\"/index.html\"}]}' > dist/vercel.json && cd dist && npx vercel deploy --prod --yes"
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.3",

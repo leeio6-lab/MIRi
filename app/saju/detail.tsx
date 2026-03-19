@@ -762,35 +762,42 @@ function ElementBalanceSection({ analysis }: { analysis: FullSajuAnalysis }) {
 function StrengthSection({ analysis }: { analysis: FullSajuAnalysis }) {
   const { strength } = analysis;
   const indicators = [
-    { label: '계절의 힘', desc: '태어난 달이 나를 돕는가', value: strength.deukryeong },
-    { label: '뿌리의 힘', desc: '내가 앉은 자리가 든든한가', value: strength.deukji },
-    { label: '시간의 힘', desc: '태어난 시가 나를 돕는가', value: strength.deuksi },
-    { label: '하늘의 힘', desc: '주변 기운이 나를 돕는가', value: strength.deukse },
+    { label: '계절의 힘', desc: '태어난 달이 나를 돕는가', value: strength.deukryeong, tip: '용신으로 보완' },
+    { label: '뿌리의 힘', desc: '내가 앉은 자리가 든든한가', value: strength.deukji, tip: '대운에서 채워짐' },
+    { label: '시간의 힘', desc: '태어난 시가 나를 돕는가', value: strength.deuksi, tip: '귀인의 도움이 큼' },
+    { label: '하늘의 힘', desc: '주변 기운이 나를 돕는가', value: strength.deukse, tip: '환경으로 보완 가능' },
   ];
+
+  const passCount = indicators.filter(i => i.value).length;
 
   return (
     <GlassCard style={s.cardSpacing}>
-      <SectionHeader title={strength.isStrong ? '자아가 강한 사주' : '조화를 이루는 사주'} />
+      <SectionHeader
+        title={strength.isStrong ? '자아가 강한 사주' : '사람과 함께 빛나는 사주'}
+        subtitle={strength.isStrong ? '스스로 밀어붙이는 힘이 있어요' : '주변의 도움으로 크게 성장하는 구조예요'}
+      />
 
       <View style={s.strengthGrid}>
         {indicators.map((ind) => (
           <View key={ind.label} style={s.strengthItem}>
-            <View style={[s.strengthIcon, ind.value ? s.strengthIconPass : s.strengthIconFail]}>
-              <Text style={[s.strengthCheck, { color: ind.value ? theme.colors.success : theme.colors.error }]}>
-                {ind.value ? '✓' : '✗'}
+            <View style={[s.strengthIcon, ind.value ? s.strengthIconPass : s.strengthIconNeutral]}>
+              <Text style={[s.strengthCheck, { color: ind.value ? theme.colors.success : theme.colors.text.tertiary }]}>
+                {ind.value ? '✓' : '−'}
               </Text>
             </View>
             <Text style={s.strengthLabel}>{ind.label}</Text>
-            <Text style={s.strengthDesc}>{ind.desc}</Text>
+            <Text style={s.strengthDesc}>{ind.value ? ind.desc : ind.tip}</Text>
           </View>
         ))}
       </View>
 
-      <View style={s.strengthScoreRow}>
-        <Text style={s.strengthScoreNumber}>{strength.score}</Text>
-        <Text style={s.strengthScoreMax}>/100</Text>
+      <View style={s.strengthSummaryRow}>
+        <Text style={s.strengthSummaryText}>
+          {passCount === 4 ? '네 기둥 모두 든든합니다' :
+           passCount >= 2 ? `${passCount}가지 기둥이 나를 돕고 있어요` :
+           '용신과 대운이 채워주는 구조예요'}
+        </Text>
       </View>
-      <Text style={s.strengthDescription}>{strength.description}</Text>
       <View style={s.strengthInterpBox}>
         <Text style={s.strengthInterpText}>
           {strength.isStrong ? STRENGTH_MESSAGES.strong : STRENGTH_MESSAGES.weak}
@@ -1616,6 +1623,9 @@ const s = StyleSheet.create({
   strengthIconFail: {
     backgroundColor: theme.colors.error + '15',
   },
+  strengthIconNeutral: {
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
   strengthCheck: {
     fontSize: 16,
     fontWeight: '700',
@@ -1629,6 +1639,18 @@ const s = StyleSheet.create({
   strengthDesc: {
     fontSize: 10,
     color: theme.colors.text.tertiary,
+    textAlign: 'center',
+  },
+  strengthSummaryRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+    paddingVertical: 10,
+  },
+  strengthSummaryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.gold.primary,
     textAlign: 'center',
   },
   strengthScoreRow: {
