@@ -89,7 +89,7 @@ export default function CompatibilityScreen() {
     const y = myEffectiveYear; const m = myEffectiveMonth; const d = myEffectiveDay;
     if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) return null;
     try { return calculateFourPillars(y, m, d, myEffectiveHour, undefined, undefined, undefined, editingMy ? false : user?.isLunar); } catch { return null; }
-  }, [myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour]);
+  }, [myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveHour, editingMy, user?.isLunar]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CompatibilityResult | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);

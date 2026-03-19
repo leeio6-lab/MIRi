@@ -452,7 +452,7 @@ export default function HomeScreen() {
     () => user
       ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar)
       : null,
-    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour]
+    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour, user?.isLunar]
   );
 
   const dominantElement = useMemo(() => {

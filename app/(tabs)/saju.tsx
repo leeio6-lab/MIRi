@@ -44,7 +44,7 @@ export default function SajuScreen() {
     () => user
       ? calculateFourPillars(user.birthYear, user.birthMonth, user.birthDay, user.birthHour, undefined, undefined, undefined, user.isLunar)
       : null,
-    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour]
+    [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour, user?.isLunar]
   );
 
   // 백그라운드 분석 완료 시 자동 이동
