@@ -335,36 +335,6 @@ const SYSTEM_LITE = `당신은 "청운 선생"이라는 페르소나를 가진 �
 
 응답: JSON만.`;
 
-// ─── Overview-only system prompt (prompt3) ───
-const SYSTEM_OVERVIEW = `사주 분석 결과를 읽고, 각 항목을 "읽은 사람이 캡처해서 친구한테 보내는" 한 줄로 바꿔.
-
-너의 역할: 분석 결과에서 핵심을 뽑아 → 그 사람이 실제로 하는 행동으로 바꿔 → 12~22자로 줄여.
-
-"행동"이란: 시간, 장소, 동작이 보이는 문장.
-"요약"은 행동이 아님. "독단적", "스트레스", "패턴 반복" 이런 건 요약이지 행동이 아님.
-
-0점 vs 100점:
-0점: "자기 의견에 확신, 가끔 독단적" ← 인사평가
-100점: "회의에서 반박당하면 표정 관리 안 됨" ← 행동
-
-0점: "책임감은 굿, 스트레스는 덤" ← 자소서
-100점: "맡으면 끝까지 하는데 속으로 왜 나만 하냐 씩씩거림" ← 행동
-
-0점: "돈 모으는 게 어려움" ← 가계부 요약
-100점: "적금 깨서 여행 갔다 온 전적 2회" ← 행동
-
-0점: "연애 실패 패턴 반복" ← 상담일지
-100점: "3개월 차에 꼭 싸우고 6개월 안에 끝남" ← 행동
-
-0점: "수분 부족으로 탈수 직전" ← 의사 소견서
-100점: "물 마셔야지 하면서 커피만 4잔째" ← 행동
-
-모든 항목이 이렇게 "어제 이 사람이 실제로 한 행동"이 떠올라야 함.
-형용사 나열, 성격 요약, 조언, 경고는 전부 0점.
-물음표 금지. ~해요/~합니다/~한다/~임/~됨 금지.
-
-응답: JSON만.`;
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -420,6 +390,7 @@ serve(async (req) => {
 성별: ${input.gender === 'male' ? '남' : '여'}
 나이: ${pi.age}세
 오행 비율: 목${pi.elements.wood}% 화${pi.elements.fire}% 토${pi.elements.earth}% 금${pi.elements.metal}% 수${pi.elements.water}%
+${pi.sipsinSummary ? `십신 분포: ${pi.sipsinSummary}` : ''}
 현재연도: ${currentYear}년${unknownTimeNote}
 
 ## [확정 — 이 데이터는 정답입니다. 절대 변경 금지]
@@ -659,7 +630,21 @@ JSON 응답:
         body: JSON.stringify(body),
       });
       const d = await resp.json();
-      return JSON.parse(d.choices[0].message.content);
+      const choice = d.choices?.[0];
+      if (!choice?.message?.content) {
+        console.error('[callAI] No content in response:', JSON.stringify(d).substring(0, 500));
+        throw new Error(`AI response empty (model=${model}, finish=${choice?.finish_reason ?? 'none'})`);
+      }
+      const raw = choice.message.content;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        // JSON이 잘렸을 수 있음 — 닫는 괄호 추가 시도
+        const fixed = raw + (raw.includes('{') && !raw.trimEnd().endsWith('}') ? '"}' + '}'.repeat(5) : '');
+        try { return JSON.parse(fixed); } catch {}
+        console.error('[callAI] JSON parse failed, finish_reason:', choice.finish_reason, 'raw tail:', raw.substring(raw.length - 200));
+        throw new Error(`JSON parse failed (model=${model}, finish=${choice.finish_reason}, len=${raw.length})`);
+      }
     };
 
     // Deterministic seed from birth data
@@ -839,84 +824,8 @@ JSON만 출력.`;
         callAI(prompt2, model2, 4500, 0.1, SYSTEM_LITE, birthSeed),
       ]);
 
-      // Step 3: overview 전용 (r1+r2 결과를 입력으로)
-      const buildOverviewPrompt = (a1: any, a2: any): string => {
-        const p = a1.personality?.core?.substring(0, 400) ?? '';
-        const c = a1.career?.analysis?.substring(0, 350) ?? '';
-        const w = a1.wealth?.pattern?.substring(0, 350) ?? '';
-        const l = [a1.love?.title, a1.love?.idealPartner?.substring(0, 150), a1.love?.warning?.substring(0, 150)].filter(Boolean).join(' ');
-        const h = [a1.health?.title, ...(a1.health?.weakPoints ?? []), a1.health?.advice?.substring(0, 150)].filter(Boolean).join(' ');
-        const fam = a2?.family?.parentFortune?.substring(0, 250) ?? '';
-        const soc = a2?.relationship?.socialStyle?.substring(0, 250) ?? '';
-        const yearData = a2?.[`yearly${currentYear}`]?.overview?.substring(0, 300) ?? '';
-        const peak = [a2?.daeun?.lifePeak?.substring(0, 200), a2?.daeun?.current?.substring(0, 200)].filter(Boolean).join(' ');
-        const final = a1.finalWords?.substring(0, 250) ?? '';
-
-        return `아래 사주 분석 결과를 SNS 한 줄 짤로 바꿔.
-
-## 분석 결과
-성격: ${p}
-직업: ${c}
-재물: ${w}
-연애: ${l}
-건강: ${h}
-가족: ${fam}
-대인: ${soc}
-올해: ${yearData}
-인생피크: ${peak}
-마지막한마디: ${final}
-
-## 각 항목을 12~22자로. 아래는 톤 레벨 기준. 이걸 쓰면 안 되고 이 수준으로 분석 결과를 바꿔.
-
-poeticTitle (8~15자): '할 말 참는 게 제일 힘든 사람'
-hookQuestion (12~22자): '회의에서 반박당하면 표정 관리 안 됨'
-personality (12~22자): '맡으면 끝까지 하는데 왜 나만 하냐 씩씩거림'
-career (12~22자): '월요일 아침 출근길에 이미 퇴근 생각'
-wealth (12~22자): '적금 깨서 여행 갔다 온 전적 2회'
-love (12~22자): '3개월 차에 꼭 싸우고 6개월 안에 끝남'
-health (12~22자): '물 마셔야지 하면서 커피만 4잔째'
-family (12~22자): '명절에 안 간다다가 결국 가서 3시간 버팀'
-social (12~22자): '단톡방 읽씹하다가 미안해서 ㅋㅋ만 보냄'
-yearly (12~22자): '올 하반기에 안 하던 짓 하나 저지름'
-lifePeak (12~22자): '지금 쌓는 거 43세쯤 한꺼번에 수확'
-lifeDirection (12~22자): '급하게 가면 매번 꼬이는 팔자'
-
-핵심: 분석 결과에 "재성이 약해서 돈에 무관심하다"가 있으면 → "월급 들어오면 어디 갔는지 본인도 모름" 이 수준.
-분석 결과에 "편관이 강해 스트레스가 크다"가 있으면 → "일요일 밤부터 월요병 시작" 이 수준.
-사주 용어는 0개. 일상 행동으로만.
-
-⚠️ 위 분석 결과에 없는 내용을 지어내면 실패. 분석 결과에 '양보를 못 한다'가 없는데 overview에 '양보 못 함'을 쓰면 실패. 분석 결과에 있는 말만 행동으로 바꿔.
-
-JSON:
-{
-  "poeticTitle": "",
-  "hookQuestion": "",
-  "personality": "",
-  "career": "",
-  "wealth": "",
-  "love": "",
-  "health": "",
-  "family": "",
-  "social": "",
-  "yearly": "",
-  "lifePeak": "",
-  "lifeDirection": "",
-  "hotKey": "위 중 가장 찔리는 항목 키 1개"
-}`;
-      };
-
-      const overviewPrompt = buildOverviewPrompt(r1, r2);
-      const r3 = await callAI(overviewPrompt, 'gpt-4o', 1000, 0.9, SYSTEM_OVERVIEW);
-
-      // overview 필드 존재 확인 + 폴백
-      const overview = r3 || {};
-      if (!overview.poeticTitle) {
-        overview.poeticTitle = r1.headline || '';
-        overview.hookQuestion = '';
-      }
-
-      // Merge AI results — overview는 r3에서
-      result = { ...r1, ...r2, overview };
+      // Merge AI results — overview는 클라이언트에서 템플릿 기반으로 생성
+      result = { ...r1, ...r2 };
 
       // ─── Overlay pre-computed deterministic data (만세력 기반, 항상 동일) ───
       if (pc) {
