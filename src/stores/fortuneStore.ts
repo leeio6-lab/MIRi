@@ -196,19 +196,23 @@ export const useFortuneStore = create<FortuneState>()(
       loadHistory: async (type?) => {
         const { isGuest } = useAuthStore.getState();
 
-        // 비회원: 기록 없음
-        if (isGuest) {
-          set({ history: [] });
-          return;
-        }
+        // 비회원: 로컬 기록 유지 (서버 조회 안 함)
+        if (isGuest) return;
 
-        const records = await api.fetchHistory(type);
+        try {
+          const serverRecords = await api.fetchHistory(type);
 
-        if (records.length > 0) {
-          // 서버 기록 기준 (서버에서 관리됨)
-          set({ history: records.slice(0, 50) });
-        } else {
-          set({ history: [] });
+          // 서버 기록 + 로컬 기록 병합 (서버 우선, 중복 제거)
+          const localOnly = get().history.filter(
+            (local) => !serverRecords.some((s) => s.id === local.id)
+          );
+          const merged = [...serverRecords, ...localOnly]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 50);
+          set({ history: merged });
+        } catch (e) {
+          if (__DEV__) console.warn('[FortuneStore] loadHistory error:', e);
+          // 에러 시 기존 로컬 기록 유지
         }
       },
 
