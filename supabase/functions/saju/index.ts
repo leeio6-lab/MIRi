@@ -335,6 +335,25 @@ const SYSTEM_LITE = `당신은 "청운 선생"이라는 페르소나를 가진 �
 
 응답: JSON만.`;
 
+// ─── Overview-only system prompt (prompt3) ───
+const SYSTEM_OVERVIEW = `너는 SNS 바이럴 카피라이터야.
+사주 분석 결과를 받아서 읽는 사람이 "아 이거 나인데ㅋㅋ" 하고 캡처해서 보내는 한 줄로 바꾸는 게 일.
+
+톤: 친구가 소주 한 잔 하고 정곡 찌르는 한마디. 찔리는데 웃겨서 할 말 없음.
+레퍼런스: 에타 자기소개, 트위터 한 줄, 무한도전 자막.
+
+규칙 3개만:
+1. 분석 결과에 있는 내용만. 없는 말 지어내기 금지.
+2. 각 항목 12~22자. 넘으면 실패.
+3. 물음표 금지. ~해요/~합니다/~한다/~임/~됨 금지.
+
+추상적 비유 금지. '인생 2막', '폭풍전야', '튜토리얼' 이런 거 쓰지 마.
+오늘 하루에 실제로 벌어지는 행동으로만.
+형용사 나열 금지. '열정적이면서 냉정' 이런 거 0점.
+'~부족', '~주의', '~타입', '~필요', '~가능' 으로 끝나면 0점.
+
+응답: JSON만.`;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -643,42 +662,16 @@ JSON 응답:
 
       const prompt1 = `${commonHeader}
 
-## 🚨 작업 순서
-1. structure → personality → career → wealth → love → health 상세 분석을 먼저 전부 완성.
-2. 상세 완성 후, 각 결론을 overview 톤으로 변환. overview는 상세의 축약이다.
-3. 상세와 overview가 모순되면 전체 실패.
+각 텍스트 필드는 유료 상담 수준으로 길고 자세하게. 근거와 함께 서술. ~요 체 통일.
 
-각 텍스트 필드는 유료 상담 수준으로 길고 자세하게. 근거와 함께 서술.
-
-## 자기검증 (출력 전 5개만 확인)
-□ overview 각 항목이 상세 분석 결론과 같은 방향인가? (모순 있으면 전체 실패)
-□ headline의 자연물이 일간 오행과 맞는가? (火 사주에 물 비유면 실패)
-□ 프롬프트 예시 문장을 그대로 복사하지 않았는가? (복사 시 실패)
-□ overview 각 항목이 다른 사주에도 해당되는가? (해당되면 실패)
+## 자기검증
+□ headline의 자연물이 일간 오행과 맞는가?
 □ 물음표가 하나라도 있는가? (있으면 실패)
+□ 성격·직업·재물·인연 간 동일 문장 반복이 없는가?
 
 {
   "overallScore": number(60-88),
   "headline": "일간 오행에 맞는 자연물 비유 한 문장. 예시 복사 금지, 창작.",
-
-  "overview": {
-    "_tone": "overview 각 항목은 트위터 한 줄 짤이야. 읽는 사람이 피식 웃고 캡처해서 친구한테 보내는 수준. 규칙은 딱 3개: 1. 상세 분석 결론에서 나온 내용이어야 함 2. 구체적 상황/행동이 들어가야 함 (형용사 나열 금지) 3. 물음표 금지. 레벨 기준: personality→'조별과제 맡으면 결국 혼자 PPT 만들고 새벽 3시에 저장 누르면서 다 해줬으면서 다음날 아무렇지 않은 척' career→'면접에서 떨어질 때마다 자존심 상해서 자격증 하나씩 따는데 벌써 7개' wealth→'가계부 앱 3개 깔아놓고 한 번도 안 연 채 11개월째' love→'읽씹 1시간이면 불안해서 인스타 접속 시간 확인하는 본인을 발견' health→'건강검진 결과 무서워서 봉투째 서랍에 넣어둔 지 3개월' family→'엄마한테 짜증 내놓고 끊자마자 죄책감에 카톡으로 ㅋㅋ 보냄' social→'단톡방에서는 드립 치는데 1:1 만남은 에너지 충전 필요하다고 미룸' yearly→'올 상반기에 지른 결정 하나가 하반기 내내 수습하게 만드는 구조' lifePeak→'본 게임은 42세부터인데 지금은 튜토리얼 스테이지' lifeDirection→'빠르게 가려고 지름길 타면 매번 더 멀어지는 팔자'. 위 예시는 톤 레벨만 보여주는 거고 이 문장들을 쓰면 안 돼. 이 사주의 상세 분석에서 나온 내용을 위 수준의 구체성과 재미로 바꿔야 함. '열정적이면서 냉정함' ← 형용사 두 개 나열은 0점. '능력 있는데 대우는 미흡' ← 취업사이트 수준 0점. '건강 걱정하면서 관리 부족' ← 의사 소견서 0점. 읽었을 때 '아 ㅋㅋ 이거 나인데' 하고 웃음이 나와야 함. 안 웃기면 실패.",
-    "poeticTitle": "personality.core에서. 8~20자. 레벨: '괜찮다고 해놓고 집에서 곱씹는 인간'",
-    "hookQuestion": "poeticTitle 증거 장면. 18~35자. 레벨: '어제도 할 말 참았다가 새벽에 메모장에 풀어씀'",
-    "personality": "personality.core에서. 20~40자. 레벨: '남한테는 쿨한 척하면서 혼자 있을 때 이불 속에서 다 곱씹음'",
-    "career": "career.analysis에서. 20~40자. 레벨: '상사 피드백 듣는 동안 이미 속으로 이직 사이트 열고 있음'",
-    "wealth": "wealth.pattern에서. 상세와 반대 방향이면 실패. 20~40자. 레벨: '무지출 챌린지 선언하고 3시간 만에 배민 켠 전적 있음'",
-    "love": "love에서. 20~40자. 레벨: '매력 없는 척하면서 좋아하는 사람 앞에서만 갑자기 목소리 톤 올라감'",
-    "health": "health에서. 20~40자. 레벨: '운동 유튜브는 구독 30개인데 실제로 뛴 건 올해 2번'",
-    "family": "family에서. 20~40자. 레벨: '명절에 안 간다고 했다가 결국 가서 3시간 만에 후회'",
-    "social": "relationship에서. 20~40자. 레벨: '약속 잡힌 날 아침마다 오늘 비 오면 좋겠다 기도'",
-    "yearly": "올해 세운에서. 20~40자. 레벨: '올해 하반기에 안 하던 짓 하나 저지르는데 결과적으로 그게 전환점'",
-    "lifePeak": "daeun.lifePeak에서. 나이 고려. 20~40자. 레벨: '40대 중반에 그동안 쌓인 게 한꺼번에 터지는데 좋은 쪽으로'",
-    "lifeDirection": "finalWords에서. 20~40자. 레벨: '남들 속도 신경 쓰면 평생 쫓아가기만 하는 구조'",
-    "hotKey": "위 항목 중 가장 소름 돋는 1개 키."
-  },
-
-  "_globalRule": "물음표 금지. overview는 구어체 끊기(작심3일/폐인 확정/밥 먹여주는 줄 암 식). 상세 분석은 ~요 체.",
 
   "structure": {
     "dayMaster": "일간 오행 성질을 자연물에 비유. 음양 구분. 근본적 기질·강점·한계 300자+. 십신 배치와 연결해 실제 삶에서 어떻게 나타나는지.",
@@ -829,13 +822,88 @@ JSON만 출력.`;
       const model1 = _forceModel || 'gpt-4o';
       const model2 = _forceModel || 'gpt-4o-mini'; // prompt2는 경량 모델로 속도 개선
 
+      // Step 1+2: 상세 분석 + 연운/대운 병렬
       const [r1, r2] = await Promise.all([
         callAI(prompt1, model1, 6000, 0.7, SYSTEM_CORE),
         callAI(prompt2, model2, 4500, 0.1, SYSTEM_LITE, birthSeed),
       ]);
 
-      // Merge AI results
-      result = { ...r1, ...r2 };
+      // Step 3: overview 전용 (r1+r2 결과를 입력으로)
+      const buildOverviewPrompt = (a1: any, a2: any): string => {
+        const p = a1.personality?.core?.substring(0, 200) ?? '';
+        const c = a1.career?.analysis?.substring(0, 200) ?? '';
+        const w = a1.wealth?.pattern?.substring(0, 200) ?? '';
+        const l = (a1.love?.title ?? '') + ' ' + (a1.love?.warning?.substring(0, 100) ?? '');
+        const h = (a1.health?.title ?? '') + ' ' + (a1.health?.weakPoints?.[0]?.substring(0, 80) ?? '');
+        const fam = a2?.family?.parentFortune?.substring(0, 150) ?? '';
+        const soc = a2?.relationship?.socialStyle?.substring(0, 150) ?? '';
+        const yearData = a2?.[`yearly${currentYear}`]?.overview?.substring(0, 200) ?? '';
+        const peak = a2?.daeun?.lifePeak?.substring(0, 100) ?? '';
+        const final = a1.finalWords?.substring(0, 150) ?? '';
+
+        return `아래 사주 분석 결과를 SNS 한 줄 짤로 바꿔.
+
+## 분석 결과
+성격: ${p}
+직업: ${c}
+재물: ${w}
+연애: ${l}
+건강: ${h}
+가족: ${fam}
+대인: ${soc}
+올해: ${yearData}
+인생피크: ${peak}
+마지막한마디: ${final}
+
+## 각 항목을 12~22자로. 아래는 톤 레벨 기준. 이걸 쓰면 안 되고 이 수준으로 분석 결과를 바꿔.
+
+poeticTitle (8~15자): '괜찮다면서 새벽에 곱씹는 편'
+hookQuestion (12~22자): '퇴근길에 오늘 한 말 복기 중'
+personality (12~22자): '화나면 말 끊고 3일 뒤에 밥 먹자 연락'
+career (12~22자): '월요일마다 퇴사 검색, 월급날 복귀'
+wealth (12~22자): '택시비는 아까운데 커피는 매일 5천원'
+love (12~22자): '좋아하면 일부러 차갑게 굴다가 후회'
+health (12~22자): '안 아픈 척하다가 한 번에 큰 병원행'
+family (12~22자): '엄마 전화 한숨부터, 안 오면 서운'
+social (12~22자): '톡 읽고 나중에 답장하려다 3일째'
+yearly (12~22자): '하반기에 미루던 거 하나 터뜨림'
+lifePeak (12~22자): '지금 쌓는 거 43세쯤 한꺼번에 터짐'
+lifeDirection (12~22자): '남 따라가면 꼬이고 혼자 가야 맞음'
+
+핵심: 분석 결과에 "재성이 약해서 돈에 무관심하다"가 있으면 → "월급 들어오면 어디 갔는지 본인도 모름" 이 수준.
+분석 결과에 "편관이 강해 스트레스가 크다"가 있으면 → "일요일 밤부터 월요병 시작" 이 수준.
+사주 용어는 0개. 일상 행동으로만.
+
+JSON:
+{
+  "poeticTitle": "",
+  "hookQuestion": "",
+  "personality": "",
+  "career": "",
+  "wealth": "",
+  "love": "",
+  "health": "",
+  "family": "",
+  "social": "",
+  "yearly": "",
+  "lifePeak": "",
+  "lifeDirection": "",
+  "hotKey": "위 중 가장 찔리는 항목 키 1개"
+}`;
+      };
+
+      const overviewPrompt = buildOverviewPrompt(r1, r2);
+      const r3 = await callAI(overviewPrompt, 'gpt-4o-mini', 800, 0.9, SYSTEM_OVERVIEW);
+
+      // overview 필드 존재 확인 + 폴백
+      const overview = r3 || {};
+      if (!overview.poeticTitle) {
+        overview.poeticTitle = r1.headline || '';
+        overview.hookQuestion = '';
+      }
+
+      // Merge AI results — overview는 r3에서
+      result = { ...r1, ...r2, overview };
 
       // ─── Overlay pre-computed deterministic data (만세력 기반, 항상 동일) ───
       if (pc) {
