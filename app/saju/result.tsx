@@ -159,18 +159,15 @@ export default function SajuResultScreen() {
       dayBranch: getSpiritStar(pillars.day.branchIdx, pillars.day.branchIdx),
       hourBranch: getSpiritStar(pillars.day.branchIdx, pillars.hour.branchIdx),
     };
-    return getOverviewFromTenGods(tenGods, spiritStars);
-  }, [pillars]);
+    return getOverviewFromTenGods(tenGods, spiritStars, storeResult);
+  }, [pillars, storeResult]);
 
-  // templateOverview가 있으면 항상 overview에 주입 (사주별 고유 문장)
+  // templateOverview가 있으면 항상 overview에 주입 (사주별 고유 문장, 10개 전부)
   if (r && templateOverview) {
     r.overview = {
       poeticTitle: r.overview?.poeticTitle || r.headline || '',
       hookQuestion: r.overview?.hookQuestion || '',
       ...templateOverview,
-      yearly: r.overview?.yearly || '',
-      lifePeak: r.overview?.lifePeak || '',
-      lifeDirection: r.overview?.lifeDirection || '',
     };
   }
 

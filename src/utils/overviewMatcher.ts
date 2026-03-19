@@ -233,9 +233,23 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
 export function getOverviewFromTenGods(
   tenGods: Record<string, string>,
   spiritStars?: Record<string, string>,
-): Record<OverviewCategory, string> {
+  gptResult?: any,
+): Record<string, string> {
   const strength = getSipsinStrength(tenGods, spiritStars);
   const tags = determineTags(strength);
+
+  if (__DEV__) {
+    console.log('[Overview] 십신 강약:', {
+      비겁: strength.비겁,
+      식상: strength.식상,
+      재성: strength.재성,
+      관성: strength.관성,
+      인성: strength.인성,
+      겁재있음: strength.겁재있음,
+      도화살있음: strength.도화살있음,
+    });
+    console.log('[Overview] 선택된 태그:', tags);
+  }
 
   // 사주별 고유 seed: 십신 문자열을 해시해서 사주마다 다른 결과
   const godStr = Object.values(tenGods).join('');
@@ -244,20 +258,35 @@ export function getOverviewFromTenGods(
     sajuHash = ((sajuHash << 5) - sajuHash + godStr.charCodeAt(i)) | 0;
   }
 
-  const result = {} as Record<OverviewCategory, string>;
-  for (const [category, tag] of Object.entries(tags)) {
-    const cat = category as OverviewCategory;
-    const pool = OVERVIEW_TEMPLATES[cat][tag];
+  const result: Record<string, string> = {};
+
+  // 7개: 템플릿에서 매칭
+  const categories: OverviewCategory[] = ['personality', 'career', 'wealth', 'love', 'health', 'family', 'social'];
+  for (const cat of categories) {
+    const pool = OVERVIEW_TEMPLATES[cat][tags[cat]];
     if (pool && pool.length > 0) {
       const idx = Math.abs(sajuHash + cat.charCodeAt(0)) % pool.length;
       result[cat] = pool[idx];
     } else {
-      // 폴백: 복합태그의 첫 번째 부분으로 재시도
-      const fallbackTag = tag.split('+')[0] as SipsinTag;
+      const fallbackTag = tags[cat].split('+')[0] as SipsinTag;
       const fallbackPool = OVERVIEW_TEMPLATES[cat][fallbackTag];
       result[cat] = fallbackPool?.[0] ?? '';
     }
   }
+
+  // 3개: GPT 결과에서 축약 (있으면)
+  if (gptResult) {
+    const currentYear = new Date().getFullYear();
+    const yearlyKey = `yearly${currentYear}`;
+
+    const trimSentence = (text: string) =>
+      text ? text.split(/[.!]\s*/)[0].replace(/~요$|~에요$|~해요$|요$/g, '').trim().substring(0, 25) : '';
+
+    result.yearly = trimSentence(gptResult[yearlyKey]?.overview ?? '');
+    result.lifePeak = trimSentence(gptResult.daeun?.lifePeak ?? '');
+    result.lifeDirection = trimSentence(gptResult.finalWords ?? '');
+  }
+
   return result;
 }
 
