@@ -6,6 +6,7 @@ export interface UserProfile {
   birthMonth: number;
   birthDay: number;
   birthHour: number;
+  isUnknownTime?: boolean;  // true면 시간 모름 → 시주 제외 분석
   isLunar: boolean;
   gender: 'male' | 'female';
   locale: string;

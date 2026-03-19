@@ -40,7 +40,7 @@ export function startSajuAnalysis({ user, pillars }: SajuParams) {
   store.setError(null);
 
   const pillarInfo = pillars
-    ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender)
+    ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender, user.isUnknownTime)
     : undefined;
 
   if (__DEV__) console.log('[BackgroundAnalysis] Saju: calling API...');

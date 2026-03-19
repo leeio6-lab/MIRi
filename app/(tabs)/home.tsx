@@ -546,7 +546,7 @@ export default function HomeScreen() {
 
     try {
       const pillarInfo = pillars
-        ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender)
+        ? formatPillarInfo(pillars, user.birthYear, user.birthMonth, user.birthDay, user.gender, user.isUnknownTime)
         : undefined;
 
       const result = await api.analyzeSaju(
@@ -846,9 +846,9 @@ function getHours(t: (key: string) => string) {
 
 function ProfileEditModal({ visible, user, onClose, onSave }: {
   visible: boolean;
-  user: { name?: string; birthYear: number; birthMonth: number; birthDay: number; birthHour: number; gender: 'male' | 'female'; isLunar: boolean; birthCity?: string; birthLongitude?: number; birthUtcOffset?: number };
+  user: { name?: string; birthYear: number; birthMonth: number; birthDay: number; birthHour: number; isUnknownTime?: boolean; gender: 'male' | 'female'; isLunar: boolean; birthCity?: string; birthLongitude?: number; birthUtcOffset?: number };
   onClose: () => void;
-  onSave: (d: { name?: string; birthYear: number; birthMonth: number; birthDay: number; birthHour: number; gender: 'male' | 'female'; isLunar: boolean; birthCity?: string; birthLongitude?: number; birthUtcOffset?: number }) => void;
+  onSave: (d: { name?: string; birthYear: number; birthMonth: number; birthDay: number; birthHour: number; isUnknownTime?: boolean; gender: 'male' | 'female'; isLunar: boolean; birthCity?: string; birthLongitude?: number; birthUtcOffset?: number }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const hours = useMemo(() => getHours(t), [t]);
@@ -857,6 +857,7 @@ function ProfileEditModal({ visible, user, onClose, onSave }: {
   const [month, setMonth] = useState(String(user.birthMonth).padStart(2, '0'));
   const [day, setDay] = useState(String(user.birthDay).padStart(2, '0'));
   const [hour, setHour] = useState(user.birthHour);
+  const [unknownTime, setUnknownTime] = useState(user.isUnknownTime ?? false);
   const [gender, setGender] = useState(user.gender);
   const [isLunar, setIsLunar] = useState(user.isLunar);
 
@@ -877,7 +878,7 @@ function ProfileEditModal({ visible, user, onClose, onSave }: {
     if (visible) {
       setName(user.name ?? ''); setYear(String(user.birthYear));
       setMonth(String(user.birthMonth).padStart(2, '0')); setDay(String(user.birthDay).padStart(2, '0'));
-      setHour(user.birthHour); setGender(user.gender); setIsLunar(user.isLunar);
+      setHour(user.birthHour); setUnknownTime(user.isUnknownTime ?? false); setGender(user.gender); setIsLunar(user.isLunar);
       // Restore city
       if (user.birthCity) {
         const city = CITIES.find(c => c.id === user.birthCity);
@@ -902,7 +903,7 @@ function ProfileEditModal({ visible, user, onClose, onSave }: {
   const handleSave = () => {
     const y = parseInt(year, 10), m = parseInt(month, 10), d = parseInt(day, 10);
     if (!y || !m || !d) return;
-    onSave({ name: name || undefined, birthYear: y, birthMonth: m, birthDay: d, birthHour: hour, gender, isLunar, birthCity: selectedCity?.id, birthLongitude: selectedCity?.longitude, birthUtcOffset: selectedCity?.utcOffset });
+    onSave({ name: name || undefined, birthYear: y, birthMonth: m, birthDay: d, birthHour: unknownTime ? 12 : hour, isUnknownTime: unknownTime || undefined, gender, isLunar, birthCity: selectedCity?.id, birthLongitude: selectedCity?.longitude, birthUtcOffset: selectedCity?.utcOffset });
   };
 
   return (
@@ -971,15 +972,25 @@ function ProfileEditModal({ visible, user, onClose, onSave }: {
             </View>
           )}
 
-          <Text style={em.label}>{t('home.editBirthHour')}</Text>
-          <View style={em.hoursGrid}>
-            {hours.map((h) => (
-              <TouchableOpacity key={h.value} style={[em.hourBtn, hour === h.value && em.hourBtnOn]} onPress={() => setHour(h.value)}>
-                <Text style={[em.hourLbl, hour === h.value && em.hourLblOn]}>{h.label}</Text>
-                <Text style={[em.hourSub, hour === h.value && em.hourSubOn]}>{h.sub}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={em.hourHeader}>
+            <Text style={em.label}>{t('home.editBirthHour')}</Text>
+            <TouchableOpacity style={em.unknownRow} onPress={() => setUnknownTime(!unknownTime)}>
+              <View style={[em.checkbox, unknownTime && em.checkboxOn]}>
+                {unknownTime && <Text style={em.checkIcon}>✓</Text>}
+              </View>
+              <Text style={em.unknownText}>{t('birth.unknownTime')}</Text>
+            </TouchableOpacity>
           </View>
+          {!unknownTime && (
+            <View style={em.hoursGrid}>
+              {hours.map((h) => (
+                <TouchableOpacity key={h.value} style={[em.hourBtn, hour === h.value && em.hourBtnOn]} onPress={() => setHour(h.value)}>
+                  <Text style={[em.hourLbl, hour === h.value && em.hourLblOn]}>{h.label}</Text>
+                  <Text style={[em.hourSub, hour === h.value && em.hourSubOn]}>{h.sub}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           <View style={em.btnRow}>
             <TouchableOpacity style={em.cancelBtn} onPress={onClose}>
@@ -1013,6 +1024,14 @@ const em = StyleSheet.create({
   togOn: { backgroundColor: '#1C1C1E' },
   togT: { fontSize: 14, color: theme.colors.text.tertiary, fontWeight: '500' },
   togTOn: { color: theme.colors.gold.light, fontWeight: '600' },
+
+  // 시간 모름
+  hourHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' } as any,
+  unknownRow: { flexDirection: 'row', alignItems: 'center', gap: 5 } as any,
+  checkbox: { width: 16, height: 16, borderRadius: 3, borderWidth: 1.5, borderColor: theme.colors.text.tertiary, alignItems: 'center', justifyContent: 'center' } as any,
+  checkboxOn: { backgroundColor: theme.colors.gold.primary, borderColor: theme.colors.gold.primary },
+  checkIcon: { fontSize: 10, color: '#FFF', fontWeight: '700' as const },
+  unknownText: { fontSize: 12, color: theme.colors.text.secondary },
 
   // 시간 그리드 — 4열 정렬
   hoursGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 6 },

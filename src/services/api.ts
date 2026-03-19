@@ -235,6 +235,7 @@ export function formatPillarInfo(
   birthMonth?: number,
   birthDay?: number,
   gender?: 'male' | 'female',
+  isUnknownTime?: boolean,
 ) {
   const fmt = (p: { stem: string; stemHanja: string; branch: string; branchHanja: string }) =>
     `${p.stem}${p.branch}(${p.stemHanja}${p.branchHanja})`;
@@ -263,14 +264,19 @@ export function formatPillarInfo(
     yearlyFortune = `${currentYear}년: ${yearly.stemHanja}${yearly.branchHanja}(${yearly.tenGod}, ${yearly.lifeStage})`;
   }
 
+  const fourPillarsStr = isUnknownTime
+    ? `연주: ${fmt(pillars.year)} | 월주: ${fmt(pillars.month)} | 일주: ${fmt(pillars.day)} | 시주: 미상(未詳)`
+    : `연주: ${fmt(pillars.year)} | 월주: ${fmt(pillars.month)} | 일주: ${fmt(pillars.day)} | 시주: ${fmt(pillars.hour)}`;
+
   return {
-    fourPillars: `연주: ${fmt(pillars.year)} | 월주: ${fmt(pillars.month)} | 일주: ${fmt(pillars.day)} | 시주: ${fmt(pillars.hour)}`,
+    fourPillars: fourPillarsStr,
     dayMaster: STEM_ELEMENT_NAMES[pillars.day.stem] || pillars.day.stem,
     age,
     elements: pillars.elementBalance,
     strength: analysis.strength,
     yongShin: analysis.yongShin,
     yongShinReason: analysis.yongShinReason,
+    isUnknownTime: isUnknownTime || undefined,
     // Deterministic fortune data (pre-calculated)
     daeunSequence,
     monthlyFortune,

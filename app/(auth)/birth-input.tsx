@@ -126,6 +126,7 @@ export default function BirthInputScreen() {
       birthMonth: monthNum,
       birthDay: dayNum,
       birthHour: hourNum,
+      isUnknownTime: unknownTime || undefined,
       isLunar,
       gender,
       locale: i18n.language,
