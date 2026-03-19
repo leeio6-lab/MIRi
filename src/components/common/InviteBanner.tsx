@@ -12,11 +12,11 @@ interface InviteBannerProps {
 export function InviteBanner({ referralCode, freeAnalysesCount = 0 }: InviteBannerProps) {
   const handleInvite = async () => {
     try {
-      const message = `MIRi(미리)에서 AI 사주/관상 분석 받아보세요! 운명을 미리 보다.\n\n추천 코드: ${referralCode ?? 'MIRI2026'}\n\n다운로드: https://miri-app.com/download`;
+      const message = `명리(命理)에서 AI 사주/관상 분석 받아보세요! 운명의 이치를 읽다.\n\n추천 코드: ${referralCode ?? 'MYEONGRI2026'}\n\n다운로드: https://myeongri-app.com/download`;
 
       await Share.share({
         message,
-        title: 'MIRi - 운명을 미리 보다',
+        title: '명리 - 운명의 이치를 읽다',
       });
 
       analytics.track('referral_invite');

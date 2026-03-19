@@ -2,10 +2,11 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
-// email + profile만 요청 (민감한 scope 없음 → Google 심사 없이 즉시 게시 가능)
+// email + profile + birthday 요청
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/user.birthday.read',
 ].join(' ');
 
 // ─── Google Sign-In ───

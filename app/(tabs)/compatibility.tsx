@@ -31,6 +31,24 @@ import type { CompatibilityResult, CompatCategories, CompatCategoryScore, Compat
 
 // ELEMENT_KO removed — use t(`elements.${el}`) inside component
 
+const CAT_LABELS: Record<string, string> = {
+  love: '애정', communication: '소통', values: '가치관',
+  sexual: '성적', finance: '금전', family: '가족',
+  growth: '성장', crisis: '위기',
+};
+
+const VERDICT_MAP: { min: number; label: string; sub: string }[] = [
+  { min: 90, label: '천생연분', sub: '전생에 약속한 인연' },
+  { min: 80, label: '찢었다', sub: '주변에서 질투할 조합' },
+  { min: 70, label: '케미 폭발', sub: '같이 있으면 시간이 순삭' },
+  { min: 60, label: '밀당의 고수들', sub: '적당한 긴장감이 관계를 지킨다' },
+  { min: 50, label: '묘한 끌림', sub: '끌리는데 불안하기도 한' },
+  { min: 40, label: '취급주의', sub: '서로 자극하는 위험한 관계' },
+  { min: 0, label: '도망쳐', sub: '만나면 둘 다 지치는 관계' },
+];
+
+const getVerdict = (score: number) => VERDICT_MAP.find(v => score >= v.min) || VERDICT_MAP[VERDICT_MAP.length - 1];
+
 const HOURS = [
   { labelKey: 'hourZi', sub: '23-01', value: 0 },
   { labelKey: 'hourChou', sub: '01-03', value: 2 },
@@ -180,6 +198,8 @@ export default function CompatibilityScreen() {
             onPress={() => setEditingMy(!editingMy)}
             activeOpacity={0.7}
           >
+            {/* 상단 골드 엣지라인 */}
+            <View style={st.myCompactGoldEdge} />
             {!editingMy ? (
               <View style={st.myCompactRow}>
                 <View style={st.myCompactLeft}>
@@ -345,16 +365,16 @@ export default function CompatibilityScreen() {
       {/* ── RESULTS ── */}
       {result && (
         <Animated.View entering={FadeInDown.springify()}>
-          {/* Brand */}
-          <View style={st.brandRow}>
-            <Text style={st.brandLogo}>MIRi</Text>
-            <Text style={st.brandTag}>두 사람의 인연</Text>
-          </View>
-
           {/* Back to input */}
           <TouchableOpacity onPress={() => setResult(null)} style={st.resetBtn}>
             <Text style={st.resetText}>{'< '}{t('compatibility.reAnalyze')}</Text>
           </TouchableOpacity>
+
+          {/* Brand */}
+          <View style={st.brandRow}>
+            <Text style={st.brandLogo}>명리</Text>
+            <Text style={st.brandTag}>두 사람의 인연</Text>
+          </View>
 
           {/* ═══ 궁합 요약 카드 (사주분석 overview 스타일) ═══ */}
           {(() => {
@@ -667,30 +687,38 @@ export default function CompatibilityScreen() {
                 </GlassCard>
               )}
               {result.finalWords && <GlassCard gold style={st.detailCard}><Text style={st.detailLabel}>{t('compatibility.masterWord')}</Text><Text style={[st.detailText, { fontWeight: '500', lineHeight: 24 }]}>{result.finalWords}</Text></GlassCard>}
-
-              {/* Share (only after paid unlock) */}
-              <View style={{ marginTop: theme.spacing.xl }}>
-                <ShareCard
-                  type="compatibility"
-                  score={result.overallScore}
-                  title={(myPillarsData && partnerPillarsData) ? getCoupleTitle(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement) : result.headline}
-                  summary={typeof result.summary === 'string' ? result.summary : ''}
-                  items={(() => {
-                    const ov2 = (myPillarsData && partnerPillarsData)
-                      ? getCompatOverview(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement, myPillarsData.year.zodiac ?? '', partnerPillarsData.year.zodiac ?? '')
-                      : null;
-                    return ov2 ? [
-                      { label: '첫인상', value: ov2.first },
-                      { label: '연애', value: ov2.love },
-                      { label: '싸움', value: ov2.fight },
-                      { label: '질투', value: ov2.jealousy },
-                      { label: '판결', value: ov2.verdict },
-                    ] : undefined;
-                  })()}
-                />
-              </View>
             </>
           )}
+
+          {/* Share */}
+          {result.categories && (() => {
+            const verdict = getVerdict(result.overallScore);
+            return (
+              <View style={{ marginTop: theme.spacing.md }}>
+                <ShareCard data={{
+                  type: 'compatibility',
+                  score: result.overallScore,
+                  name1: myDisplayName,
+                  name2: ptName,
+                  verdict: verdict.label,
+                  verdictSub: verdict.sub,
+                  summary: result.headline || (typeof result.summary === 'string' ? result.summary : ''),
+                  best: (() => {
+                    const entries = Object.entries(result.categories ?? {})
+                      .map(([key, val]) => ({ key, score: (val as any)?.score ?? (typeof val === 'number' ? val : 50) }))
+                      .sort((a, b) => b.score - a.score);
+                    return entries.length > 0 ? { name: CAT_LABELS[entries[0].key] || entries[0].key, score: entries[0].score } : { name: '-', score: 0 };
+                  })(),
+                  worst: (() => {
+                    const entries = Object.entries(result.categories ?? {})
+                      .map(([key, val]) => ({ key, score: (val as any)?.score ?? (typeof val === 'number' ? val : 50) }))
+                      .sort((a, b) => a.score - b.score);
+                    return entries.length > 0 ? { name: CAT_LABELS[entries[0].key] || entries[0].key, score: entries[0].score } : { name: '-', score: 0 };
+                  })(),
+                }} />
+              </View>
+            );
+          })()}
         </Animated.View>
       )}
 
@@ -737,6 +765,22 @@ const st = StyleSheet.create({
     borderRadius: theme.radius.md,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232,176,74,0.15)',
+    shadowColor: '#E8B04A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  myCompactGoldEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 16,
+    right: 16,
+    height: 1,
+    backgroundColor: 'rgba(232,176,74,0.3)',
   },
   myCompactRow: {
     flexDirection: 'row',

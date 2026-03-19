@@ -11,7 +11,6 @@ import Animated, {
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
-import { MIRiLogo } from '../../src/components/ui/MIRiLogo';
 import { useAuthStore } from '../../src/stores/authStore';
 import { fetchGoogleProfile } from '../../src/services/auth';
 
@@ -181,7 +180,7 @@ export default function LoginScreen() {
 
       <Animated.View style={[styles.contentWrap, contentStyle]}>
         <View style={styles.centerArea}>
-          <Text style={styles.title}>MIRi</Text>
+          <Text style={styles.title}>명리</Text>
           <Text style={styles.subtitle}>{t('auth.welcome')}</Text>
           <View style={styles.decorative}>
             <Text style={styles.decorChar}>占</Text>
@@ -209,23 +208,7 @@ export default function LoginScreen() {
               disabled={isLoading}
             />
 
-            <LoginButton
-              label={t('auth.loginKakao')}
-              icon="K"
-              iconColor="#3C1E1E"
-              iconBg="#FEE500"
-              onPress={handleKakaoLogin}
-              disabled={isLoading}
-            />
-
-            <LoginButton
-              label={t('auth.loginLine')}
-              icon="L"
-              iconColor="#fff"
-              iconBg="#06C755"
-              onPress={handleLineLogin}
-              disabled={isLoading}
-            />
+            {/* 카카오/LINE 비활성화 — 추후 재활성화 */}
           </View>
 
           <TouchableOpacity
@@ -249,28 +232,22 @@ const styles = StyleSheet.create({
   contentWrap: {
     flex: 1,
     paddingHorizontal: theme.spacing.screenPadding,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   centerArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: height * 0.15,
-    pointerEvents: 'none',
+    marginBottom: 48,
   },
   bottomArea: {
-    paddingBottom: 40,
     alignItems: 'center',
+    width: '100%',
   },
   title: {
     fontSize: 44,
     fontWeight: '200',
     color: theme.colors.text.primary,
-    letterSpacing: 14,
+    letterSpacing: 6,
   },
   subtitle: {
     fontSize: 15,

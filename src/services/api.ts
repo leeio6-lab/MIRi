@@ -2,7 +2,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase';
 import type { SajuInput, SajuResult, FaceResult, CompatibilityResult, DailyFortune } from '../types/api';
 import type { AnalysisMode } from '../stores/userStore';
 import type { FourPillarsCalc } from '../utils/saju-calc';
-import { calculateDaeun, calculateMonthlyFortune, calculateYearlyFortune } from '../utils/saju-calc';
+import { calculateDaeun, calculateMonthlyFortune, calculateYearlyFortune, getTenGod, getTenGodForBranch, getSpiritStar } from '../utils/saju-calc';
+import { getSipsinSummary } from '../utils/overviewMatcher';
 
 // ─── Rate Limiter ───
 const rateLimitMap = new Map<string, number[]>();
@@ -244,6 +245,26 @@ export function formatPillarInfo(
   const age = currentYear - birthYear + 1;
   const analysis = analyzeStrengthAndYongShin(pillars);
 
+  // Compute tenGods for sipsin summary
+  const dmIdx = pillars.day.stemIdx;
+  const tenGods = {
+    yearStem: getTenGod(dmIdx, pillars.year.stemIdx),
+    monthStem: getTenGod(dmIdx, pillars.month.stemIdx),
+    dayStem: '비견',
+    hourStem: getTenGod(dmIdx, pillars.hour.stemIdx),
+    yearBranch: getTenGodForBranch(dmIdx, pillars.year.branchIdx),
+    monthBranch: getTenGodForBranch(dmIdx, pillars.month.branchIdx),
+    dayBranch: getTenGodForBranch(dmIdx, pillars.day.branchIdx),
+    hourBranch: getTenGodForBranch(dmIdx, pillars.hour.branchIdx),
+  };
+  const spiritStars = {
+    yearBranch: getSpiritStar(pillars.day.branchIdx, pillars.year.branchIdx),
+    monthBranch: getSpiritStar(pillars.day.branchIdx, pillars.month.branchIdx),
+    dayBranch: getSpiritStar(pillars.day.branchIdx, pillars.day.branchIdx),
+    hourBranch: getSpiritStar(pillars.day.branchIdx, pillars.hour.branchIdx),
+  };
+  const sipsinSummary = getSipsinSummary(tenGods, spiritStars);
+
   // Pre-calculated daeun + monthly fortune (deterministic)
   let daeunSequence: string | undefined;
   let monthlyFortune: string | undefined;
@@ -276,6 +297,7 @@ export function formatPillarInfo(
     strength: analysis.strength,
     yongShin: analysis.yongShin,
     yongShinReason: analysis.yongShinReason,
+    sipsinSummary,
     isUnknownTime: isUnknownTime || undefined,
     // Deterministic fortune data (pre-calculated)
     daeunSequence,

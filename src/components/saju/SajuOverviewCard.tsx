@@ -67,13 +67,16 @@ const ITEMS: { key: keyof Omit<SajuOverview, 'poeticTitle' | 'hookQuestion'>; la
   { key: 'lifeDirection',  label: '방향', section: 'lifeDirection' },
 ];
 
+const TEMPLATE_KEYS = new Set(['personality', 'career', 'wealth', 'love', 'health', 'family', 'social']);
+
 interface Props {
   overview: SajuOverview;
+  templateOverview?: Partial<Record<'personality' | 'career' | 'wealth' | 'love' | 'health' | 'family' | 'social', string>>;
   accentColor?: string;
   onItemPress: (section: string) => void;
 }
 
-export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview, accentColor, onItemPress }: Props) {
+export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview, templateOverview, accentColor, onItemPress }: Props) {
   const { t } = useTranslation();
   const accent = accentColor ?? G;
 
@@ -92,7 +95,9 @@ export const SajuOverviewCard = React.memo(function SajuOverviewCard({ overview,
   return (
     <View style={styles.container}>
       {ITEMS.map((item, idx) => {
-        const value = overview[item.key];
+        const value = (TEMPLATE_KEYS.has(item.key) && templateOverview?.[item.key as keyof typeof templateOverview])
+          ? templateOverview[item.key as keyof typeof templateOverview]!
+          : overview[item.key];
         if (!value) return null;
         const Icon = ICON_MAP[item.section];
         const isHot = item.section === hotKey;

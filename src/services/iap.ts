@@ -138,7 +138,7 @@ class IAPService {
   private showPurchaseError() {
     Alert.alert(
       '결제 오류',
-      '결제 처리 중 문제가 발생했습니다.\n다시 시도해주세요.\n\n문제가 지속되면 support@miri-app.com으로 문의해주세요.',
+      '결제 처리 중 문제가 발생했습니다.\n다시 시도해주세요.\n\n문제가 지속되면 support@myeongri-app.com으로 문의해주세요.',
       [{ text: '확인' }],
     );
   }

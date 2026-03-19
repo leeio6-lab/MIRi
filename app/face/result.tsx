@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ const AREA_HANJA: Record<string, string> = {
 
 export default function FaceResultScreen() {
   const { t } = useTranslation();
+  const captureRef = useRef<View>(null);
   const { faceResult, transformedImageBase64 } = useFortuneStore();
   const imageUri = transformedImageBase64
     ? `data:image/png;base64,${transformedImageBase64}`
@@ -57,14 +58,23 @@ export default function FaceResultScreen() {
       contentContainerStyle={s.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
+      {/* Header (outside capture area) */}
       <View style={s.nav}>
         <BackButton />
         <View style={s.brand}>
-          <Text style={s.logo}>MIRi</Text>
+          <Text style={s.logo}>명리</Text>
           <Text style={s.tagline}>얼굴에 담긴 운명</Text>
         </View>
         <View style={{ width: 34 }} />
+      </View>
+
+      {/* Capture area start */}
+      <View ref={captureRef} style={s.captureArea} collapsable={false}>
+
+      {/* Capture header */}
+      <View style={s.captureHeader}>
+        <Text style={s.logo}>명리</Text>
+        <Text style={s.tagline}>얼굴에 담긴 운명</Text>
       </View>
 
       {/* Portrait */}
@@ -158,12 +168,20 @@ export default function FaceResultScreen() {
         </Animated.View>
       )}
 
+      {/* Capture footer */}
+      <View style={s.captureFooter}>
+        <Text style={s.captureFooterText}>명리 — 운명의 이치를 읽다</Text>
+      </View>
+
+      </View>{/* Capture area end */}
+
       {/* Share */}
       <View style={s.shareWrap}>
         <ShareCard
           type="face"
           score={faceResult.overallScore}
           summary={faceResult.summary}
+          captureViewRef={captureRef}
         />
       </View>
 
@@ -362,6 +380,29 @@ const s = StyleSheet.create({
     color: theme.colors.text.secondary,
     lineHeight: 22,
     letterSpacing: 0.3,
+  },
+
+  // Capture area
+  captureArea: {
+    backgroundColor: theme.colors.bg.primary,
+    paddingBottom: 20,
+  },
+  captureHeader: {
+    alignItems: 'center' as const,
+    marginBottom: 20,
+  },
+  captureFooter: {
+    alignItems: 'center' as const,
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border.divider,
+  },
+  captureFooterText: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: theme.colors.text.tertiary,
+    letterSpacing: 2,
   },
 
   // Share

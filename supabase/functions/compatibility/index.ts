@@ -283,13 +283,35 @@ JSON 응답:
         max_tokens: maxTok,
       };
       if (seed !== undefined) body.seed = seed;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 120_000); // 120초 타임아웃
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`[compatibility] OpenAI error (${resp.status}):`, errText.substring(0, 500));
+        throw new Error(`OpenAI error (${resp.status}): ${errText.substring(0, 200)}`);
+      }
+
       const d = await resp.json();
-      return JSON.parse(d.choices[0].message.content);
+      const content = d.choices?.[0]?.message?.content;
+      if (!content) {
+        console.error('[compatibility] Empty OpenAI response:', JSON.stringify(d).substring(0, 500));
+        throw new Error('Empty response from OpenAI');
+      }
+
+      try {
+        return JSON.parse(content);
+      } catch (parseErr) {
+        console.error('[compatibility] JSON parse failed:', content.substring(0, 300));
+        throw new Error('Failed to parse AI response as JSON');
+      }
     };
 
     const model = isPaid ? 'gpt-4o' : 'gpt-4o-mini';

@@ -34,9 +34,9 @@ export default function SharePage() {
   const handleDownload = () => {
     // TODO: Replace with actual App Store / Play Store URLs
     if (Platform.OS === 'web') {
-      window.open('https://miri-app.com', '_blank');
+      window.open('https://myeongri-app.com', '_blank');
     } else {
-      Linking.openURL('https://miri-app.com');
+      Linking.openURL('https://myeongri-app.com');
     }
   };
 
@@ -46,7 +46,7 @@ export default function SharePage() {
       <View style={st.card}>
         {/* Header */}
         <View style={st.header}>
-          <Text style={st.logo}>MIRi</Text>
+          <Text style={st.logo}>명리</Text>
           <View style={[st.typeBadge, { backgroundColor: meta.color + '15' }]}>
             <Text style={[st.typeChar, { color: meta.color }]}>{meta.char}</Text>
             <Text style={[st.typeLabel, { color: meta.color }]}>{meta.label}</Text>
@@ -81,13 +81,13 @@ export default function SharePage() {
 
         {/* Blur overlay — tease more content */}
         <View style={st.blurOverlay}>
-          <Text style={st.blurText}>더 자세한 분석 결과는 MIRi에서</Text>
+          <Text style={st.blurText}>더 자세한 분석 결과는 명리에서</Text>
         </View>
       </View>
 
       {/* CTA */}
       <TouchableOpacity style={st.ctaBtn} onPress={handleDownload} activeOpacity={0.85}>
-        <Text style={st.ctaText}>MIRi에서 내 운명 보기</Text>
+        <Text style={st.ctaText}>명리에서 내 운명 보기</Text>
         <Text style={st.ctaSub}>무료로 시작하기</Text>
       </TouchableOpacity>
 
@@ -98,8 +98,8 @@ export default function SharePage() {
 
       {/* Footer */}
       <View style={st.footer}>
-        <Text style={st.footerLogo}>MIRi</Text>
-        <Text style={st.footerTag}>운명을 미리 보다</Text>
+        <Text style={st.footerLogo}>명리</Text>
+        <Text style={st.footerTag}>운명의 이치를 읽다</Text>
         <Text style={st.footerDisc}>엔터테인먼트 목적으로 제공됩니다</Text>
       </View>
     </ScrollView>

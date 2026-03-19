@@ -53,7 +53,7 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const email = `line_${profile.userId}@line.miri.app`;
+    const email = `line_${profile.userId}@line.myeongri.app`;
 
     // 기존 유저 찾기 또는 생성
     const { data: existingUsers } = await supabase.auth.admin.listUsers();

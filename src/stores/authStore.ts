@@ -92,7 +92,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'miri-auth',
+      name: 'myeongri-auth',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         user: state.user,

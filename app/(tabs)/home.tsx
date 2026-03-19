@@ -25,7 +25,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
-import { MIRiLogo } from '../../src/components/ui/MIRiLogo';
+import { MyeongriLogo } from '../../src/components/brand/MyeongriLogo';
 import { LoadingInk } from '../../src/components/ui/LoadingInk';
 import { ElementChart } from '../../src/components/saju/ElementChart';
 import { PaywallModal } from '../../src/components/ui/PaywallModal';
@@ -34,8 +34,9 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { usePurchaseStore } from '../../src/stores/purchaseStore';
 import { useDailyFortune } from '../../src/hooks/useDailyFortune';
-import { calculateFourPillars, hourToBranchIndex, getTenGod, calculateWeeklyFortune, calculateTodaySaju } from '../../src/utils/saju-calc';
+import { calculateFourPillars, hourToBranchIndex, getTenGod, getTenGodForBranch, getSpiritStar, calculateWeeklyFortune, calculateTodaySaju } from '../../src/utils/saju-calc';
 import { api, formatPillarInfo } from '../../src/services/api';
+import { getOverviewFromTenGods } from '../../src/utils/overviewMatcher';
 import { CITIES, type City } from '../../src/constants/cities';
 import { HOURLY_INSIGHTS } from '../../src/constants/hourlyInsights';
 import { DAILY_INSIGHTS } from '../../src/constants/dailyInsights';
@@ -462,6 +463,28 @@ export default function HomeScreen() {
     )[0];
   }, [pillars]);
 
+  const templateOverview = useMemo(() => {
+    if (!pillars) return null;
+    const dmIdx = pillars.day.stemIdx;
+    const tenGods = {
+      yearStem: getTenGod(dmIdx, pillars.year.stemIdx),
+      monthStem: getTenGod(dmIdx, pillars.month.stemIdx),
+      dayStem: '비견',
+      hourStem: getTenGod(dmIdx, pillars.hour.stemIdx),
+      yearBranch: getTenGodForBranch(dmIdx, pillars.year.branchIdx),
+      monthBranch: getTenGodForBranch(dmIdx, pillars.month.branchIdx),
+      dayBranch: getTenGodForBranch(dmIdx, pillars.day.branchIdx),
+      hourBranch: getTenGodForBranch(dmIdx, pillars.hour.branchIdx),
+    };
+    const spiritStars = {
+      yearBranch: getSpiritStar(pillars.day.branchIdx, pillars.year.branchIdx),
+      monthBranch: getSpiritStar(pillars.day.branchIdx, pillars.month.branchIdx),
+      dayBranch: getSpiritStar(pillars.day.branchIdx, pillars.day.branchIdx),
+      hourBranch: getSpiritStar(pillars.day.branchIdx, pillars.hour.branchIdx),
+    };
+    return getOverviewFromTenGods(tenGods, spiritStars);
+  }, [pillars]);
+
   const dayMasterElementColor = theme.colors.elements[pillars?.dayMasterElement as keyof typeof theme.colors.elements] ?? theme.colors.gold.primary;
   const elementColor = dayMasterElementColor;
 
@@ -611,9 +634,7 @@ export default function HomeScreen() {
       {/* ── 헤더 ── */}
       <Animated.View entering={FadeInDown.delay(50).duration(500)}>
         <View style={styles.header}>
-          <Text style={styles.appName}>MIRi</Text>
-          <Text style={styles.appSub}>운명을 미리 보다</Text>
-          <View style={styles.headerDivider} />
+          <MyeongriLogo variant="stacked" size={32} />
         </View>
       </Animated.View>
 
@@ -1066,33 +1087,14 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing.screenPadding,
-    paddingTop: 48,
+    paddingTop: 64,
     paddingBottom: 120,
   },
 
   /* ── 헤더 ── */
   header: {
     alignItems: 'center',
-    marginBottom: 30,
-  },
-  appName: {
-    fontSize: 44,
-    fontWeight: '200',
-    color: theme.colors.text.primary,
-    letterSpacing: 10,
-  },
-  appSub: {
-    fontSize: 11,
-    color: theme.colors.text.tertiary,
-    fontWeight: '500',
-    letterSpacing: 3,
-    marginTop: 2,
-  },
-  headerDivider: {
-    width: 32,
-    height: 1,
-    backgroundColor: 'rgba(212,168,75,0.20)',
-    marginTop: 12,
+    marginBottom: 24,
   },
 
   /* ── 프로필 바 ── */

@@ -130,7 +130,7 @@ export const usePurchaseStore = create<PurchaseState>()(
       },
     }),
     {
-      name: 'miri-purchases',
+      name: 'myeongri-purchases',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         freeCredits: state.freeCredits,

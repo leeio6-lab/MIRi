@@ -11,7 +11,7 @@ export function ReviewPrompt({ onDismiss }: ReviewPromptProps) {
   const handleReview = () => {
     const storeUrl = Platform.OS === 'ios'
       ? 'https://apps.apple.com/app/id0000000000' // TODO: Replace with real ID
-      : 'https://play.google.com/store/apps/details?id=com.miri.app';
+      : 'https://play.google.com/store/apps/details?id=com.myeongri.app';
 
     Linking.openURL(storeUrl).catch(() => {});
     onDismiss();
@@ -19,7 +19,7 @@ export function ReviewPrompt({ onDismiss }: ReviewPromptProps) {
 
   return (
     <GlassCard style={styles.container}>
-      <Text style={styles.title}>MIRi가 마음에 드셨나요?</Text>
+      <Text style={styles.title}>명리가 마음에 드셨나요?</Text>
       <Text style={styles.desc}>리뷰를 남겨주시면 더 좋은 서비스를 만드는 데 큰 힘이 됩니다.</Text>
       <View style={styles.buttons}>
         <TouchableOpacity onPress={onDismiss} style={styles.laterBtn}>

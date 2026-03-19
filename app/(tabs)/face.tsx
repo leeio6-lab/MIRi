@@ -17,6 +17,7 @@ import { theme } from '../../src/constants/theme';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { LoadingInk } from '../../src/components/ui/LoadingInk';
 import { PaywallModal } from '../../src/components/ui/PaywallModal';
+import { ShareCard } from '../../src/components/ui/ShareCard';
 import { FaceOverlay } from '../../src/components/face/FaceOverlay';
 import { useFortuneStore } from '../../src/stores/fortuneStore';
 import { usePurchaseStore } from '../../src/stores/purchaseStore';
@@ -259,28 +260,19 @@ export default function FaceScreen() {
   //  RESULTS VIEW
   // ════════════════════════════════════════════════════════════════════════════
 
-  const handleShare = async () => {
-    const shareText = `[MIRi 관상] ${faceResult?.shareTitle ?? ''} ${faceResult?.overallScore ?? ''}점\n\n${faceResult?.hookLine ?? faceResult?.summary ?? ''}\n\nhttps://dist-drab-ten-14.vercel.app/share?type=face&score=${faceResult?.overallScore}`;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
-      try { await (navigator as any).share({ title: 'MIRi 관상 분석', text: shareText }); } catch {}
-    } else if (Platform.OS === 'web' && navigator?.clipboard) {
-      await navigator.clipboard.writeText(shareText);
-    }
-  };
-
   const handleDownloadPainting = async () => {
     if (!transformedImageBase64) return;
 
     if (Platform.OS === 'web') {
       const link = document.createElement('a');
       link.href = `data:image/png;base64,${transformedImageBase64}`;
-      link.download = `MIRi_portrait_${Date.now()}.png`;
+      link.download = `Myeongri_portrait_${Date.now()}.png`;
       link.click();
     } else {
       try {
         const FS = require('expo-file-system');
         const Share = require('expo-sharing');
-        const fileUri = `${FS.cacheDirectory}MIRi_portrait_${Date.now()}.png`;
+        const fileUri = `${FS.cacheDirectory}Myeongri_portrait_${Date.now()}.png`;
         await FS.writeAsStringAsync(fileUri, transformedImageBase64, {
           encoding: FS.EncodingType.Base64,
         });
@@ -303,7 +295,7 @@ export default function FaceScreen() {
         <View style={rs.navBar}>
           <View style={rs.navSpacer} />
           <View style={rs.navBrand}>
-            <Text style={rs.navLogo}>MIRi</Text>
+            <Text style={rs.navLogo}>명리</Text>
             <View style={rs.navDecoRow}>
               <View style={rs.navDeco} />
               <Text style={rs.navTagline}>面 相 풀 이</Text>
@@ -358,9 +350,6 @@ export default function FaceScreen() {
             {faceResult.celebrity && (
               <Text style={rs.mainCelebrity}>{faceResult.celebrity}</Text>
             )}
-            <TouchableOpacity style={rs.mainShareBtn} onPress={handleShare} activeOpacity={0.8}>
-              <Text style={rs.mainShareText}>{t('common.share')}</Text>
-            </TouchableOpacity>
           </View>
         </Animated.View>
 
@@ -478,9 +467,21 @@ export default function FaceScreen() {
 
         {/* ─── 7. BOTTOM ─── */}
         <View style={rs.bottomActions}>
-          <TouchableOpacity style={rs.bottomShareBtn} onPress={handleShare} activeOpacity={0.8}>
-            <Text style={rs.bottomShareText}>{t('common.share')}</Text>
-          </TouchableOpacity>
+          <ShareCard data={{
+            type: 'face',
+            score: faceResult.overallScore,
+            tag: faceResult.shareTitle || '관상',
+            hookLine: faceResult.hookLine ?? faceResult.summary ?? '',
+            celebrity: faceResult.celebrity,
+            radar: faceResult.radarScores ? [
+              { label: '재물', kanji: '財', value: faceResult.radarScores.wealth },
+              { label: '성공', kanji: '祿', value: faceResult.radarScores.success },
+              { label: '연애', kanji: '愛', value: faceResult.radarScores.love },
+              { label: '건강', kanji: '壽', value: faceResult.radarScores.health },
+              { label: '사교', kanji: '和', value: faceResult.radarScores.social },
+            ] : undefined,
+            portraitBase64: transformedImageBase64 ?? undefined,
+          }} />
           <TouchableOpacity style={rs.newBtn} onPress={resetAnalysis} activeOpacity={0.8}>
             <Text style={rs.newBtnText}>{t('face.newAnalysis')}</Text>
           </TouchableOpacity>

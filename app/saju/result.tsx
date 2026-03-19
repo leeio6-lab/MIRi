@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent, Share } from 'react-native';
+import React, { useRef, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { calculateFourPillars, getTenGod, getTenGodForBranch, getSpiritStar } from '../../src/utils/saju-calc';
 import { getOverviewFromTenGods } from '../../src/utils/overviewMatcher';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+import { ShareCard } from '../../src/components/ui/ShareCard';
 import { DayMasterAnim } from '../../src/components/icons/DayMasterAnim';
 
 // ── 한글→한자 매핑 (DayMasterAnim용) ──
@@ -70,18 +71,6 @@ function DayMasterIcon({ stem, size = 32 }: { stem: string; size?: number }) {
 
 const SCREEN_W = Dimensions.get('window').width;
 const isSmall = SCREEN_W < 380;
-const SHARE_BASE_URL = 'https://dist-drab-ten-14.vercel.app/share';
-
-function ShareIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M16 6l-4-4-4 4" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M12 2v13" stroke="#FFF" strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 const sc = (s?: number) => {
   const v = s ?? 70;
   return v >= 80 ? theme.colors.success : v >= 60 ? theme.colors.gold.primary : v >= 40 ? theme.colors.warning : theme.colors.error;
@@ -189,29 +178,6 @@ export default function SajuResultScreen() {
   if (!r) return (
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>
   );
-
-  const handleShare = async () => {
-    const hookTitle = r.overview?.poeticTitle || r.headline || '사주 분석 결과';
-    const lines: string[] = [];
-    const ov = templateOverview ?? r.overview;
-    if (ov?.personality) lines.push(`성격: ${ov.personality}`);
-    if (ov?.career) lines.push(`직업: ${ov.career}`);
-    if (ov?.wealth) lines.push(`재물: ${ov.wealth}`);
-    if (ov?.love) lines.push(`연애: ${ov.love}`);
-    const params = new URLSearchParams();
-    params.set('type', 'saju');
-    if (hookTitle) params.set('title', encodeURIComponent(hookTitle));
-    if (lines[0]) params.set('summary', encodeURIComponent(lines[0]));
-    const shareUrl = `${SHARE_BASE_URL}?${params.toString()}`;
-    const shareText = `[명리 사주]\n\n${hookTitle}\n\n${lines.slice(0, 3).join('\n')}\n\n나도 보러가기 → ${shareUrl}`;
-    try {
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
-        await (navigator as any).share({ title: '명리 사주', text: shareText });
-      } else if (Platform.OS !== 'web') {
-        await Share.share({ message: shareText, title: '명리 사주' });
-      }
-    } catch {}
-  };
 
   const yearly = r.yearly2026 ?? r.yearlyFortune;
   const lucky = r.lucky ?? r.luckyElements;
@@ -503,41 +469,32 @@ export default function SajuResultScreen() {
       {/* ═══ 공유 섹션 ═══ */}
       <Animated.View entering={FadeInDown.delay(nd()).springify()}>
         <View style={$.shareSection}>
-          <View style={$.shareDecoLine}>
-            <View style={$.decoLineSide} />
-            <Text style={$.decoChar}>命</Text>
-            <View style={$.decoLineSide} />
-          </View>
-
-          <Text style={$.shareCta}>{'이 사주,\n혼자만 볼 거야?'}</Text>
-
-          {(r.overview || templateOverview) && (() => {
-            const items: { kanji: string; val: string }[] = [];
-            const ov = templateOverview ?? r.overview;
-            if (ov?.personality) items.push({ kanji: '性', val: ov.personality });
-            if (ov?.career) items.push({ kanji: '業', val: ov.career });
-            if (ov?.wealth) items.push({ kanji: '財', val: ov.wealth });
-            if (ov?.love) items.push({ kanji: '緣', val: ov.love });
-            if (ov?.health) items.push({ kanji: '體', val: ov.health });
-            const top3 = items.slice(0, 3);
-            return top3.length > 0 ? (
-              <View style={$.sharePreview}>
-                {top3.map((item, i) => (
-                  <View key={i} style={$.shareRow}>
-                    <Text style={$.shareKanji}>{item.kanji}</Text>
-                    <Text style={$.shareVal} numberOfLines={1}>{item.val}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null;
-          })()}
-
-          <TouchableOpacity style={$.shareBtn} onPress={handleShare} activeOpacity={0.85}>
-            <ShareIcon />
-            <Text style={$.shareBtnText}>친구에게 공유하기</Text>
-          </TouchableOpacity>
-
-          <Text style={$.shareHint}>카카오톡, 인스타, 문자로 보내기</Text>
+          <ShareCard data={{
+            type: 'saju',
+            score: r.overallScore ?? 0,
+            headline: r.overview?.poeticTitle || r.headline || '',
+            dayMaster: (() => {
+              const stem = pillars?.day?.stem;
+              const info = stem ? DAY_MASTER_IDENTITY[stem] : null;
+              return info?.name ?? '사주 분석';
+            })(),
+            nature: (() => {
+              const stem = pillars?.day?.stem;
+              const info = stem ? DAY_MASTER_IDENTITY[stem] : null;
+              return info ? `${info.nature}의 기운` : '';
+            })(),
+            items: (() => {
+              const ov = templateOverview ?? r.overview;
+              const items: { k: string; v: string }[] = [];
+              if (ov?.personality) items.push({ k: '性', v: ov.personality });
+              if (ov?.career) items.push({ k: '業', v: ov.career });
+              if (ov?.wealth) items.push({ k: '財', v: ov.wealth });
+              if (ov?.love) items.push({ k: '緣', v: ov.love });
+              if (ov?.health) items.push({ k: '體', v: ov.health });
+              return items.slice(0, 5);
+            })(),
+            lucky: r.lucky ? `행운색 ${r.lucky.color} · 행운번호 ${r.lucky.number}` : undefined,
+          }} />
         </View>
       </Animated.View>
 
@@ -740,88 +697,9 @@ const $ = StyleSheet.create({
   // Share section
   shareSection: {
     marginTop: 28,
-    backgroundColor: theme.colors.goldCard.bg,
     borderRadius: 20,
     padding: 28,
     alignItems: 'center' as const,
-  },
-  shareDecoLine: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 12,
-    marginBottom: 20,
-    alignSelf: 'stretch' as const,
-  },
-  decoLineSide: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(212, 168, 75, 0.25)',
-  },
-  decoChar: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: theme.colors.gold.primary,
-    letterSpacing: 2,
-    opacity: 0.5,
-  },
-  shareCta: {
-    fontSize: 22,
-    fontWeight: '800' as const,
-    color: theme.colors.goldCard.text,
-    textAlign: 'center' as const,
-    lineHeight: 32,
-    letterSpacing: -0.5,
-    marginBottom: 20,
-  },
-  sharePreview: {
-    alignSelf: 'stretch' as const,
-    gap: 8,
-    marginBottom: 24,
-  },
-  shareRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  shareKanji: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: theme.colors.gold.primary,
-    width: 24,
-    textAlign: 'center' as const,
-  },
-  shareVal: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: theme.colors.goldCard.textSecondary,
-    lineHeight: 19,
-  },
-  shareBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 8,
-    backgroundColor: theme.colors.gold.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignSelf: 'stretch' as const,
-  },
-  shareBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  shareHint: {
-    fontSize: 11,
-    color: theme.colors.goldCard.textTertiary,
-    marginTop: 10,
-    letterSpacing: 0.5,
   },
 
   // Floating button

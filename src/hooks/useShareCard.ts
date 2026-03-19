@@ -12,7 +12,7 @@ export function useShareCard() {
 
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png',
-        dialogTitle: 'MIRi 분석 결과 공유',
+        dialogTitle: '명리 분석 결과 공유',
       });
 
       analytics.track('share_card', { type });

@@ -63,10 +63,10 @@ export default function OnboardingScreen() {
     <View style={s.container}>
       {/* 브랜드 헤더 */}
       <View style={s.header}>
-        <Text style={s.appName}>MIRi</Text>
+        <Text style={s.appName}>명리</Text>
         <View style={s.headerDecoRow}>
           <View style={s.headerDeco} />
-          <Text style={s.appNameSub}>운명을 미리 보다</Text>
+          <Text style={s.appNameSub}>운명의 이치를 읽다</Text>
           <View style={s.headerDeco} />
         </View>
       </View>
@@ -133,7 +133,7 @@ export default function OnboardingScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
   header: { paddingTop: 70, alignItems: 'center', gap: 8 },
-  appName: { fontSize: 32, fontWeight: '200', color: theme.colors.text.primary, letterSpacing: 10 },
+  appName: { fontSize: 32, fontWeight: '200', color: theme.colors.text.primary, letterSpacing: 6 },
   headerDecoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerDeco: { width: 20, height: 1, backgroundColor: theme.colors.gold.light, opacity: 0.3 },
   appNameSub: { fontSize: 11, color: theme.colors.text.tertiary, letterSpacing: 3, fontWeight: '400' },

@@ -1,206 +1,102 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, Share, Alert, TouchableOpacity } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { theme } from '../../constants/theme';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
+import { ShareImageCard, type ShareData } from '../share/ShareImageCard';
 import { Button } from './Button';
 
-const { width } = Dimensions.get('window');
-
-const SHARE_BASE_URL = 'https://dist-drab-ten-14.vercel.app/share';
-
 interface ShareCardProps {
-  type: 'saju' | 'face' | 'compatibility';
-  score: number;
-  summary: string;
-  title?: string;
-  items?: { label: string; value: string }[];
+  data: ShareData;
 }
 
-function buildShareUrl(props: ShareCardProps): string {
-  const params = new URLSearchParams();
-  params.set('type', props.type);
-  if (props.score > 0) params.set('score', String(props.score));
-  if (props.title) params.set('title', props.title);
-  if (props.summary) params.set('summary', props.summary);
-  if (props.items && props.items.length > 0) {
-    params.set('items', JSON.stringify(props.items.slice(0, 5)));
+/** 웹: html-to-image로 DOM 캡처 → Blob */
+async function captureWeb(node: HTMLElement): Promise<Blob | null> {
+  try {
+    const { toPng } = await import('html-to-image');
+    const dataUrl = await toPng(node, { quality: 0.95, pixelRatio: 2 });
+    const res = await fetch(dataUrl);
+    return await res.blob();
+  } catch (e) {
+    console.error('[ShareCard] web capture:', e);
+    return null;
   }
-  return `${SHARE_BASE_URL}?${params.toString()}`;
 }
 
-export function ShareCard({ type, score, summary, title, items }: ShareCardProps) {
-  const { t } = useTranslation();
+export function ShareCard({ data }: ShareCardProps) {
+  const cardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const typeLabels = { saju: t('share.sajuType'), face: t('share.faceType'), compatibility: t('share.compatType') };
-
-  const shareUrl = buildShareUrl({ type, score, summary, title, items });
-  const shareText = `[MIRi] ${title || typeLabels[type]}${score > 0 ? ` ${score}점` : ''}\n\n${summary}\n\n${shareUrl}`;
+  const [done, setDone] = useState(false);
 
   const handleShare = async () => {
-    if (sharing) return;
+    if (sharing || !cardRef.current) return;
     setSharing(true);
 
     try {
-      // 1. Web Share API (URL 포함)
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
-        await (navigator as any).share({
-          title: `MIRi ${typeLabels[type]}`,
-          text: `${title || typeLabels[type]}${score > 0 ? ` ${score}점` : ''}\n${summary}`,
-          url: shareUrl,
-        });
-        return;
-      }
+      if (Platform.OS === 'web') {
+        const blob = await captureWeb((cardRef.current as any) as HTMLElement);
+        if (!blob) { setSharing(false); return; }
+        const file = new File([blob], `myeongri-${data.type}.png`, { type: 'image/png' });
 
-      // 2. React Native Share (모바일)
-      if (Platform.OS !== 'web') {
-        await Share.share({
-          message: shareText,
-          title: `MIRi ${typeLabels[type]}`,
-          url: shareUrl,
-        });
-        return;
-      }
-
-      // 3. Fallback: 클립보드 복사
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(shareUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch (err: any) {
-      if (err?.message?.includes('cancel') || err?.message?.includes('dismiss')) {
-        // silently ignore
+        if ((navigator as any).canShare?.({ files: [file] })) {
+          await (navigator as any).share({ title: '명리', files: [file] });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setDone(true);
+          setTimeout(() => setDone(false), 2500);
+        }
       } else {
-        if (__DEV__) console.error('Share failed:', err);
+        const uri = await captureRef(cardRef, {
+          format: 'png',
+          quality: 0.95,
+          result: 'tmpfile',
+        });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: '명리 결과 공유' });
+        }
+      }
+    } catch (e: any) {
+      if (!e?.message?.includes('cancel') && !e?.message?.includes('dismiss') && e?.name !== 'AbortError') {
+        console.error('[ShareCard]', e);
       }
     } finally {
       setSharing(false);
     }
   };
 
-  const handleCopyLink = async () => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(shareUrl);
-      }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
-  };
-
   return (
-    <View style={styles.container}>
-      {/* Preview card */}
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Text style={styles.appName}>MIRi</Text>
-          <Text style={styles.typeLabel}>{typeLabels[type]}</Text>
-        </View>
-        {title && <Text style={styles.title} numberOfLines={2}>{title}</Text>}
-        {score > 0 && (
-          <Text style={styles.score}>{score}<Text style={styles.scoreUnit}>점</Text></Text>
-        )}
-        <Text style={styles.summary} numberOfLines={3}>{summary}</Text>
-        <Text style={styles.cta}>터치해서 결과 보기 →</Text>
+    <View>
+      {/* Off-screen: 캡처용 카드 */}
+      <View style={styles.offscreen} pointerEvents="none">
+        <ShareImageCard ref={cardRef} data={data} />
       </View>
 
-      {/* Share buttons */}
-      <View style={styles.btnRow}>
-        <Button
-          title={sharing ? t('common.shareInProgress') : t('common.share')}
-          onPress={handleShare}
-          style={styles.shareBtn}
-          loading={sharing}
-          disabled={sharing}
-        />
-        <TouchableOpacity style={styles.copyBtn} onPress={handleCopyLink} activeOpacity={0.7}>
-          <Text style={styles.copyText}>{copied ? t('common.copied') : t('common.share') + ' URL'}</Text>
-        </TouchableOpacity>
-      </View>
+      {/* 공유 버튼 */}
+      <Button
+        title={sharing ? '이미지 생성 중...' : done ? '저장 완료!' : '결과 이미지로 공유'}
+        onPress={handleShare}
+        loading={sharing}
+        disabled={sharing}
+        style={styles.btn}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {},
-  card: {
-    width: width - 48,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+  offscreen: {
+    position: 'absolute',
+    left: -9999,
+    top: 0,
+    opacity: 0,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  appName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: theme.colors.gold.primary,
-    letterSpacing: 3,
-  },
-  typeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.gold.muted,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
-    lineHeight: 22,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  score: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: theme.colors.gold.primary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  scoreUnit: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.colors.text.tertiary,
-  },
-  summary: {
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  cta: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.gold.primary,
-    textAlign: 'center',
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  shareBtn: {
-    flex: 1,
-  },
-  copyBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.gold.primary + '40',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.gold.primary,
+  btn: {
+    width: '100%',
   },
 });

@@ -206,7 +206,7 @@ export default function CompatibilityScreen() {
       <View style={sty.navRow}>
         <BackButton />
         <View style={sty.brandCenter}>
-          <Text style={sty.brandLogo}>MIRi</Text>
+          <Text style={sty.brandLogo}>명리</Text>
           <Text style={sty.brandTag}>두 사람의 인연</Text>
         </View>
         <View style={{ width: 34 }} />
@@ -865,7 +865,7 @@ export default function CompatibilityScreen() {
                   <GlassCard gold style={sty.detailCard}>
                     <View style={sty.finalHeader}>
                       <View style={sty.finalQuote}><Text style={sty.finalQuoteText}>"</Text></View>
-                      <Text style={sty.finalLabel}>MIRi의 한 마디</Text>
+                      <Text style={sty.finalLabel}>명리의 한 마디</Text>
                     </View>
                     <Text style={[sty.detailText, { fontWeight: '500', lineHeight: 24, fontSize: 15 }]}>{result.finalWords}</Text>
                   </GlassCard>
@@ -894,51 +894,39 @@ export default function CompatibilityScreen() {
               </TouchableOpacity>
             </>
           )}
+
+          {/* Share */}
+          {(() => {
+            const verdict = getVerdict(result.overallScore);
+            return (
+              <View style={sty.shareSection}>
+                <ShareCard data={{
+                  type: 'compatibility',
+                  score: result.overallScore,
+                  name1: myName,
+                  name2: ptName,
+                  verdict: verdict.label,
+                  verdictSub: verdict.sub,
+                  summary: result.headline || (typeof result.summary === 'string' ? result.summary : ''),
+                  best: (() => {
+                    const entries = Object.entries(result.categories ?? {})
+                      .map(([key, val]) => ({ key, score: (val as any)?.score ?? (typeof val === 'number' ? val : 50) }))
+                      .sort((a, b) => b.score - a.score);
+                    return entries.length > 0 ? { name: CAT_LABELS[entries[0].key] || entries[0].key, score: entries[0].score } : { name: '-', score: 0 };
+                  })(),
+                  worst: (() => {
+                    const entries = Object.entries(result.categories ?? {})
+                      .map(([key, val]) => ({ key, score: (val as any)?.score ?? (typeof val === 'number' ? val : 50) }))
+                      .sort((a, b) => a.score - b.score);
+                    return entries.length > 0 ? { name: CAT_LABELS[entries[0].key] || entries[0].key, score: entries[0].score } : { name: '-', score: 0 };
+                  })(),
+                }} />
+              </View>
+            );
+          })()}
+
         </Animated.View>
       )}
-
-      {result && (() => {
-        const verdict = getVerdict(result.overallScore);
-        return (
-        <Animated.View entering={FadeInDown.delay(680).springify()}>
-          <View style={sty.shareSection}>
-            {/* Decorative divider */}
-            <View style={sty.shareDividerRow}>
-              <View style={sty.shareDividerLine} />
-              <Text style={sty.shareDividerChar}>緣</Text>
-              <View style={sty.shareDividerLine} />
-            </View>
-
-            {/* Title card */}
-            <View style={sty.shareTitleCard}>
-              <Text style={sty.shareTitleNames}>{myName} &times; {ptName}</Text>
-              <Text style={sty.shareTitleScore}>{result.overallScore}<Text style={sty.shareTitleUnit}>점</Text></Text>
-              <Text style={sty.shareTitleVerdict}>{verdict.label}</Text>
-              <Text style={sty.shareTitleSub}>{verdict.sub}</Text>
-            </View>
-
-            <ShareCard
-              type="compatibility"
-              score={result.overallScore}
-              title={`${myName} × ${ptName} — ${verdict.label}`}
-              summary={result.headline || (typeof result.summary === 'string' ? result.summary : '')}
-              items={result.categories ? (() => {
-                const entries = Object.entries(result.categories)
-                  .map(([key, val]) => {
-                    const cat = val as CompatCategoryScore;
-                    return { key, score: cat?.score ?? (typeof val === 'number' ? val : 50) };
-                  })
-                  .sort((a, b) => b.score - a.score);
-                return [
-                  { label: '강점', value: `${CAT_LABELS[entries[0].key]} ${entries[0].score}점` },
-                  { label: '약점', value: `${CAT_LABELS[entries[entries.length - 1].key]} ${entries[entries.length - 1].score}점` },
-                ];
-              })() : undefined}
-            />
-          </View>
-        </Animated.View>
-        );
-      })()}
 
       <Text style={sty.disclaimer}>{t('common.disclaimer')}</Text>
 
@@ -1244,7 +1232,7 @@ const sty = StyleSheet.create({
   finalLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.muted, letterSpacing: 0.5 },
 
   // Share
-  shareSection: { marginTop: theme.spacing.xl, alignItems: 'center' as const },
+  shareSection: { marginTop: theme.spacing.md, alignItems: 'center' as const },
   shareDividerRow: {
     flexDirection: 'row' as const, alignItems: 'center' as const,
     width: '100%' as const, marginBottom: 16,

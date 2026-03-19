@@ -57,7 +57,7 @@ async function verifyGoogleReceipt(productId: string, purchaseToken: string): Pr
   const accessToken = await getGoogleAccessToken(serviceAccount);
   if (!accessToken) return false;
 
-  const packageName = 'com.miri.app';
+  const packageName = 'com.myeongri.app';
   const apiUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`;
 
   const response = await fetch(apiUrl, {

@@ -20,7 +20,7 @@ export const useUserStore = create<UserSettingsState>()(
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
     }),
     {
-      name: 'miri-user-settings',
+      name: 'myeongri-user-settings',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

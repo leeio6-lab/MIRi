@@ -6,7 +6,7 @@ import ko from './ko.json';
 import ja from './ja.json';
 import en from './en.json';
 
-const LANGUAGE_KEY = 'miri-language';
+const LANGUAGE_KEY = 'myeongri-language';
 const supportedLngs = ['ko', 'ja', 'en'];
 
 const deviceLocale = getLocales()[0]?.languageCode ?? 'en';

@@ -624,11 +624,22 @@ JSON 응답:
         max_tokens: maxTok,
       };
       if (seed !== undefined) body.seed = seed;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 120_000); // 120초 타임아웃
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`[callAI] OpenAI error (${resp.status}):`, errText.substring(0, 500));
+        throw new Error(`OpenAI error (${resp.status}): ${errText.substring(0, 200)}`);
+      }
+
       const d = await resp.json();
       const choice = d.choices?.[0];
       if (!choice?.message?.content) {

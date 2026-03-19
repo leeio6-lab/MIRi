@@ -1,4 +1,4 @@
--- MIRI App Database Schema
+-- Myeongri App Database Schema
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (

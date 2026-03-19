@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "MIRI",
-    "slug": "miri-app",
+    "name": "명리",
+    "slug": "myeongri-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "miri",
+    "scheme": "myeongri",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B0A0F"
+      "backgroundColor": "#FEFCF8"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.miri.fortune",
+      "bundleIdentifier": "com.myeongri.app",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "관상 분석을 위해 카메라 접근이 필요합니다.",
@@ -23,11 +23,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0A0F",
+        "backgroundColor": "#E8B04A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
-      "package": "com.miri.fortune",
+      "package": "com.myeongri.app",
       "permissions": [
         "CAMERA"
       ]

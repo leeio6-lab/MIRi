@@ -28,6 +28,7 @@ interface SajuParams {
     gender: 'male' | 'female';
     locale: string;
     name?: string;
+    isUnknownTime?: boolean;
   };
   pillars: FourPillarsCalc | null;
 }

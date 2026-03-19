@@ -2,17 +2,17 @@ import { Platform } from 'react-native';
 
 export const PRODUCT_IDS = {
   SAJU_DETAIL: Platform.select({
-    ios: 'com.miri.saju.detail',
+    ios: 'com.myeongri.saju.detail',
     android: 'saju_detail',
     default: 'saju_detail',
   })!,
   FACE_ANALYSIS: Platform.select({
-    ios: 'com.miri.face.analysis',
+    ios: 'com.myeongri.face.analysis',
     android: 'face_analysis',
     default: 'face_analysis',
   })!,
   COMPATIBILITY: Platform.select({
-    ios: 'com.miri.compatibility',
+    ios: 'com.myeongri.compatibility',
     android: 'compatibility',
     default: 'compatibility',
   })!,

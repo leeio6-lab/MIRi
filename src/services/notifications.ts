@@ -46,7 +46,7 @@ class NotificationService {
     // Schedule daily morning notification at 8 AM
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'MIRi - 오늘의 운세',
+        title: '명리 - 오늘의 운세',
         body: '오늘의 운세가 준비되었어요. 지금 확인해보세요!',
         data: { screen: '/(tabs)/home' },
         sound: true,

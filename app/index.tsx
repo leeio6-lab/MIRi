@@ -10,7 +10,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { theme } from '../src/constants/theme';
-import { MIRiLogo } from '../src/components/ui/MIRiLogo';
 import { useAuthStore } from '../src/stores/authStore';
 import { supabase } from '../src/services/supabase';
 
@@ -172,11 +171,11 @@ export default function SplashScreen() {
       <InkDrop delay={1000} x={width * 0.38} y={height * 0.50} size={50} maxScale={2.2} color="#2C2C2E" />
 
       <Animated.View style={titleStyle}>
-        <Text style={styles.title}>MIRi</Text>
-        <Text style={styles.titleKo}>미리</Text>
+        <Text style={styles.title}>명리</Text>
+        <Text style={styles.titleKo}>命理</Text>
       </Animated.View>
       <Animated.View style={taglineStyle}>
-        <Text style={styles.tagline}>운명을 미리 보다</Text>
+        <Text style={styles.tagline}>운명의 이치를 읽다</Text>
         <Text style={styles.taglineSub}>3,000년 역학 x 현대 과학</Text>
       </Animated.View>
     </View>
@@ -195,7 +194,7 @@ const styles = StyleSheet.create({
     fontWeight: '200',
     color: theme.colors.text.primary,
     textAlign: 'center',
-    letterSpacing: 18,
+    letterSpacing: 8,
   },
   titleKo: {
     fontSize: 16,
