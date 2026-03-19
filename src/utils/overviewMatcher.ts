@@ -1,4 +1,4 @@
-import { OVERVIEW_TEMPLATES, OverviewCategory, SipsinTag } from '../constants/overviewTemplates';
+import { OVERVIEW_TEMPLATES, YEARLY_TEMPLATES, LIFE_PEAK_TEMPLATES, LIFE_DIRECTION_TEMPLATES, OverviewCategory, SipsinTag } from '../constants/overviewTemplates';
 
 interface SipsinStrength {
   비겁: number;
@@ -233,12 +233,12 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
 export function getOverviewFromTenGods(
   tenGods: Record<string, string>,
   spiritStars?: Record<string, string>,
-  gptResult?: any,
+  pillarInfo?: { yongShinElement?: string; peakDaeunAge?: number },
 ): Record<string, string> {
   const strength = getSipsinStrength(tenGods, spiritStars);
   const tags = determineTags(strength);
 
-  if (__DEV__) {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
     console.log('[Overview] 십신 강약:', {
       비겁: strength.비겁,
       식상: strength.식상,
@@ -251,41 +251,45 @@ export function getOverviewFromTenGods(
     console.log('[Overview] 선택된 태그:', tags);
   }
 
-  // 사주별 고유 seed: 십신 문자열을 해시해서 사주마다 다른 결과
+  // 사주별 고유 seed
   const godStr = Object.values(tenGods).join('');
   let sajuHash = 0;
   for (let i = 0; i < godStr.length; i++) {
     sajuHash = ((sajuHash << 5) - sajuHash + godStr.charCodeAt(i)) | 0;
   }
+  const seed = Math.abs(sajuHash);
 
   const result: Record<string, string> = {};
 
-  // 7개: 템플릿에서 매칭
+  // 7개: 십신 태그 → 템플릿 매칭
   const categories: OverviewCategory[] = ['personality', 'career', 'wealth', 'love', 'health', 'family', 'social'];
   for (const cat of categories) {
-    const pool = OVERVIEW_TEMPLATES[cat][tags[cat]];
+    const pool = OVERVIEW_TEMPLATES[cat]?.[tags[cat]];
     if (pool && pool.length > 0) {
-      const idx = Math.abs(sajuHash + cat.charCodeAt(0)) % pool.length;
-      result[cat] = pool[idx];
+      result[cat] = pool[(seed + cat.charCodeAt(0)) % pool.length];
     } else {
       const fallbackTag = tags[cat].split('+')[0] as SipsinTag;
-      const fallbackPool = OVERVIEW_TEMPLATES[cat][fallbackTag];
+      const fallbackPool = OVERVIEW_TEMPLATES[cat]?.[fallbackTag];
       result[cat] = fallbackPool?.[0] ?? '';
     }
   }
 
-  // 3개: GPT 결과에서 축약 (있으면)
-  if (gptResult) {
-    const currentYear = new Date().getFullYear();
-    const yearlyKey = `yearly${currentYear}`;
+  // 3개: 용신 오행 + 피크 나이 → 템플릿 매칭
+  const yongShinEl = pillarInfo?.yongShinElement ?? 'earth';
+  const peakAge = pillarInfo?.peakDaeunAge ?? 50;
 
-    const trimSentence = (text: string) =>
-      text ? text.split(/[.!]\s*/)[0].replace(/~요$|~에요$|~해요$|요$/g, '').trim().substring(0, 25) : '';
+  // yearly: 용신 오행
+  const yearlyPool = YEARLY_TEMPLATES[yongShinEl] ?? YEARLY_TEMPLATES.earth;
+  result.yearly = yearlyPool[seed % yearlyPool.length];
 
-    result.yearly = trimSentence(gptResult[yearlyKey]?.overview ?? '');
-    result.lifePeak = trimSentence(gptResult.daeun?.lifePeak ?? '');
-    result.lifeDirection = trimSentence(gptResult.finalWords ?? '');
-  }
+  // lifePeak: 피크 나이
+  const peakCategory = peakAge <= 30 ? 'early' : peakAge <= 50 ? 'mid' : 'late';
+  const peakPool = LIFE_PEAK_TEMPLATES[peakCategory];
+  result.lifePeak = peakPool[seed % peakPool.length];
+
+  // lifeDirection: 용신 오행
+  const dirPool = LIFE_DIRECTION_TEMPLATES[yongShinEl] ?? LIFE_DIRECTION_TEMPLATES.earth;
+  result.lifeDirection = dirPool[(seed + 7) % dirPool.length];
 
   return result;
 }

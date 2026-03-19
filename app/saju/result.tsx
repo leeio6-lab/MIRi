@@ -159,7 +159,22 @@ export default function SajuResultScreen() {
       dayBranch: getSpiritStar(pillars.day.branchIdx, pillars.day.branchIdx),
       hourBranch: getSpiritStar(pillars.day.branchIdx, pillars.hour.branchIdx),
     };
-    return getOverviewFromTenGods(tenGods, spiritStars, storeResult);
+    // 용신 오행: STEM_ELEMENTS에서 일간 기준으로 간이 계산
+    const STEM_EL_MAP = ['wood', 'wood', 'fire', 'fire', 'earth', 'earth', 'metal', 'metal', 'water', 'water'];
+    const dayEl = STEM_EL_MAP[dmIdx];
+    // 간이 용신: 일간을 생하는 오행 (인성)
+    const GENERATES: Record<string, string> = { wood: 'water', fire: 'wood', earth: 'fire', metal: 'earth', water: 'metal' };
+    const yongShinElement = GENERATES[dayEl] ?? 'earth';
+
+    // 피크 대운 나이: lifeGraph에서 최고점
+    let peakDaeunAge = 50;
+    const lifeGraph = storeResult?.daeun?.lifeGraph;
+    if (Array.isArray(lifeGraph) && lifeGraph.length > 0) {
+      const peak = lifeGraph.reduce((best: any, d: any) => (d.score ?? 0) > (best.score ?? 0) ? d : best, lifeGraph[0]);
+      peakDaeunAge = parseInt(peak.age, 10) || 50;
+    }
+
+    return getOverviewFromTenGods(tenGods, spiritStars, { yongShinElement, peakDaeunAge });
   }, [pillars, storeResult]);
 
   // templateOverview가 있으면 항상 overview에 주입 (사주별 고유 문장, 10개 전부)
