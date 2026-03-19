@@ -893,7 +893,7 @@ JSON:
       };
 
       const overviewPrompt = buildOverviewPrompt(r1, r2);
-      const r3 = await callAI(overviewPrompt, 'gpt-4o-mini', 800, 0.9, SYSTEM_OVERVIEW);
+      const r3 = await callAI(overviewPrompt, 'gpt-4o', 800, 0.9, SYSTEM_OVERVIEW);
 
       // overview 필드 존재 확인 + 폴백
       const overview = r3 || {};
