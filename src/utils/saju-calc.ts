@@ -16,6 +16,7 @@
 // ============================================================
 
 import { applySolarTimeCorrection } from './solar-time';
+import KoreanLunarCalendar from 'korean-lunar-calendar';
 
 // ─── 천간 (天干, Heavenly Stems) ───
 const HEAVENLY_STEMS = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'] as const;
@@ -338,7 +339,6 @@ export function calculateFourPillars(
 
   if (isLunar) {
     try {
-      const KoreanLunarCalendar = require('korean-lunar-calendar');
       const cal = new KoreanLunarCalendar();
       cal.setLunarDate(year, month, day, false);
       const solar = cal.getSolarCalendar();
