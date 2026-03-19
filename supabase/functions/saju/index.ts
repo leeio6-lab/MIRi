@@ -841,16 +841,16 @@ JSON만 출력.`;
 
       // Step 3: overview 전용 (r1+r2 결과를 입력으로)
       const buildOverviewPrompt = (a1: any, a2: any): string => {
-        const p = a1.personality?.core?.substring(0, 200) ?? '';
-        const c = a1.career?.analysis?.substring(0, 200) ?? '';
-        const w = a1.wealth?.pattern?.substring(0, 200) ?? '';
-        const l = (a1.love?.title ?? '') + ' ' + (a1.love?.warning?.substring(0, 100) ?? '');
-        const h = (a1.health?.title ?? '') + ' ' + (a1.health?.weakPoints?.[0]?.substring(0, 80) ?? '');
-        const fam = a2?.family?.parentFortune?.substring(0, 150) ?? '';
-        const soc = a2?.relationship?.socialStyle?.substring(0, 150) ?? '';
-        const yearData = a2?.[`yearly${currentYear}`]?.overview?.substring(0, 200) ?? '';
-        const peak = a2?.daeun?.lifePeak?.substring(0, 100) ?? '';
-        const final = a1.finalWords?.substring(0, 150) ?? '';
+        const p = a1.personality?.core?.substring(0, 400) ?? '';
+        const c = a1.career?.analysis?.substring(0, 350) ?? '';
+        const w = a1.wealth?.pattern?.substring(0, 350) ?? '';
+        const l = [a1.love?.title, a1.love?.idealPartner?.substring(0, 150), a1.love?.warning?.substring(0, 150)].filter(Boolean).join(' ');
+        const h = [a1.health?.title, ...(a1.health?.weakPoints ?? []), a1.health?.advice?.substring(0, 150)].filter(Boolean).join(' ');
+        const fam = a2?.family?.parentFortune?.substring(0, 250) ?? '';
+        const soc = a2?.relationship?.socialStyle?.substring(0, 250) ?? '';
+        const yearData = a2?.[`yearly${currentYear}`]?.overview?.substring(0, 300) ?? '';
+        const peak = [a2?.daeun?.lifePeak?.substring(0, 200), a2?.daeun?.current?.substring(0, 200)].filter(Boolean).join(' ');
+        const final = a1.finalWords?.substring(0, 250) ?? '';
 
         return `아래 사주 분석 결과를 SNS 한 줄 짤로 바꿔.
 
@@ -885,6 +885,8 @@ lifeDirection (12~22자): '급하게 가면 매번 꼬이는 팔자'
 분석 결과에 "편관이 강해 스트레스가 크다"가 있으면 → "일요일 밤부터 월요병 시작" 이 수준.
 사주 용어는 0개. 일상 행동으로만.
 
+⚠️ 위 분석 결과에 없는 내용을 지어내면 실패. 분석 결과에 '양보를 못 한다'가 없는데 overview에 '양보 못 함'을 쓰면 실패. 분석 결과에 있는 말만 행동으로 바꿔.
+
 JSON:
 {
   "poeticTitle": "",
@@ -904,7 +906,7 @@ JSON:
       };
 
       const overviewPrompt = buildOverviewPrompt(r1, r2);
-      const r3 = await callAI(overviewPrompt, 'gpt-4o', 800, 0.9, SYSTEM_OVERVIEW);
+      const r3 = await callAI(overviewPrompt, 'gpt-4o', 1000, 0.9, SYSTEM_OVERVIEW);
 
       // overview 필드 존재 확인 + 폴백
       const overview = r3 || {};
