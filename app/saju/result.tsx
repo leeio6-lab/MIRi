@@ -162,15 +162,15 @@ export default function SajuResultScreen() {
     return getOverviewFromTenGods(tenGods, spiritStars);
   }, [pillars]);
 
-  // overview가 서버에서 안 왔으면 templateOverview를 overview로 사용
-  if (r && !r.overview && templateOverview) {
+  // templateOverview가 있으면 항상 overview에 주입 (사주별 고유 문장)
+  if (r && templateOverview) {
     r.overview = {
-      poeticTitle: r.headline || '',
-      hookQuestion: '',
+      poeticTitle: r.overview?.poeticTitle || r.headline || '',
+      hookQuestion: r.overview?.hookQuestion || '',
       ...templateOverview,
-      yearly: '',
-      lifePeak: '',
-      lifeDirection: '',
+      yearly: r.overview?.yearly || '',
+      lifePeak: r.overview?.lifePeak || '',
+      lifeDirection: r.overview?.lifeDirection || '',
     };
   }
 
