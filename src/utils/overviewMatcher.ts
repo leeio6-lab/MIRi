@@ -1,4 +1,4 @@
-import { OVERVIEW_TEMPLATES, YEARLY_TEMPLATES, LIFE_PEAK_TEMPLATES, LIFE_DIRECTION_TEMPLATES, OverviewCategory, SipsinTag } from '../constants/overviewTemplates';
+import { OVERVIEW_TEMPLATES, YEARLY_TEMPLATES, LIFE_PEAK_TEMPLATES, LIFE_DIRECTION_TEMPLATES, OverviewCategory, OverviewCategoryBase, SipsinTag } from '../constants/overviewTemplates';
 
 interface SipsinStrength {
   비겁: number;
@@ -40,7 +40,7 @@ export function getSipsinStrength(tenGods: Record<string, string>, spiritStars?:
 /**
  * 십신 강약에서 카테고리별 최적 태그 결정
  */
-export function determineTags(strength: SipsinStrength): Record<OverviewCategory, SipsinTag> {
+export function determineTags(strength: SipsinStrength): Record<OverviewCategoryBase, SipsinTag> {
   const { 비겁, 식상, 재성, 관성, 인성, 겁재있음, 도화살있음 } = strength;
 
   const 비겁강 = 비겁 >= 2;
@@ -251,18 +251,21 @@ export function getOverviewFromTenGods(
     console.log('[Overview] 선택된 태그:', tags);
   }
 
-  // 사주별 고유 seed
+  // 사주 + 날짜 기반 고유 seed (같은 사주라도 매번 다른 결과)
   const godStr = Object.values(tenGods).join('');
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const seedInput = godStr + dateStr;
   let sajuHash = 0;
-  for (let i = 0; i < godStr.length; i++) {
-    sajuHash = ((sajuHash << 5) - sajuHash + godStr.charCodeAt(i)) | 0;
+  for (let i = 0; i < seedInput.length; i++) {
+    sajuHash = ((sajuHash << 5) - sajuHash + seedInput.charCodeAt(i)) | 0;
   }
   const seed = Math.abs(sajuHash);
 
   const result: Record<string, string> = {};
 
   // 7개: 십신 태그 → 템플릿 매칭
-  const categories: OverviewCategory[] = ['personality', 'career', 'wealth', 'love', 'health', 'family', 'social'];
+  const categories: OverviewCategoryBase[] = ['personality', 'career', 'wealth', 'love', 'health', 'family', 'social'];
   for (const cat of categories) {
     const pool = OVERVIEW_TEMPLATES[cat]?.[tags[cat]];
     if (pool && pool.length > 0) {

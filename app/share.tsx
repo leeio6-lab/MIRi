@@ -19,6 +19,8 @@ export default function SharePage() {
     title?: string;
     summary?: string;
     items?: string; // JSON encoded array of {label, value}
+    analysisId?: string; // 공유된 분석 ID (친구가 볼 수 있음)
+    sharedBy?: string; // 공유한 사람 이름
   }>();
 
   const type = params.type ?? 'saju';
@@ -26,6 +28,7 @@ export default function SharePage() {
   const score = parseInt(params.score ?? '0', 10);
   const title = params.title ? decodeURIComponent(params.title) : '';
   const summary = params.summary ? decodeURIComponent(params.summary) : '';
+  const sharedBy = params.sharedBy ? decodeURIComponent(params.sharedBy) : '';
   let items: { label: string; value: string }[] = [];
   try {
     if (params.items) items = JSON.parse(decodeURIComponent(params.items));
@@ -52,6 +55,13 @@ export default function SharePage() {
             <Text style={[st.typeLabel, { color: meta.color }]}>{meta.label}</Text>
           </View>
         </View>
+
+        {/* Shared by */}
+        {sharedBy ? (
+          <View style={st.sharedByWrap}>
+            <Text style={st.sharedByText}>{sharedBy}님의 분석 결과</Text>
+          </View>
+        ) : null}
 
         {/* Title */}
         {title ? <Text style={st.title}>{title}</Text> : null}
@@ -118,6 +128,8 @@ const st = StyleSheet.create({
       ? { boxShadow: '0 8px 32px rgba(181,149,48,0.12), 0 2px 8px rgba(0,0,0,0.04)' }
       : { shadowColor: '#B59530', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 8 }),
   } as any,
+  sharedByWrap: { backgroundColor: theme.colors.gold.primary + '10', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12, alignSelf: 'center' },
+  sharedByText: { fontSize: 13, fontWeight: '600', color: theme.colors.gold.primary },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   logo: { fontSize: 24, fontWeight: '800', color: theme.colors.gold.primary, letterSpacing: 4 },
   typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },

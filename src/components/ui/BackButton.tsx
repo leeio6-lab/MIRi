@@ -31,17 +31,18 @@ export function BackButton({ fallback = '/(tabs)/home' }: BackButtonProps) {
 
 const styles = StyleSheet.create({
   btn: {
-    alignSelf: 'flex-start',
     width: 34,
     height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.04)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   arrow: {
     fontSize: 24,
     fontWeight: '300',
     color: theme.colors.text.primary,
     marginTop: -1,
-    marginLeft: -2,
   },
 });

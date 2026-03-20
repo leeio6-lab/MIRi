@@ -177,12 +177,12 @@ export default function FaceResultScreen() {
 
       {/* Share */}
       <View style={s.shareWrap}>
-        <ShareCard
-          type="face"
-          score={faceResult.overallScore}
-          summary={faceResult.summary}
-          captureViewRef={captureRef}
-        />
+        <ShareCard data={{
+          type: 'face',
+          score: faceResult.overallScore,
+          tag: faceResult.shareTitle || '관상',
+          hookLine: faceResult.hookLine ?? faceResult.summary ?? '',
+        }} />
       </View>
 
       <Text style={s.disclaimer}>{t('common.disclaimer')}</Text>

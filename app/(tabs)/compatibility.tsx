@@ -366,8 +366,11 @@ export default function CompatibilityScreen() {
       {result && (
         <Animated.View entering={FadeInDown.springify()}>
           {/* Back to input */}
-          <TouchableOpacity onPress={() => setResult(null)} style={st.resetBtn}>
-            <Text style={st.resetText}>{'< '}{t('compatibility.reAnalyze')}</Text>
+          <TouchableOpacity onPress={() => setResult(null)} style={st.resetBtn} activeOpacity={0.6}>
+            <View style={st.resetIconWrap}>
+              <Text style={st.resetIcon}>{'\u2039'}</Text>
+            </View>
+            <Text style={st.resetText}>{t('compatibility.reAnalyze')}</Text>
           </TouchableOpacity>
 
           {/* Brand */}
@@ -385,7 +388,7 @@ export default function CompatibilityScreen() {
               <>
                 {/* 커플 타이틀 + 점수 */}
                 <View style={st.hookHero}>
-                  <Text style={st.hookTitle}>{ov?.coupleTitle ?? result.headline ?? ''}</Text>
+                  <Text style={st.hookTitle} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>{ov?.coupleTitle ?? result.headline ?? ''}</Text>
                   <Text style={st.hookScore}>{result.overallScore}<Text style={st.hookScoreUnit}>점</Text></Text>
                 </View>
 
@@ -752,7 +755,7 @@ const st = StyleSheet.create({
     marginTop: 1,
   },
   hero: { alignItems: 'center', marginBottom: theme.spacing.xl },
-  heroChar: { fontSize: 64, fontWeight: '200', color: theme.colors.gold.primary, marginBottom: 10 },
+  heroChar: { fontSize: 52, fontWeight: '200', color: theme.colors.gold.primary, marginBottom: 10 },
   heroDotsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
   heroDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#1A1A1A' },
   heroDotSmall: { width: 2, height: 2, borderRadius: 1, backgroundColor: '#1A1A1A', opacity: 0.4 },
@@ -857,8 +860,10 @@ const st = StyleSheet.create({
   genderTextActive: { color: theme.colors.gold.primary, fontWeight: '700' },
   analyzeBtn: { marginTop: theme.spacing.xl },
   // Result header
-  resetBtn: { marginBottom: theme.spacing.md },
-  resetText: { color: theme.colors.text.secondary, fontSize: 14 },
+  resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: theme.spacing.md, paddingVertical: 4 },
+  resetIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.04)', alignItems: 'center', justifyContent: 'center' },
+  resetIcon: { fontSize: 20, fontWeight: '300', color: theme.colors.text.primary, marginTop: -1 },
+  resetText: { color: theme.colors.text.secondary, fontSize: 14, fontWeight: '500' },
   // Hook hero
   hookHero: { alignItems: 'center', marginBottom: theme.spacing.md },
   hookTitle: { fontSize: 22, fontWeight: '800', color: theme.colors.gold.primary, textAlign: 'center', lineHeight: 30, letterSpacing: -0.5 },
@@ -906,11 +911,11 @@ const st = StyleSheet.create({
   catDetail: { fontSize: 12, color: theme.colors.text.tertiary, lineHeight: 18 },
   // Day Master
   dmType: { fontSize: 15, fontWeight: '700', color: theme.colors.gold.primary, marginBottom: theme.spacing.sm },
-  dmPairRow: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.md },
-  dmPairCol: { flex: 1, backgroundColor: theme.colors.bg.secondary, borderRadius: theme.radius.sm, padding: theme.spacing.sm },
+  dmPairRow: { flexDirection: 'column', gap: theme.spacing.sm, marginTop: theme.spacing.md },
+  dmPairCol: { backgroundColor: theme.colors.bg.secondary, borderRadius: theme.radius.sm, padding: theme.spacing.sm },
   dmPairLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.gold.muted, marginBottom: 4 },
   dmPairText: { fontSize: 12, color: theme.colors.text.secondary, lineHeight: 18 },
-  dmDiv: { width: 1, backgroundColor: theme.colors.glass.border },
+  dmDiv: { height: 1, backgroundColor: theme.colors.glass.border },
   // Dynamics
   dynSec: { marginBottom: theme.spacing.md },
   dynTitle: { fontSize: 13, fontWeight: '600', color: theme.colors.text.primary, marginBottom: 4 },
@@ -966,9 +971,9 @@ const st = StyleSheet.create({
   dateItemLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.text.tertiary, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   dateItemText: { fontSize: 13, color: theme.colors.text.secondary, lineHeight: 20 },
   // Secret message
-  secretRow: { flexDirection: 'row', gap: theme.spacing.sm },
+  secretRow: { flexDirection: 'column', gap: theme.spacing.sm },
   secretCol: { flex: 1, backgroundColor: theme.colors.bg.secondary, borderRadius: theme.radius.sm, padding: theme.spacing.sm },
-  secretDiv: { width: 1, backgroundColor: theme.colors.glass.border },
+  secretDiv: { height: 1, backgroundColor: theme.colors.glass.border },
   secretLabel: { fontSize: 11, fontWeight: '700', color: theme.colors.gold.muted, marginBottom: 4 },
   secretText: { fontSize: 12, color: theme.colors.text.secondary, lineHeight: 18 },
   // Fun fact

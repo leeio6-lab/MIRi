@@ -403,12 +403,12 @@ function mapRowToRecord(row: any): AnalysisRecord {
   };
 }
 
-async function fetchHistory(type?: string, limit = 30, retentionDays = 7): Promise<AnalysisRecord[]> {
+async function fetchHistory(type?: string, limit = 50, retentionDays = 90): Promise<AnalysisRecord[]> {
   try {
     const userId = await getCachedUserId();
     if (!userId) return [];
 
-    // 7일 이내 기록만 조회
+    // 90일 이내 기록 조회
     const since = new Date();
     since.setDate(since.getDate() - retentionDays);
 

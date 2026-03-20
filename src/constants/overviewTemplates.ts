@@ -2,7 +2,8 @@
 // 태그 매칭으로 GPT 호출 없이 overview 생성
 // 각 3문장: 찔리는 칭찬 1 + 공유각 1 + 팩폭 1
 
-export type OverviewCategory = 'personality' | 'career' | 'wealth' | 'love' | 'health' | 'family' | 'social' | 'yearly' | 'lifePeak' | 'lifeDirection';
+export type OverviewCategoryBase = 'personality' | 'career' | 'wealth' | 'love' | 'health' | 'family' | 'social';
+export type OverviewCategory = OverviewCategoryBase | 'yearly' | 'lifePeak' | 'lifeDirection';
 
 export type SipsinTag =
   | '비겁강' | '비겁약' | '식상강' | '식상약'
@@ -15,7 +16,7 @@ export type SipsinTag =
   | '식상강+인성약' | '비겁약+관성강' | '재성약+식상강'
   | '관성약+재성강' | '도화살있음';
 
-export const OVERVIEW_TEMPLATES: Record<OverviewCategory, Record<string, string[]>> = {
+export const OVERVIEW_TEMPLATES: Record<OverviewCategoryBase, Record<string, string[]>> = {
   personality: {
     '비겁강': ['지는 건 죽어도 못 참는데 그래서 결국 이김', '승부욕이 밥 먹여주는 사주, 실제로 잘 먹고 삶', '양보는 하는데 속으로 3일 곱씹음'],
     '비겁약': ['남 챙기느라 정작 본인 밥은 늦게 먹는 사람', '맞춰주는 능력이 진짜 재능인데 본인은 모름', '싫은데 웃으면서 오케이 해버림'],
@@ -245,12 +246,12 @@ export const YEARLY_TEMPLATES: Record<string, string[]> = {
 // ─── 인생 피크 (피크 대운 나이 기반) ───
 export const LIFE_PEAK_TEMPLATES: Record<string, string[]> = {
   early: [
-    '이미 한번 터졌고 두 번째가 오는 중, 준비만 하면',
-    '일찍 빛난 만큼 유지하는 힘도 있는 사주, 자만만 조심',
-    '초반에 치고 나간 추진력이 평생 자산, 잃지 마',
+    '이미 쌓아둔 복이 있어서 두 번째 전성기가 오는 중',
+    '일찍 빛난 경험이 평생의 자산, 앞으로 더 크게 쓸 때가 옴',
+    '초반에 얻은 감각과 추진력이 지금부터 진가를 발휘함',
   ],
   mid: [
-    '지금이 제일 좋은 시기, 여기서 밀어야 후회 없음',
+    '쌓아온 게 결실 맺는 구간, 여기서 밀어야 후회 없음',
     '본 게임 진행 중, 쌓은 게 결과로 나오는 황금기',
     '지금 노력이 바로 보상받는 구간, 아끼지 마',
   ],

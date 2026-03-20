@@ -196,8 +196,13 @@ export const useFortuneStore = create<FortuneState>()(
       loadHistory: async (type?) => {
         const { isGuest } = useAuthStore.getState();
 
-        // 비회원: 로컬 기록 유지 (서버 조회 안 함)
-        if (isGuest) return;
+        // 비회원: 로컬 기록만 필터링하여 유지 (서버 조회 안 함)
+        if (isGuest) {
+          if (type) {
+            // 필터 적용 시 로컬에서 필터링만
+          }
+          return;
+        }
 
         try {
           const serverRecords = await api.fetchHistory(type);
@@ -320,8 +325,8 @@ export const useFortuneStore = create<FortuneState>()(
         transformedImageBase64: null, // persist 제외 (1MB+, 용량 초과 방지)
         dailyFortune: isGuest ? null : state.dailyFortune,
         compatibilityResult: isGuest ? null : state.compatibilityResult,
-        // 히스토리는 서버에서 관리 — 로컬에는 최근 15개 경량 캐시만
-        history: isGuest ? [] : state.history.slice(0, 15).map((r) => {
+        // 히스토리: 로컬에 최근 15개 경량 캐시 (게스트도 유지)
+        history: state.history.slice(0, 15).map((r) => {
           const result = r.type === 'face' && r.result ? {
             overallScore: (r.result as any).overallScore,
             shareTitle: (r.result as any).shareTitle,

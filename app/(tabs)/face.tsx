@@ -291,9 +291,11 @@ export default function FaceScreen() {
         contentContainerStyle={rs.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── 0. BRAND ─── */}
+        {/* ─── 0. BRAND + BACK ─── */}
         <View style={rs.navBar}>
-          <View style={rs.navSpacer} />
+          <TouchableOpacity onPress={resetAnalysis} style={rs.navBackBtn} activeOpacity={0.5} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Text style={rs.navBackArrow}>{'\u2039'}</Text>
+          </TouchableOpacity>
           <View style={rs.navBrand}>
             <Text style={rs.navLogo}>명리</Text>
             <View style={rs.navDecoRow}>
@@ -682,6 +684,20 @@ const rs = StyleSheet.create({
     fontWeight: '400',
     color: theme.colors.text.tertiary,
     letterSpacing: 3,
+  },
+  navBackBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBackArrow: {
+    fontSize: 22,
+    fontWeight: '300',
+    color: theme.colors.text.primary,
+    marginTop: -1,
   },
   navSpacer: {
     width: 34,
