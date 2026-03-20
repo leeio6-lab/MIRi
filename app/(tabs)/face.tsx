@@ -202,10 +202,15 @@ export default function FaceScreen() {
       setFaceResult(null);
       setTransformedImage(null);
 
-      // 즉시 얼굴 사전 검증 → 상태 피드백
+      // 즉시 얼굴 사전 검증 — 얼굴 없으면 사진 거부
       const faceCheck = await detectFaceLocal(uri);
       if (!faceCheck.hasFace && faceCheck.confidence !== 'skip') {
-        setPhotoStatus('noface');
+        setImageUri(null);
+        setPhotoStatus('none');
+        Alert.alert(
+          '얼굴을 찾을 수 없어요',
+          '사람 얼굴이 잘 보이는 정면 사진을 선택해주세요.\n\n• 밝은 조명에서 촬영된 사진\n• 얼굴이 가려지지 않은 사진\n• 정면을 바라보는 사진',
+        );
       } else {
         setPhotoStatus('ok');
       }
@@ -306,14 +311,9 @@ export default function FaceScreen() {
 
   if (analyzed && faceResult) {
     return (
-      <ScrollView
-        ref={scrollRef}
-        style={rs.container}
-        contentContainerStyle={rs.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ─── 0. BRAND + BACK ─── */}
-        <View style={rs.navBar}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg.primary }}>
+        {/* 고정 헤더 */}
+        <View style={rs.fixedHeader}>
           <TouchableOpacity onPress={resetAnalysis} style={rs.navBackBtn} activeOpacity={0.5} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Text style={rs.navBackArrow}>{'\u2039'}</Text>
           </TouchableOpacity>
@@ -327,6 +327,13 @@ export default function FaceScreen() {
           </View>
           <View style={rs.navSpacer} />
         </View>
+
+      <ScrollView
+        ref={scrollRef}
+        style={rs.container}
+        contentContainerStyle={rs.content}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* ─── 1. PORTRAIT ─── */}
         <Animated.View entering={FadeIn.delay(100).duration(500)}>
@@ -512,6 +519,7 @@ export default function FaceScreen() {
 
         <Text style={rs.disclaimer}>{t('common.disclaimer')}</Text>
       </ScrollView>
+      </View>
     );
   }
 
@@ -670,13 +678,17 @@ export default function FaceScreen() {
 
 const rs = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: theme.spacing.screenPadding, paddingTop: 48, paddingBottom: 120 },
+  content: { padding: theme.spacing.screenPadding, paddingTop: 12, paddingBottom: 120 },
 
-  // ── 0. NavBar ──
-  navBar: {
+  // ── 0. Fixed Header ──
+  fixedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    paddingHorizontal: theme.spacing.screenPadding,
+    paddingTop: 48,
+    paddingBottom: 8,
+    backgroundColor: theme.colors.bg.primary,
+    zIndex: 10,
   },
   navBrand: {
     flex: 1,

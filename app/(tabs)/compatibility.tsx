@@ -180,7 +180,19 @@ export default function CompatibilityScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView ref={scrollRef} style={st.container} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
+    {/* 결과 모드: 고정 뒤로가기 헤더 */}
+    {result && (
+      <View style={st.fixedHeader}>
+        <TouchableOpacity onPress={() => setResult(null)} style={st.resetIconWrap} activeOpacity={0.6}>
+          <Text style={st.resetIcon}>{'\u2039'}</Text>
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={st.brandLogo}>명리</Text>
+        </View>
+        <View style={{ width: 32 }} />
+      </View>
+    )}
+    <ScrollView ref={scrollRef} style={st.container} contentContainerStyle={[st.content, result && { paddingTop: 12 }]} showsVerticalScrollIndicator={false}>
 
       {/* Error banner */}
       {analyzeError && (
@@ -377,17 +389,8 @@ export default function CompatibilityScreen() {
       {/* ── RESULTS ── */}
       {result && (
         <Animated.View entering={FadeInDown.springify()}>
-          {/* Back to input */}
-          <TouchableOpacity onPress={() => setResult(null)} style={st.resetBtn} activeOpacity={0.6}>
-            <View style={st.resetIconWrap}>
-              <Text style={st.resetIcon}>{'\u2039'}</Text>
-            </View>
-            <Text style={st.resetText}>{t('compatibility.reAnalyze')}</Text>
-          </TouchableOpacity>
-
-          {/* Brand */}
+          {/* 브랜드 서브 */}
           <View style={st.brandRow}>
-            <Text style={st.brandLogo}>명리</Text>
             <Text style={st.brandTag}>두 사람의 인연</Text>
           </View>
 
@@ -750,6 +753,15 @@ export default function CompatibilityScreen() {
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
   content: { padding: theme.spacing.screenPadding, paddingTop: 48, paddingBottom: 120 },
+  fixedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.screenPadding,
+    paddingTop: 48,
+    paddingBottom: 8,
+    backgroundColor: theme.colors.bg.primary,
+    zIndex: 10,
+  },
   brandRow: {
     alignItems: 'center' as const,
     marginBottom: 12,

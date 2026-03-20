@@ -219,6 +219,16 @@ export default function SajuResultScreen() {
 
   return (
     <>
+    {/* 고정 헤더 — 스크롤해도 항상 보임 */}
+    <View style={$.fixedHeader}>
+      <BackButton />
+      <View style={$.navBrand}>
+        <Text style={$.navLogo}>명리</Text>
+        <Text style={$.navTagline}>사주 풀이</Text>
+      </View>
+      <View style={$.navSpacer} />
+    </View>
+
     <ScrollView
       ref={scrollRef}
       style={$.container}
@@ -227,20 +237,11 @@ export default function SajuResultScreen() {
       onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const y = e.nativeEvent.contentOffset.y;
         scrollY.value = y;
-        // 스크롤마다 state 업데이트 대신 값이 변경될 때만 업데이트
         const shouldShow = !!(r.overview && y > overviewY.current + 300);
         if (shouldShow !== showFloatingBtn) setShowFloatingBtn(shouldShow);
       }}
       scrollEventThrottle={32}
     >
-      <View style={$.navBar}>
-        <BackButton />
-        <View style={$.navBrand}>
-          <Text style={$.navLogo}>명리</Text>
-          <Text style={$.navTagline}>사주 풀이</Text>
-        </View>
-        <View style={$.navSpacer} />
-      </View>
 
       {/* ═══ HOOK HEADLINE ═══ */}
       <Animated.View entering={FadeInDown.delay(nd()).springify()}>
@@ -554,11 +555,15 @@ function LuckyRow({ icon, label, val }: { icon: string; label: string; val: stri
 /* ─── Styles ─── */
 const $ = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: isSmall ? 16 : 20, paddingTop: Platform.OS === 'ios' ? 52 : 44, paddingBottom: 80 },
-  navBar: {
+  content: { padding: isSmall ? 16 : 20, paddingTop: 12, paddingBottom: 80 },
+  fixedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    paddingHorizontal: isSmall ? 16 : 20,
+    paddingTop: Platform.OS === 'ios' ? 52 : 44,
+    paddingBottom: 8,
+    backgroundColor: theme.colors.bg.primary,
+    zIndex: 10,
   },
   navBrand: {
     flex: 1,
