@@ -227,9 +227,28 @@ serve(async (req) => {
   }
 });
 
+// ─── 점수 클램핑 (60-95 범위 강제) ───
+function clampScore(val: unknown, fallback = 75): number {
+  const n = typeof val === 'number' ? val : (typeof val === 'string' ? parseInt(val, 10) : fallback);
+  return Math.max(60, Math.min(95, isNaN(n) ? fallback : n));
+}
+
 // ─── 분석 결과 정규화 ───
 function normalizeAnalysis(raw: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = { ...raw };
+
+  // overallScore 클램핑
+  if (result.overallScore !== undefined) {
+    result.overallScore = clampScore(result.overallScore);
+  }
+
+  // radarScores 클램핑
+  if (result.radarScores && typeof result.radarScores === 'object') {
+    const radar = result.radarScores as Record<string, unknown>;
+    for (const key of ['wealth', 'love', 'health', 'success', 'social']) {
+      if (radar[key] !== undefined) radar[key] = clampScore(radar[key]);
+    }
+  }
 
   if (result.features && !Array.isArray(result.features)) {
     const featuresObj = result.features as Record<string, Record<string, unknown>>;
@@ -238,7 +257,7 @@ function normalizeAnalysis(raw: Record<string, unknown>): Record<string, unknown
       .filter(area => featuresObj[area])
       .map(area => ({
         area,
-        score: featuresObj[area].score ?? 75,
+        score: clampScore(featuresObj[area].score),
         nickname: featuresObj[area].nickname ?? '',
         description: featuresObj[area].title ?? featuresObj[area].description ?? featuresObj[area].name ?? '',
         detail: featuresObj[area].detail,
@@ -249,7 +268,7 @@ function normalizeAnalysis(raw: Record<string, unknown>): Record<string, unknown
   if (Array.isArray(result.features)) {
     result.features = (result.features as Record<string, unknown>[]).map((f, i) => ({
       area: f.area ?? ['forehead', 'eyes', 'nose', 'mouth', 'jawline', 'ears'][i] ?? 'unknown',
-      score: f.score ?? 75,
+      score: clampScore(f.score),
       nickname: f.nickname ?? '',
       description: f.description ?? '',
       detail: f.detail,

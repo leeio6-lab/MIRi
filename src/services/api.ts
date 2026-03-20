@@ -350,6 +350,27 @@ async function getCachedUserId(): Promise<string | null> {
   return null;
 }
 
+/** 회원 탈퇴: 서버 DB에서 사용자 데이터 삭제 후 auth 삭제 */
+async function deleteAccount(): Promise<void> {
+  try {
+    const userId = await getCachedUserId();
+    if (userId) {
+      // analyses 테이블에서 사용자 기록 삭제
+      await supabase.from('analyses').delete().eq('user_id', userId);
+      // users 테이블에서 사용자 삭제
+      await supabase.from('users').delete().eq('id', userId);
+    }
+    // auth 세션 종료
+    await supabase.auth.signOut();
+    clearAuthCache();
+  } catch (e) {
+    if (__DEV__) console.warn('[API] deleteAccount error:', e);
+    // 에러 발생해도 로컬 로그아웃은 진행
+    await supabase.auth.signOut().catch(() => {});
+    clearAuthCache();
+  }
+}
+
 async function saveAnalysis(
   type: 'saju' | 'face' | 'compatibility',
   isPaid: boolean,
@@ -557,6 +578,7 @@ export const api = {
   ) =>
     invokeFunction<DailyFortune>('daily-fortune', { birthData, locale, pillarInfo, sajuContext }),
 
+  deleteAccount,
   saveAnalysis,
   fetchHistory,
   fetchPendingAnalyses,

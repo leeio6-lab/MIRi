@@ -113,10 +113,15 @@ export default function CompatibilityScreen() {
   const partnerMonthNum = parseInt(partnerMonth, 10);
   const partnerDayNum = parseInt(partnerDay, 10);
   const partnerHourNum = partnerUnknownTime ? 12 : (partnerSelectedHour ?? 12);
+  const isValidDate = (y: number, m: number, d: number) => {
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return false;
+    if (y < 1920 || y > new Date().getFullYear()) return false;
+    if (m < 1 || m > 12 || d < 1) return false;
+    const maxDay = new Date(y, m, 0).getDate();
+    return d <= maxDay;
+  };
   const isPartnerValid =
-    partnerYear.length === 4 && !isNaN(partnerYearNum) && partnerYearNum >= 1900 && partnerYearNum <= new Date().getFullYear() &&
-    partnerMonth.length >= 1 && !isNaN(partnerMonthNum) && partnerMonthNum >= 1 && partnerMonthNum <= 12 &&
-    partnerDay.length >= 1 && !isNaN(partnerDayNum) && partnerDayNum >= 1 && partnerDayNum <= 31;
+    partnerYear.length === 4 && isValidDate(partnerYearNum, partnerMonthNum, partnerDayNum);
 
   const myDisplayName = (editingMy ? myName.trim() : user?.name) || t('common.me');
   const ptName = partnerName.trim() || t('common.partner');
@@ -159,6 +164,9 @@ export default function CompatibilityScreen() {
       if (!mountedRef.current) return;
       if (__DEV__) console.error('[Compatibility] error:', err);
       setAnalyzeError(err instanceof Error ? err.message : 'Analysis failed');
+      // 결제 후 분석 실패 시 크레딧 복원
+      const { usePurchaseStore } = require('../../src/stores/purchaseStore');
+      usePurchaseStore.getState().restoreCredit('compatibility');
     } finally {
       if (mountedRef.current) setLoading(false);
     }

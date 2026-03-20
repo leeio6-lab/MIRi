@@ -75,6 +75,8 @@ export function startSajuAnalysis({ user, pillars }: SajuParams) {
       useFortuneStore.getState().setError(
         err instanceof Error ? err.message : 'Analysis failed',
       );
+      // 결제 후 분석 실패 시 크레딧 복원
+      usePurchaseStore.getState().restoreCredit('saju');
     })
     .finally(() => {
       if (gen !== sajuGen) return;
@@ -167,6 +169,8 @@ export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams
       useFortuneStore.getState().setError(
         err instanceof Error ? err.message : '관상 분석에 실패했습니다.',
       );
+      // 결제 후 분석 실패 시 티켓 복원 (얼굴 미감지는 위에서 이미 처리)
+      usePurchaseStore.getState().restoreCredit('face');
     })
     .finally(() => {
       if (gen !== faceGen) return;

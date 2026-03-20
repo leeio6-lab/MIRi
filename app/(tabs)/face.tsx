@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  AppState,
 } from 'react-native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
@@ -157,6 +158,25 @@ export default function FaceScreen() {
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const [photoStatus, setPhotoStatus] = useState<'none' | 'ok' | 'noface'>('none');
   const scrollRef = useRef<ScrollView>(null);
+  const pendingStartTime = useRef<number>(0);
+
+  // 관상 분석 타임아웃 복구 (2분 이상 pending이면 자동 해제)
+  useEffect(() => {
+    if (facePending) {
+      pendingStartTime.current = Date.now();
+    }
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && facePending && pendingStartTime.current > 0) {
+        const elapsed = Date.now() - pendingStartTime.current;
+        if (elapsed > 120_000) {
+          // 2분 이상 경과 — 타임아웃으로 판단
+          useFortuneStore.getState().setFacePending(false);
+          useFortuneStore.getState().setError('분석 시간이 초과되었습니다. 다시 시도해주세요.');
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [facePending]);
 
   const portraitSize = Math.min(width - 32, 420);
   const features = faceResult ? ensureFeaturesArray(faceResult.features) : [];
@@ -238,6 +258,7 @@ export default function FaceScreen() {
     setExpandedFeature(null);
     setPhotoStatus('none');
     setFaceNoFace(null);
+    setError(null);
   };
 
   // Image URIs

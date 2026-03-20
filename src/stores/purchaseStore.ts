@@ -21,6 +21,8 @@ interface PurchaseState {
   hasFaceTicket: () => boolean;
   useFaceTicket: () => boolean;
   addFreeCredits: (count: number) => void;
+  /** 분석 실패 시 크레딧 복원 */
+  restoreCredit: (type: 'saju' | 'face' | 'compatibility') => void;
 }
 
 export const usePurchaseStore = create<PurchaseState>()(
@@ -55,6 +57,15 @@ export const usePurchaseStore = create<PurchaseState>()(
 
       addFreeCredits: (count: number) => {
         set((s) => ({ freeCredits: s.freeCredits + count }));
+      },
+
+      restoreCredit: (type) => {
+        // 분석 실패 시 차감된 크레딧 복원
+        set((s) => ({
+          freeCredits: s.freeCredits + 1,
+          faceTickets: type === 'face' ? s.faceTickets + 1 : s.faceTickets,
+        }));
+        if (__DEV__) console.log('[PurchaseStore] Credit restored for failed', type);
       },
 
       useFreeCredit: () => {

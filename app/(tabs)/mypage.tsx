@@ -59,11 +59,15 @@ export default function MyPageScreen() {
 
   const performDeleteAccount = async () => {
     try {
+      // 1. 서버 DB에서 analyses + users 삭제
+      const { api } = require('../../src/services/api');
+      await api.deleteAccount();
+      // 2. 로컬 데이터 전부 초기화
       clearAllData();
-      // Supabase 계정 삭제 (RPC 또는 signOut 후 서버에서 처리)
-      await logout();
     } catch (e) {
       if (__DEV__) console.warn('[DeleteAccount]', e);
+      // 서버 삭제 실패해도 로컬은 초기화
+      clearAllData();
     }
     router.replace('/(auth)/onboarding');
   };
