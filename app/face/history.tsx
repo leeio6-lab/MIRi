@@ -165,7 +165,7 @@ const cd = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: '#FFFDF8',
+    backgroundColor: '#242323',
     borderWidth: 1,
     borderColor: 'rgba(212, 168, 75, 0.20)',
     alignItems: 'center',

@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', color: theme.colors.text.primary, marginBottom: 14, letterSpacing: 0.5 },
   row: { flexDirection: 'row', gap: 10, marginBottom: 4 },
   btn: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'rgba(232,176,74,0.25)',
+    width: 52, height: 52, borderRadius: 26, backgroundColor: theme.colors.bg.elevated, borderWidth: 1.5, borderColor: 'rgba(232,176,74,0.25)',
     alignItems: 'center', justifyContent: 'center',
     ...Platform.select({
       web: { boxShadow: '0 2px 8px rgba(0,0,0,0.04)' },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   btnHanja: { fontSize: 18, fontWeight: '300' },
   btnLabel: { fontSize: 9, color: '#C4912E', marginTop: 1 },
   resultCard: {
-    marginTop: 12, width: '100%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, alignItems: 'center',
+    marginTop: 12, width: '100%', backgroundColor: theme.colors.bg.elevated, borderRadius: 16, padding: 20, alignItems: 'center',
     ...Platform.select({
       web: { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
       default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },

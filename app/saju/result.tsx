@@ -592,7 +592,7 @@ const $ = StyleSheet.create({
   identityCard: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: 16,
     padding: 18,
     marginBottom: 6,
@@ -604,7 +604,7 @@ const $ = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1,
@@ -694,7 +694,7 @@ const $ = StyleSheet.create({
 
   // Quarter grid
   qGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  qItem: { flex: 1, minWidth: 0, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 8 },
+  qItem: { flex: 1, minWidth: 0, backgroundColor: theme.colors.bg.elevated, borderRadius: 10, padding: 8 },
   qHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   qPeriod: { fontSize: 11, fontWeight: '600', color: theme.colors.text.primary },
   qScore: { fontSize: 18, fontWeight: '700' },
@@ -704,7 +704,7 @@ const $ = StyleSheet.create({
 
   // Lucky
   luckyGrid: { gap: 6 },
-  luckyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
+  luckyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: theme.colors.bg.elevated, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 },
   luckyIcon: { fontSize: 14 },
   luckyLbl: { fontSize: 11, color: theme.colors.text.tertiary, width: 32 },
   luckyVal: { flex: 1, fontSize: 12, color: theme.colors.text.primary, fontWeight: '600' },

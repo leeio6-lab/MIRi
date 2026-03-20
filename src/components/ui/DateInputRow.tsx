@@ -109,7 +109,7 @@ export function DateInputRow({
 
 const styles = StyleSheet.create({
   dateCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.md,
     paddingVertical: 6,
     paddingHorizontal: 8,

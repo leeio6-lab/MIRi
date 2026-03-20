@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   loginBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: 12,
     paddingVertical: 13,
     paddingHorizontal: 16,

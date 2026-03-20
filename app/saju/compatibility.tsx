@@ -1258,7 +1258,7 @@ const sty = StyleSheet.create({
   shareTitleCard: {
     alignItems: 'center' as const, marginBottom: 20,
     paddingVertical: 20, paddingHorizontal: 24,
-    backgroundColor: '#FFFDF8', borderRadius: 20,
+    backgroundColor: '#242323', borderRadius: 20,
     borderWidth: 1, borderColor: 'rgba(212,168,75,0.15)',
   },
   shareTitleNames: {

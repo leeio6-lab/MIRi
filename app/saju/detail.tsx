@@ -344,7 +344,7 @@ function TodaySajuSection({ analysis }: { analysis: FullSajuAnalysis }) {
               </View>
             </TermBadge>
             <TermBadge termKey="lifeStages" label={todaySaju.lifeStage}>
-              <View style={[s.pillBadge, { backgroundColor: '#F5F5F5' }]}>
+              <View style={[s.pillBadge, { backgroundColor: '#2B2A29' }]}>
                 <Text style={[s.pillBadgeText, { color: theme.colors.text.secondary }]}>{todaySaju.lifeStage}</Text>
               </View>
             </TermBadge>
@@ -471,7 +471,7 @@ function FourPillarsCardSection({ analysis }: { analysis: FullSajuAnalysis }) {
                 {/* Spirit star — fixed height */}
                 <TermBadge termKey="spiritStars" label={p.ss}>
                   <View style={s.pillarMetaRow}>
-                    <View style={[s.pillBadge, { backgroundColor: '#F5F5F5' }]}>
+                    <View style={[s.pillBadge, { backgroundColor: '#2B2A29' }]}>
                       <Text style={[s.pillBadgeTextSm, { color: theme.colors.text.secondary }]}>{p.ss}</Text>
                     </View>
                   </View>
@@ -549,7 +549,7 @@ function ManseryeokTableSection({ analysis }: { analysis: FullSajuAnalysis }) {
               </Text>
             </View>
           );
-        }), '#F5F5F5' + '40')}
+        }), '#2B2A29' + '40')}
 
         {/* 지지 */}
         {renderRow('지지', columns.map((col) => {
@@ -565,7 +565,7 @@ function ManseryeokTableSection({ analysis }: { analysis: FullSajuAnalysis }) {
               <Text style={[s2.tableKoSmall, { color: bColor }]}>{col.pillar.branch}</Text>
             </View>
           );
-        }), '#F5F5F5' + '40')}
+        }), '#2B2A29' + '40')}
 
         {/* 십성 (지지) */}
         {renderRow('지지십성', columns.map((col) => {
@@ -1165,7 +1165,7 @@ const s = StyleSheet.create({
   // ─── Layout ───
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
   },
   content: {
     padding: theme.spacing.screenPadding,
@@ -1321,10 +1321,10 @@ const s = StyleSheet.create({
     minHeight: 260,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
   },
   pillarCardDay: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderWidth: 1.5,
     borderColor: theme.colors.gold.light + '40',
     ...Platform.select({
@@ -1564,7 +1564,7 @@ const s = StyleSheet.create({
   tenGodPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
@@ -1602,7 +1602,7 @@ const s = StyleSheet.create({
   strengthItem: {
     width: '48%' as unknown as number,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
@@ -1677,7 +1677,7 @@ const s = StyleSheet.create({
   },
   strengthInterpBox: {
     marginTop: theme.spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
@@ -1726,7 +1726,7 @@ const s = StyleSheet.create({
   },
   yongShinTipBox: {
     marginTop: theme.spacing.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
@@ -1761,14 +1761,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
     gap: 3,
   },
   daeunCardCurrent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderWidth: 1.5,
     borderColor: theme.colors.gold.light + '40',
   },
@@ -1889,13 +1889,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderRadius: theme.radius.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderWidth: 1,
     borderColor: theme.colors.border.subtle,
     gap: 3,
   },
   monthItemCurrent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderWidth: 1.5,
     borderColor: theme.colors.gold.light + '40',
   },
@@ -2108,7 +2108,7 @@ const s2 = StyleSheet.create({
     borderColor: theme.colors.border.subtle,
     borderRadius: theme.radius.md,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
   },
   tableRow: {
     flexDirection: 'row',
@@ -2119,7 +2119,7 @@ const s2 = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 7,
-    backgroundColor: '#F5F5F5' + '80',
+    backgroundColor: '#2B2A29' + '80',
     borderRightWidth: 1,
     borderRightColor: theme.colors.border.divider,
   },

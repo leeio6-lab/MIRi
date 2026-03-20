@@ -768,7 +768,7 @@ const rs = StyleSheet.create({
 
   // ── 2. 메인 카드 (검정) ──
   mainCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#2B2A29',
     borderRadius: theme.radius.lg,
     padding: 24,
     marginTop: -4,
@@ -848,7 +848,7 @@ const rs = StyleSheet.create({
 
   // ── 3. Best Card (다크) ──
   bestCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#2B2A29',
     borderRadius: theme.radius.lg,
     padding: 28,
     marginBottom: 20,
@@ -1189,7 +1189,7 @@ const cs = StyleSheet.create({
     width: 3.5,
     height: 3.5,
     borderRadius: 2,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#2B2A29',
   },
   heroChar: {
     fontSize: 48,
@@ -1216,7 +1216,7 @@ const cs = StyleSheet.create({
   infoNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(26, 26, 26, 0.06)',
@@ -1259,7 +1259,7 @@ const cs = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 28,
     gap: 8,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#2B2A29',
     borderRadius: theme.radius.lg,
   },
   actionHanja: {
@@ -1284,7 +1284,7 @@ const cs = StyleSheet.create({
   // 사진 준비 완료 카드
   readyCard: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.bg.elevated,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: 'rgba(212, 168, 75, 0.10)',
@@ -1381,7 +1381,7 @@ const cs = StyleSheet.create({
 
   // Analyze button
   analyzeBtn: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#2B2A29',
     borderRadius: theme.radius.md,
     paddingVertical: 16,
     alignItems: 'center',

@@ -30,7 +30,7 @@ const EINFO: Record<string, {
   wood:  { primary: '#5B7A4A', bg: '#ECF3E6', gradient: ['#F2F6EE', '#E4EDD8', '#D6E4C8'], hanja: '木', label: { ko: '목(木)', en: 'Wood', ja: '木' } },
   water: { primary: '#3D6B8E', bg: '#EBF2F9', gradient: ['#EEF4F9', '#DCE8F2', '#CADCEC'], hanja: '水', label: { ko: '수(水)', en: 'Water', ja: '水' } },
   fire:  { primary: '#B85450', bg: '#FFF0EC', gradient: ['#F9F0EE', '#F2DDD8', '#EBCAC4'], hanja: '火', label: { ko: '화(火)', en: 'Fire', ja: '火' } },
-  earth: { primary: '#8B6E4E', bg: '#F2EBDF', gradient: ['#F5F0E8', '#EBE0D2', '#E0D0BC'], hanja: '土', label: { ko: '토(土)', en: 'Earth', ja: '土' } },
+  earth: { primary: '#8B6E4E', bg: '#F2EBDF', gradient: ['#1C1B1B', '#EBE0D2', '#E0D0BC'], hanja: '土', label: { ko: '토(土)', en: 'Earth', ja: '土' } },
 };
 
 const ELEM_ICONS: Record<string, React.FC<{ size?: number; color?: string }>> = {
@@ -536,7 +536,7 @@ export function ElementTarot({ dayStemIdx, onCardSelect, onPurchase }: { dayStem
 /* ═══ STYLES ═══ */
 const $ = StyleSheet.create({
   wrap: { marginBottom: 8, overflow: 'visible' },
-  title: { fontSize: 18, fontWeight: '600', color: '#1A1A1A', textAlign: 'center', marginBottom: 6, letterSpacing: 1 },
+  title: { fontSize: 18, fontWeight: '600', color: '#FCF9F8', textAlign: 'center', marginBottom: 6, letterSpacing: 1 },
   sub: { fontSize: 12, color: '#AAA', textAlign: 'center', marginBottom: 20 },
   row: { flexDirection: 'row', justifyContent: 'center', gap: 10, overflow: 'visible' },
   row2: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 8, overflow: 'visible' },
@@ -557,7 +557,7 @@ const $ = StyleSheet.create({
   // Card front (premium)
   cardFront: {
     width: CARD_W, height: CARD_H, borderRadius: 12, overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#21201F',
     borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       web: { boxShadow: '0 4px 18px rgba(0,0,0,0.12)' },
@@ -600,7 +600,7 @@ const $ = StyleSheet.create({
     }),
   } as any,
   miniHanja: { fontSize: 20, fontWeight: '700', color: G },
-  summaryTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  summaryTitle: { fontSize: 14, fontWeight: '600', color: '#FCF9F8' },
   summaryKeyword: { fontSize: 12, color: '#888', marginTop: 2, fontWeight: '500' },
   expandIcon: { fontSize: 12, color: '#AAA' },
   afternoonHint: { fontSize: 13, color: '#E8B04A', textAlign: 'center', marginTop: 10, fontWeight: '500' },
