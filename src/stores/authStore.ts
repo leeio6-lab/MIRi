@@ -4,6 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UserProfile } from '../types/user';
 import * as AuthService from '../services/auth';
 import { api } from '../services/api';
+import { useFortuneStore } from './fortuneStore';
+import type { AnalysisRecord } from '../services/api';
 
 interface AuthState {
   user: UserProfile | null;
@@ -27,6 +29,48 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+// ─── Guest → Social login data migration helpers ───
+interface GuestDataSnapshot {
+  history: AnalysisRecord[];
+  sajuResult: unknown;
+  faceResult: unknown;
+  dailyFortune: unknown;
+  compatibilityResult: unknown;
+}
+
+function _snapshotGuestData(isGuest: boolean): GuestDataSnapshot | null {
+  if (!isGuest) return null;
+  const fs = useFortuneStore.getState();
+  const snapshot: GuestDataSnapshot = {
+    history: [...fs.history],
+    sajuResult: fs.sajuResult,
+    faceResult: fs.faceResult,
+    dailyFortune: fs.dailyFortune,
+    compatibilityResult: fs.compatibilityResult,
+  };
+  if (__DEV__) console.log('[Auth] Guest data snapshot saved — history count:', snapshot.history.length);
+  return snapshot;
+}
+
+function _restoreGuestData(snapshot: GuestDataSnapshot | null): void {
+  if (!snapshot) return;
+  const fs = useFortuneStore.getState();
+  // Merge: keep any existing history on the new session, prepend guest history (dedup by id)
+  const existingIds = new Set(fs.history.map((r) => r.id));
+  const merged = [
+    ...fs.history,
+    ...snapshot.history.filter((r) => !existingIds.has(r.id)),
+  ];
+  useFortuneStore.setState({
+    history: merged,
+    sajuResult: fs.sajuResult ?? snapshot.sajuResult as any,
+    faceResult: fs.faceResult ?? snapshot.faceResult as any,
+    dailyFortune: fs.dailyFortune ?? snapshot.dailyFortune as any,
+    compatibilityResult: fs.compatibilityResult ?? snapshot.compatibilityResult as any,
+  });
+  if (__DEV__) console.log('[Auth] Guest data restored — merged history count:', merged.length);
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -45,29 +89,38 @@ export const useAuthStore = create<AuthState>()(
 
       signInWithGoogle: async () => {
         set({ isLoading: true });
+        // Snapshot guest data before social login destroys anonymous session
+        const guestSnapshot = _snapshotGuestData(get().isGuest);
         const result = await AuthService.signInWithGoogle();
         set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
+        if (result.success) _restoreGuestData(guestSnapshot);
         return { success: result.success, error: result.error, providerToken: result.providerToken };
       },
 
       signInWithApple: async () => {
         set({ isLoading: true });
+        const guestSnapshot = _snapshotGuestData(get().isGuest);
         const result = await AuthService.signInWithApple();
         set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
+        if (result.success) _restoreGuestData(guestSnapshot);
         return result;
       },
 
       signInWithKakao: async () => {
         set({ isLoading: true });
+        const guestSnapshot = _snapshotGuestData(get().isGuest);
         const result = await AuthService.signInWithKakao();
         set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
+        if (result.success) _restoreGuestData(guestSnapshot);
         return result;
       },
 
       signInWithLine: async () => {
         set({ isLoading: true });
+        const guestSnapshot = _snapshotGuestData(get().isGuest);
         const result = await AuthService.signInWithLine();
         set({ isLoading: false, isAuthenticated: result.success, isGuest: false });
+        if (result.success) _restoreGuestData(guestSnapshot);
         return result;
       },
 

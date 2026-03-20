@@ -276,6 +276,37 @@ function normalizeAnalysis(raw: Record<string, unknown>): Record<string, unknown
     }));
   }
 
+  // ─── Post-processing: ensure all feature nicknames are non-empty ───
+  if (Array.isArray(result.features)) {
+    const AREA_FALLBACK_NICKNAMES: Record<string, string> = {
+      forehead: '넓은 이마',
+      eyes: '맑은 눈',
+      nose: '단정한 코',
+      mouth: '복 있는 입',
+      jawline: '균형 잡힌 턱선',
+      chin: '안정된 턱',
+      ears: '복이 깃든 귀',
+    };
+
+    result.features = (result.features as Record<string, unknown>[]).map((f) => {
+      const nickname = (typeof f.nickname === 'string' && f.nickname.trim() !== '')
+        ? f.nickname
+        : AREA_FALLBACK_NICKNAMES[f.area as string] ?? '관상';
+      const description = (typeof f.description === 'string' && f.description.trim() !== '')
+        ? f.description
+        : nickname;
+
+      // Variety warning: log if eye feature keeps returning 봉황
+      if (f.area === 'eyes' && typeof nickname === 'string' && nickname.includes('봉황')) {
+        if (Math.random() < 0.3) {
+          console.warn('[normalizeAnalysis] Eye nickname contains 봉황 — prompt may lack variety');
+        }
+      }
+
+      return { ...f, nickname, description };
+    });
+  }
+
   return result;
 }
 

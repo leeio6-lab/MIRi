@@ -1,5 +1,9 @@
 import { OVERVIEW_TEMPLATES, YEARLY_TEMPLATES, LIFE_PEAK_TEMPLATES, LIFE_DIRECTION_TEMPLATES, OverviewCategory, OverviewCategoryBase, SipsinTag } from '../constants/overviewTemplates';
 
+// Issue 1: Module-level cache to track last used sentence index per tag+category
+// Ensures 3-sentence rotation within a reasonable period
+const lastUsedIndices = new Map<string, number>();
+
 interface SipsinStrength {
   비겁: number;
   식상: number;
@@ -54,6 +58,24 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
   const 인성강 = 인성 >= 2;
   const 인성약 = 인성 === 0;
 
+  // Issue 2: Balanced saju fallback — when no strong pattern detected,
+  // pick the sipsin with the highest count. If truly tied, rotate by category hash.
+  const sipsinEntries: [string, number][] = [
+    ['비겁', 비겁], ['식상', 식상], ['재성', 재성], ['관성', 관성], ['인성', 인성],
+  ];
+
+  function balancedFallback(category: string): SipsinTag {
+    const maxCount = Math.max(...sipsinEntries.map(([, c]) => c));
+    const topSipsin = sipsinEntries.filter(([, c]) => c === maxCount);
+    // If multiple tied at max, rotate based on category name hash
+    let hash = 0;
+    for (let i = 0; i < category.length; i++) {
+      hash = ((hash << 5) - hash + category.charCodeAt(i)) | 0;
+    }
+    const picked = topSipsin[Math.abs(hash) % topSipsin.length];
+    return `${picked[0]}강` as SipsinTag;
+  }
+
   // 카테고리별 핵심 십신이 다름
   // personality: 비겁 > 인성 > 식상 우선
   // career: 관성 > 식상 > 재성 우선
@@ -83,7 +105,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (관성약) return '관성약';
     if (재성강) return '재성강';
     if (재성약) return '재성약';
-    return '비겁강';
+    return balancedFallback('personality');
   }
 
   function pickCareer(): SipsinTag {
@@ -107,7 +129,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (재성약) return '재성약';
     if (인성강) return '인성강';
     if (인성약) return '인성약';
-    return '관성강';
+    return balancedFallback('career');
   }
 
   function pickWealth(): SipsinTag {
@@ -128,7 +150,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (비겁약) return '비겁약';
     if (관성강) return '관성강';
     if (인성강) return '인성강';
-    return '재성강';
+    return balancedFallback('wealth');
   }
 
   function pickLove(): SipsinTag {
@@ -152,7 +174,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (인성약) return '인성약';
     if (재성강) return '재성강';
     if (재성약) return '재성약';
-    return '비겁강';
+    return balancedFallback('love');
   }
 
   function pickHealth(): SipsinTag {
@@ -171,7 +193,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (비겁약) return '비겁약';
     if (재성강) return '재성강';
     if (재성약) return '재성약';
-    return '관성강';
+    return balancedFallback('health');
   }
 
   function pickFamily(): SipsinTag {
@@ -192,7 +214,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (관성약) return '관성약';
     if (재성강) return '재성강';
     if (재성약) return '재성약';
-    return '인성강';
+    return balancedFallback('family');
   }
 
   function pickSocial(): SipsinTag {
@@ -212,7 +234,7 @@ export function determineTags(strength: SipsinStrength): Record<OverviewCategory
     if (관성강) return '관성강';
     if (관성약) return '관성약';
     if (재성강) return '재성강';
-    return '식상강';
+    return balancedFallback('social');
   }
 
   return {
@@ -267,11 +289,20 @@ export function getOverviewFromTenGods(
   // 7개: 십신 태그 → 템플릿 매칭
   const categories: OverviewCategoryBase[] = ['personality', 'career', 'wealth', 'love', 'health', 'family', 'social'];
   for (const cat of categories) {
-    const pool = OVERVIEW_TEMPLATES[cat]?.[tags[cat]];
+    const tag = tags[cat];
+    const pool = OVERVIEW_TEMPLATES[cat]?.[tag];
     if (pool && pool.length > 0) {
-      result[cat] = pool[(seed + cat.charCodeAt(0)) % pool.length];
+      let idx = (seed + cat.charCodeAt(0)) % pool.length;
+      // Rotation guarantee: avoid repeating the same sentence as last time
+      const cacheKey = `${cat}:${tag}`;
+      const lastIdx = lastUsedIndices.get(cacheKey);
+      if (lastIdx === idx && pool.length > 1) {
+        idx = (idx + 1) % pool.length;
+      }
+      lastUsedIndices.set(cacheKey, idx);
+      result[cat] = pool[idx];
     } else {
-      const fallbackTag = tags[cat].split('+')[0] as SipsinTag;
+      const fallbackTag = tag.split('+')[0] as SipsinTag;
       const fallbackPool = OVERVIEW_TEMPLATES[cat]?.[fallbackTag];
       result[cat] = fallbackPool?.[0] ?? '';
     }

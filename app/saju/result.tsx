@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, NativeSyntheticEvent, NativeScrollEvent, ViewStyle } from 'react-native';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,27 @@ import { getOverviewFromTenGods } from '../../src/utils/overviewMatcher';
 import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
 import { ShareCard } from '../../src/components/ui/ShareCard';
 import { DayMasterAnim } from '../../src/components/icons/DayMasterAnim';
+import type { SajuResult, SajuOverview, SajuMonthlyScore, SajuQuarter, LifeGraphPoint } from '../../src/types/api';
+
+/** Extended SajuLove with legacy 'tendency' field that some API responses may include */
+interface SajuLoveExtended {
+  title: string;
+  score: number;
+  idealPartner: string;
+  timing: string;
+  warning: string;
+  ifInRelationship: string;
+  /** Legacy field - some older API responses use this instead of 'timing' */
+  tendency?: string;
+}
+
+/** SajuResult with merged overview from template and legacy field extensions */
+type MergedSajuResult = Omit<SajuResult, 'love'> & {
+  love?: SajuLoveExtended;
+};
+
+/** Return type of getOverviewFromTenGods */
+type TemplateOverview = Record<string, string>;
 
 // ── 한글→한자 매핑 (DayMasterAnim용) ──
 const STEM_KO_TO_HANJA: Record<string, string> = {
@@ -77,19 +98,22 @@ const sc = (s?: number) => {
 };
 
 /* ─── Section Title ─── */
-function Section({ title, sub, helpKeys, termKey }: { title: string; sub?: string; helpKeys?: string[]; termKey?: string }) {
+type GlossaryKey = Parameters<typeof TermTip>[0]['termKey'];
+type HelpButtonTermKeys = NonNullable<Parameters<typeof HelpButton>[0]['termKeys']>;
+
+function Section({ title, sub, helpKeys, termKey }: { title: string; sub?: string; helpKeys?: HelpButtonTermKeys; termKey?: GlossaryKey }) {
   return (
     <View style={$.secWrap}>
       <View style={$.secRow}>
         {termKey ? (
           <View style={$.secRow}>
             <Text style={$.secTitle}>{title} </Text>
-            <TermTip termKey={termKey as any} label="?" style={{ fontSize: 13, fontWeight: '700' }} />
+            <TermTip termKey={termKey} label="?" style={{ fontSize: 13, fontWeight: '700' }} />
           </View>
         ) : (
           <Text style={$.secTitle}>{title}</Text>
         )}
-        {helpKeys && <HelpButton termKeys={helpKeys as any} size={17} />}
+        {helpKeys && <HelpButton termKeys={helpKeys} size={17} />}
       </View>
       {sub ? <Text style={$.secSub}>{sub}</Text> : null}
     </View>
@@ -128,7 +152,7 @@ export default function SajuResultScreen() {
     [user?.birthYear, user?.birthMonth, user?.birthDay, user?.birthHour, user?.isLunar]
   );
 
-  const templateOverview = useMemo(() => {
+  const templateOverview = useMemo((): TemplateOverview | null => {
     if (!pillars) return null;
     const dmIdx = pillars.day.stemIdx;
     const tenGods = {
@@ -158,7 +182,7 @@ export default function SajuResultScreen() {
     let peakDaeunAge = 50;
     const lifeGraph = storeResult?.daeun?.lifeGraph;
     if (Array.isArray(lifeGraph) && lifeGraph.length > 0) {
-      const peak = lifeGraph.reduce((best: any, d: any) => (d.score ?? 0) > (best.score ?? 0) ? d : best, lifeGraph[0]);
+      const peak = lifeGraph.reduce((best: LifeGraphPoint, d: LifeGraphPoint) => (d.score ?? 0) > (best.score ?? 0) ? d : best, lifeGraph[0]);
       peakDaeunAge = parseInt(peak.age, 10) || 50;
     }
 
@@ -166,15 +190,15 @@ export default function SajuResultScreen() {
   }, [pillars, storeResult]);
 
   // templateOverview를 스토어 변경 없이 새 객체로 합성 (렌더 중 뮤테이션 방지)
-  const r: any = useMemo(() => {
+  const r = useMemo((): MergedSajuResult | null => {
     if (!storeResult) return null;
-    const merged: any = { ...storeResult };
+    const merged: MergedSajuResult = { ...storeResult };
     if (templateOverview) {
       merged.overview = {
-        poeticTitle: (storeResult as any).overview?.poeticTitle || (storeResult as any).headline || '',
-        hookQuestion: (storeResult as any).overview?.hookQuestion || '',
+        poeticTitle: storeResult.overview?.poeticTitle || storeResult.headline || '',
+        hookQuestion: storeResult.overview?.hookQuestion || '',
         ...templateOverview,
-      };
+      } as SajuOverview;
     }
     return merged;
   }, [storeResult, templateOverview]);
@@ -186,8 +210,8 @@ export default function SajuResultScreen() {
   const yearly = r.yearly2026 ?? r.yearlyFortune;
   const lucky = r.lucky ?? r.luckyElements;
   const final = r.finalWords ?? r.finalMessage;
-  const { personality, career, wealth, love, health, daeun, lifePeriods, relationship, family } = r as any;
-  const monthly: any[] | undefined = r.monthly2026 ?? r[`monthly${new Date().getFullYear()}`];
+  const { personality, career, wealth, love, health, daeun, lifePeriods, relationship, family } = r;
+  const monthly: SajuMonthlyScore[] | undefined = r.monthly2026 ?? (r as Record<string, unknown>)[`monthly${new Date().getFullYear()}`] as SajuMonthlyScore[] | undefined;
 
   let d = 0;
   const nd = () => { d += 30; return d; };
@@ -222,8 +246,8 @@ export default function SajuResultScreen() {
         <View style={$.hookHero}>
           {(() => {
             // poeticTitle=정의(큰글씨), hookQuestion=보충(서브). 질문이 title에 오면 swap
-            let title = r.overview?.poeticTitle || (templateOverview as any)?.poeticTitle || r.headline || '';
-            let sub = r.overview?.hookQuestion || (templateOverview as any)?.hookQuestion || '';
+            let title = r.overview?.poeticTitle || templateOverview?.['poeticTitle'] || r.headline || '';
+            let sub = r.overview?.hookQuestion || templateOverview?.['hookQuestion'] || '';
             if (title.includes('?') || title.includes('？')) {
               [title, sub] = [sub || title, title];
             }
@@ -262,7 +286,7 @@ export default function SajuResultScreen() {
 
       {/* ═══ Overview (990사주 스타일) ═══ */}
       {(r.overview || templateOverview) && (() => {
-        const ov = r.overview || templateOverview || {};
+        const ov = (r.overview || templateOverview || {}) as SajuOverview;
         return (
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { overviewY.current = e.nativeEvent.layout.y; }}>
           <SajuOverviewCard
@@ -349,7 +373,7 @@ export default function SajuResultScreen() {
           <GlassCard style={$.card}>
             <Section title="연애·결혼운" sub={love.title} />
             {love.idealPartner && <View style={$.hlBox}><Text style={$.hlLabel}>이상형</Text><Text style={$.hlText}>{love.idealPartner}</Text></View>}
-            {(love.timing || (love as any).tendency) && <View style={$.hlBox}><Text style={$.hlLabel}>좋은 시기</Text><Text style={$.hlText}>{love.timing || (love as any).tendency}</Text></View>}
+            {(love.timing || love.tendency) && <View style={$.hlBox}><Text style={$.hlLabel}>좋은 시기</Text><Text style={$.hlText}>{love.timing || love.tendency}</Text></View>}
             {love.warning && <View style={$.alertBox}><Text style={$.alertT}>{love.warning}</Text></View>}
           </GlassCard>
         </Animated.View>
@@ -383,7 +407,7 @@ export default function SajuResultScreen() {
               <>
                 <View style={$.divider} />
                 <View style={$.qGrid}>
-                  {yearly.quarters.map((q: any, i: number) => (
+                  {yearly.quarters.map((q: SajuQuarter, i: number) => (
                     <View key={i} style={$.qItem}>
                       <View style={$.qHead}><Text style={$.qPeriod}>{q.period}</Text><Text style={[$.qScore, { color: sc(q.score) }]}>{q.score}</Text></View>
                       <View style={[$.qBar, { backgroundColor: sc(q.score) }]} />
@@ -403,8 +427,8 @@ export default function SajuResultScreen() {
         <Animated.View entering={FadeInDown.delay(nd()).springify()} onLayout={(e) => { sectionY.current['lifePeak'] = e.nativeEvent.layout.y; }}>
           <GlassCard style={$.card}>
             <Section title="평생 운세" termKey="daeun" />
-            {lifePeriods?.length > 0 && <LifePeriodTimeline data={lifePeriods} />}
-            {daeun?.lifeGraph?.length > 0 && <><View style={$.divider} /><LifeGraph data={daeun.lifeGraph} /></>}
+            {(lifePeriods?.length ?? 0) > 0 && <LifePeriodTimeline data={lifePeriods!} />}
+            {(daeun?.lifeGraph?.length ?? 0) > 0 && <><View style={$.divider} /><LifeGraph data={daeun!.lifeGraph!} /></>}
             {daeun?.current && (
               <>
                 <View style={$.divider} />
@@ -502,7 +526,7 @@ export default function SajuResultScreen() {
         </View>
       </Animated.View>
 
-      <TouchableOpacity style={$.reBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/saju' as any)} activeOpacity={0.7}>
+      <TouchableOpacity style={$.reBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/saju' as `/${string}`)} activeOpacity={0.7}>
         <Text style={$.reBtnT}>{t('result.reAnalyze')}</Text>
       </TouchableOpacity>
       <Text style={$.disc}>{r.disclaimer || t('common.disclaimer')}</Text>
@@ -718,8 +742,8 @@ const $ = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }
+      ? { boxShadow: '0 2px 12px rgba(0,0,0,0.15)' } as unknown as ViewStyle
       : { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6 }),
-  } as any,
+  },
   floatingBtnIcon: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: -1 },
 });
