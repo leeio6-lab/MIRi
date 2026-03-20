@@ -668,16 +668,17 @@ export default function CompatibilityScreen() {
               {/* Timeline */}
               {result.timeline && (() => {
                 const tl = result.timeline as any;
-                const best = tl.bestMonths2026 ?? Object.values(tl).find((v: any) => Array.isArray(v) && v[0]?.month) ?? [];
-                const worst = tl.worstMonths2026 ?? [];
+                const cy = new Date().getFullYear();
+                const best = tl[`bestMonths${cy}`] ?? tl.bestMonths2026 ?? Object.values(tl).find((v: any) => Array.isArray(v) && v[0]?.month) ?? [];
+                const worst = tl[`worstMonths${cy}`] ?? tl.worstMonths2026 ?? [];
                 return (
                   <View onLayout={(e) => { sectionY.current['timeline'] = e.nativeEvent.layout.y; }}><GlassCard style={st.detailCard}>
                     <Text style={st.detailLabel}>{t('compatibility.monthlyCompatTitle', { year: new Date().getFullYear() })}</Text>
                     {best.length > 0 && <View style={st.tlSec}><Text style={st.tlSecTitle}>{t('compatibility.goodMonths')}</Text>
-                      {best.map((m: any, i: number) => <View key={i} style={st.tlRow}><Text style={st.tlMonth}>{m.month}</Text><View style={st.tlBar}><View style={[st.tlFill, st.tlGood, { width: `${m.score}%` }]} /></View><Text style={[st.tlScore, { color: theme.colors.success }]}>{m.score}</Text></View>)}
+                      {best.map((m: any, i: number) => <View key={i} style={st.tlRow}><Text style={st.tlMonth}>{m.month ?? ''}</Text><View style={st.tlBar}><View style={[st.tlFill, st.tlGood, { width: `${Math.max(0, Math.min(100, m.score ?? 50))}%` }]} /></View><Text style={[st.tlScore, { color: theme.colors.success }]}>{m.score ?? '-'}</Text></View>)}
                     </View>}
                     {worst.length > 0 && <View style={st.tlSec}><Text style={st.tlSecTitle}>{t('compatibility.cautionMonths')}</Text>
-                      {worst.map((m: any, i: number) => <View key={i} style={st.tlRow}><Text style={st.tlMonth}>{m.month}</Text><View style={st.tlBar}><View style={[st.tlFill, st.tlWarn, { width: `${m.score}%` }]} /></View><Text style={[st.tlScore, { color: theme.colors.warning }]}>{m.score}</Text></View>)}
+                      {worst.map((m: any, i: number) => <View key={i} style={st.tlRow}><Text style={st.tlMonth}>{m.month ?? ''}</Text><View style={st.tlBar}><View style={[st.tlFill, st.tlWarn, { width: `${Math.max(0, Math.min(100, m.score ?? 50))}%` }]} /></View><Text style={[st.tlScore, { color: theme.colors.warning }]}>{m.score ?? '-'}</Text></View>)}
                     </View>}
                     {tl.marriageTiming && <View style={st.tlHi}><Text style={st.tlHiLabel}>{t('compatibility.bestMarriageTiming')}</Text><Text style={st.tlHiText}>{tl.marriageTiming}</Text></View>}
                   </GlassCard></View>

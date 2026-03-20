@@ -615,6 +615,7 @@ JSON 응답:
     }
 
     // --- Helper: call OpenAI ---
+    let _retried = false;
     const callAI = async (prompt: string, model: string, maxTok: number, temp: number, system: string, seed?: number) => {
       const body: Record<string, unknown> = {
         model,
@@ -653,7 +654,13 @@ JSON 응답:
         // JSON이 잘렸을 수 있음 — 닫는 괄호 추가 시도
         const fixed = raw + (raw.includes('{') && !raw.trimEnd().endsWith('}') ? '"}' + '}'.repeat(5) : '');
         try { return JSON.parse(fixed); } catch {}
-        console.error('[callAI] JSON parse failed, finish_reason:', choice.finish_reason, 'raw tail:', raw.substring(raw.length - 200));
+        // 1회 자동 재시도 (파싱 실패)
+        if (!_retried) {
+          console.warn('[callAI] JSON parse failed, retrying once...');
+          _retried = true;
+          return callAI(prompt, model, maxTok, temp, system, seed);
+        }
+        console.error('[callAI] JSON parse failed after retry, finish_reason:', choice.finish_reason, 'raw tail:', raw.substring(raw.length - 200));
         throw new Error(`JSON parse failed (model=${model}, finish=${choice.finish_reason}, len=${raw.length})`);
       }
     };

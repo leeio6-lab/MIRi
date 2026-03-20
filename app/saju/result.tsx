@@ -207,11 +207,12 @@ export default function SajuResultScreen() {
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>
   );
 
-  const yearly = r.yearly2026 ?? r.yearlyFortune;
+  const currentYear = new Date().getFullYear();
+  const yearly = (r as Record<string, unknown>)[`yearly${currentYear}`] as typeof r.yearlyFortune ?? r.yearly2026 ?? r.yearlyFortune;
   const lucky = r.lucky ?? r.luckyElements;
   const final = r.finalWords ?? r.finalMessage;
   const { personality, career, wealth, love, health, daeun, lifePeriods, relationship, family } = r;
-  const monthly: SajuMonthlyScore[] | undefined = r.monthly2026 ?? (r as Record<string, unknown>)[`monthly${new Date().getFullYear()}`] as SajuMonthlyScore[] | undefined;
+  const monthly: SajuMonthlyScore[] | undefined = (r as Record<string, unknown>)[`monthly${currentYear}`] as SajuMonthlyScore[] | undefined ?? r.monthly2026;
 
   let d = 0;
   const nd = () => { d += 30; return d; };
