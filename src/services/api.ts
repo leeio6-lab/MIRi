@@ -389,8 +389,26 @@ async function saveAnalysis(
       .maybeSingle();
 
     if (!userRow) {
-      // User row doesn't exist yet (onboarding incomplete) — skip DB save, local only
-      return;
+      // User row 없으면 자동 생성 (게스트/소셜 로그인 직후 onboarding 전)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const meta = session?.user?.user_metadata;
+        await supabase.from('users').insert({
+          id: userId,
+          email: session?.user?.email ?? null,
+          name: meta?.name ?? meta?.full_name ?? '',
+          birth_year: 1990,
+          birth_month: 1,
+          birth_day: 1,
+          gender: 'male',
+          locale: meta?.locale ?? 'ko',
+        }).then(() => {
+          if (__DEV__) console.log('[API] Auto-created user row for', userId);
+        });
+      } catch (e) {
+        if (__DEV__) console.warn('[API] Auto-create user row failed:', e);
+        return; // 생성 실패 시 분석 저장 스킵
+      }
     }
 
     // input_data에 거대한 base64가 있으면 제거 (JSONB 컬럼에 1-3MB PNG 저장 방지)

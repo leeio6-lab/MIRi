@@ -117,6 +117,23 @@ function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number):
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
+/** OpenAI 429/500 자동 재시도 (최대 2회, 지수 백오프) */
+async function fetchWithRetry(url: string, options: RequestInit, timeoutMs: number, maxRetries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetchWithTimeout(url, options, timeoutMs);
+    if (response.ok || attempt === maxRetries) return response;
+    // 429 (rate limit) 또는 5xx (서버 에러)만 재시도
+    if (response.status === 429 || response.status >= 500) {
+      const waitMs = Math.min(2000 * Math.pow(2, attempt), 8000); // 2s, 4s, 8s
+      console.warn(`[face-transform] OpenAI ${response.status}, retry ${attempt + 1}/${maxRetries} after ${waitMs}ms`);
+      await new Promise(r => setTimeout(r, waitMs));
+      continue;
+    }
+    return response; // 4xx (400, 401 등)는 재시도 안 함
+  }
+  throw new Error('fetchWithRetry: unreachable');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -396,7 +413,7 @@ hookLine 나쁜 예:
   "highlight": {"area":"(최고 부위 영문키)", "message":"(이 부위가 왜 극귀(極貴)한지 관상학 근거+이것이 가져올 놀라운 행운. 마의상법 인용 포함. 180자)"}
 }`;
 
-  const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+  const response = await fetchWithRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENAI_API_KEY}`,

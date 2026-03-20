@@ -283,15 +283,27 @@ JSON 응답:
         max_tokens: maxTok,
       };
       if (seed !== undefined) body.seed = seed;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 120_000); // 120초 타임아웃
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
+      // OpenAI 429/500 자동 재시도 (최대 2회)
+      let resp!: Response;
+      for (let attempt = 0; attempt <= 2; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 120_000);
+        resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (resp.ok || attempt === 2) break;
+        if (resp.status === 429 || resp.status >= 500) {
+          const waitMs = Math.min(2000 * Math.pow(2, attempt), 8000);
+          console.warn(`[compatibility] OpenAI ${resp.status}, retry ${attempt + 1}/2 after ${waitMs}ms`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+        break;
+      }
 
       if (!resp.ok) {
         const errText = await resp.text();
