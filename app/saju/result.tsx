@@ -120,7 +120,6 @@ export default function SajuResultScreen() {
   const [showFloatingBtn, setShowFloatingBtn] = useState(false);
   const scrollY = useSharedValue(0);
   const storeResult = useFortuneStore().sajuResult;
-  const r: any = storeResult;
   const { user } = useAuthStore();
   const pillars = useMemo(
     () => user
@@ -166,14 +165,19 @@ export default function SajuResultScreen() {
     return getOverviewFromTenGods(tenGods, spiritStars, { yongShinElement, peakDaeunAge });
   }, [pillars, storeResult]);
 
-  // templateOverview가 있으면 항상 overview에 주입 (사주별 고유 문장, 10개 전부)
-  if (r && templateOverview) {
-    r.overview = {
-      poeticTitle: r.overview?.poeticTitle || r.headline || '',
-      hookQuestion: r.overview?.hookQuestion || '',
-      ...templateOverview,
-    };
-  }
+  // templateOverview를 스토어 변경 없이 새 객체로 합성 (렌더 중 뮤테이션 방지)
+  const r: any = useMemo(() => {
+    if (!storeResult) return null;
+    const merged: any = { ...storeResult };
+    if (templateOverview) {
+      merged.overview = {
+        poeticTitle: (storeResult as any).overview?.poeticTitle || (storeResult as any).headline || '',
+        hookQuestion: (storeResult as any).overview?.hookQuestion || '',
+        ...templateOverview,
+      };
+    }
+    return merged;
+  }, [storeResult, templateOverview]);
 
   if (!r) return (
     <View style={$.empty}><Text style={$.emptyText}>{t('result.noResult')}</Text><BackButton /></View>

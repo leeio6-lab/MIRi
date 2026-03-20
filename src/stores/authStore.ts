@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UserProfile } from '../types/user';
 import * as AuthService from '../services/auth';
+import { api } from '../services/api';
 
 interface AuthState {
   user: UserProfile | null;
@@ -83,6 +84,8 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // Always clear local state even if Supabase signOut fails
         }
+        // 이전 사용자 토큰/ID 캐시 제거 (다른 사용자 데이터 혼동 방지)
+        api.clearAuthCache();
         set({
           user: null,
           isAuthenticated: false,

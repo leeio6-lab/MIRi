@@ -196,13 +196,12 @@ export const useFortuneStore = create<FortuneState>()(
       loadHistory: async (type?) => {
         const { isGuest } = useAuthStore.getState();
 
-        // 비회원: 로컬 기록만 필터링하여 유지 (서버 조회 안 함)
-        if (isGuest) {
-          if (type) {
-            // 필터 적용 시 로컬에서 필터링만
-          }
-          return;
-        }
+        // 비회원: 로컬 기록만 유지 (서버 조회 안 함)
+        if (isGuest) return;
+
+        // 동시 호출 방어
+        if ((get() as any)._loadingHistory) return;
+        set({ _loadingHistory: true } as any);
 
         try {
           const serverRecords = await api.fetchHistory(type);
@@ -218,6 +217,8 @@ export const useFortuneStore = create<FortuneState>()(
         } catch (e) {
           if (__DEV__) console.warn('[FortuneStore] loadHistory error:', e);
           // 에러 시 기존 로컬 기록 유지
+        } finally {
+          set({ _loadingHistory: false } as any);
         }
       },
 

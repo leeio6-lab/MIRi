@@ -381,8 +381,8 @@ export default function CompatibilityScreen() {
 
           {/* ═══ 궁합 요약 카드 (사주분석 overview 스타일) ═══ */}
           {(() => {
-            const ov = (myPillarsData && partnerPillarsData)
-              ? getCompatOverview(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement, myPillarsData.year.zodiac ?? '', partnerPillarsData.year.zodiac ?? '')
+            const ov = (myPillarsData?.dayMasterElement && partnerPillarsData?.dayMasterElement)
+              ? getCompatOverview(myPillarsData.dayMasterElement, partnerPillarsData.dayMasterElement, myPillarsData.year?.zodiac ?? '', partnerPillarsData.year?.zodiac ?? '')
               : null;
             return (
               <>

@@ -152,7 +152,8 @@ export default function FaceScreen() {
   const { user } = useAuthStore();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
-  const analyzed = faceReady && faceResult !== null;
+  const displayImageUri = (transformedImageBase64 ? `data:image/png;base64,${transformedImageBase64}` : null) ?? imageUri;
+  const analyzed = faceReady && faceResult !== null && displayImageUri !== null;
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const [photoStatus, setPhotoStatus] = useState<'none' | 'ok' | 'noface'>('none');
   const scrollRef = useRef<ScrollView>(null);
@@ -243,7 +244,6 @@ export default function FaceScreen() {
   const transformedUri = transformedImageBase64
     ? `data:image/png;base64,${transformedImageBase64}`
     : null;
-  const displayImageUri = transformedUri ?? imageUri;
 
   if (facePending) {
     return (
@@ -316,7 +316,7 @@ export default function FaceScreen() {
           )}
           <View style={rs.portraitFrame}>
             <FaceOverlay
-              imageUri={displayImageUri!}
+              imageUri={displayImageUri ?? ''}
               features={features}
               imageSize={portraitSize}
               isTransformed={!!transformedUri}

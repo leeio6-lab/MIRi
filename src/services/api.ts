@@ -35,6 +35,14 @@ let _cachedToken: string | null = null;
 let _tokenFetchedAt = 0;
 const TOKEN_CACHE_MS = 60_000; // 1분 캐시
 
+/** 로그아웃 시 반드시 호출 — 이전 사용자 토큰/ID 캐시 제거 */
+function clearAuthCache(): void {
+  _cachedToken = null;
+  _tokenFetchedAt = 0;
+  _cachedUserId = null;
+  _userIdFetchedAt = 0;
+}
+
 async function getAuthToken(): Promise<string> {
   const now = Date.now();
   if (_cachedToken && now - _tokenFetchedAt < TOKEN_CACHE_MS) return _cachedToken;
@@ -555,4 +563,5 @@ export const api = {
   fetchAnalysisById,
   fetchAnalysisImage,
   deleteAnalysis,
+  clearAuthCache,
 };
