@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import Svg, {
   Path,
   Circle,
@@ -12,9 +12,9 @@ import Svg, {
 import { theme } from '../../constants/theme';
 
 const SCREEN_W = Dimensions.get('window').width;
-// 화면 padding(20*2) + GlassCard 내부 padding(24*2) = 88
-const CHART_W = SCREEN_W - theme.spacing.screenPadding * 2 - theme.spacing.cardPadding * 2;
-const CHART_H = 160;
+// 모바일 잘림 방지: 좌우 여백을 충분히 확보
+const CHART_W = Math.max(SCREEN_W - 56, 280);
+const CHART_H = 170;
 const PAD_L = 28;
 const PAD_R = 12;
 const PAD_T = 22;
@@ -88,7 +88,8 @@ export const MonthlyChart = React.memo(function MonthlyChart({ data }: MonthlyCh
 
   return (
     <View style={styles.container}>
-      <Svg width={svgW} height={svgH}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -8 }} contentContainerStyle={{ paddingHorizontal: 8 }}>
+      <Svg width={Math.max(svgW, 340)} height={svgH}>
         <Defs>
           <LinearGradient id="monthAreaGrad" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={theme.colors.gold.primary} stopOpacity="0.15" />
@@ -157,6 +158,7 @@ export const MonthlyChart = React.memo(function MonthlyChart({ data }: MonthlyCh
           );
         })}
       </Svg>
+      </ScrollView>
 
       {/* Keyword chips row */}
       <View style={styles.kwRow}>

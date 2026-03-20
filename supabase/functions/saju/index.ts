@@ -6,8 +6,8 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!;
 // ─── Pre-computation: 만세력 기반 결정적 데이터 (AI 불필요, 매번 동일) ───
 
 const STAGE_SCORES: Record<string, number> = {
-  장생: 85, 목욕: 65, 관대: 80, 건록: 88, 제왕: 92,
-  쇠: 60, 병: 50, 사: 45, 묘: 40, 절: 35, 태: 55, 양: 70,
+  장생: 78, 목욕: 62, 관대: 75, 건록: 82, 제왕: 85,
+  쇠: 58, 병: 52, 사: 48, 묘: 45, 절: 42, 태: 55, 양: 68,
 };
 
 const TENGOD_KW: Record<string, string> = {
@@ -74,20 +74,21 @@ const EL_CONTROLS: Record<string, string> = {
 };
 
 /**
- * 대운 점수에 용신 호환성을 반영
+ * 대운 점수에 용신 호환성을 반영 (완만한 곡선 생성)
  *
- * 전통 명리학에서 대운의 좋고 나쁨은 용신 일치가 핵심.
- * 12운성은 에너지 강도이고, 용신은 에너지 방향.
+ * 보너스 범위를 축소하여 극단적 편향 방지:
+ * - 기존: ±45 → 30~95 전체 폭
+ * - 변경: ±20 → 45~85 완만한 곡선
  *
- * 천간: 대운의 주요 기운 (가중치 높음)
- *   - 천간 = 용신 → +35 (용신 대운, 최고)
- *   - 천간이 용신을 생 → +20 (희신 대운)
- *   - 천간이 용신을 극 → -20 (기신 대운)
+ * 천간: 대운의 주요 기운
+ *   - 천간 = 용신 → +18 (용신 대운)
+ *   - 천간이 용신을 생 → +10 (희신 대운)
+ *   - 천간이 용신을 극 → -12 (기신 대운)
  *
  * 지지: 대운의 보조 기운
- *   - 지지 = 용신 → +10
- *   - 지지가 용신을 생 → +5
- *   - 지지가 용신을 극 → -8
+ *   - 지지 = 용신 → +7
+ *   - 지지가 용신을 생 → +4
+ *   - 지지가 용신을 극 → -6
  */
 function yongShinBonus(daeunLabel: string, yongShinEl: string | null): number {
   if (!yongShinEl || !daeunLabel || daeunLabel.length < 2) return 0;
@@ -97,17 +98,17 @@ function yongShinBonus(daeunLabel: string, yongShinEl: string | null): number {
   // 천간 (1글자)
   const stemEl = STEM_HANJA_EL[daeunLabel.charAt(0)];
   if (stemEl) {
-    if (stemEl === yongShinEl) bonus += 35;
-    else if (EL_GENERATES[stemEl] === yongShinEl) bonus += 20;
-    else if (EL_CONTROLS[stemEl] === yongShinEl) bonus -= 20;
+    if (stemEl === yongShinEl) bonus += 18;
+    else if (EL_GENERATES[stemEl] === yongShinEl) bonus += 10;
+    else if (EL_CONTROLS[stemEl] === yongShinEl) bonus -= 12;
   }
 
   // 지지 (2글자)
   const branchEl = BRANCH_HANJA_EL[daeunLabel.charAt(1)];
   if (branchEl) {
-    if (branchEl === yongShinEl) bonus += 10;
-    else if (EL_GENERATES[branchEl] === yongShinEl) bonus += 5;
-    else if (EL_CONTROLS[branchEl] === yongShinEl) bonus -= 8;
+    if (branchEl === yongShinEl) bonus += 7;
+    else if (EL_GENERATES[branchEl] === yongShinEl) bonus += 4;
+    else if (EL_CONTROLS[branchEl] === yongShinEl) bonus -= 6;
   }
 
   return bonus;
@@ -158,14 +159,14 @@ function precompute(pi: any) {
   // 대운의 좋고 나쁨 = 용신 일치 > 12운성 에너지
   const lifeGraph = daeun.length > 0 ? daeun.slice(0, 8).map(d => {
     const stageBase = STAGE_SCORES[d.stage] ?? 55;
-    // 12운성을 -10 ~ +10 범위의 보조 보정값으로 압축
-    const stageMod = Math.round((stageBase - 60) / 3);
-    // 기본 60점 + 용신 보너스(주) + 12운성 보정(보조)
-    const raw = 60 + yongShinBonus(d.label, el) + stageMod;
+    // 12운성을 -6 ~ +6 범위의 보조 보정값으로 압축 (더 완만)
+    const stageMod = Math.round((stageBase - 60) / 5);
+    // 기본 62점 + 용신 보너스(축소) + 12운성 보정(축소)
+    const raw = 62 + yongShinBonus(d.label, el) + stageMod;
     return {
       age: d.age,
       label: d.label,
-      score: Math.max(30, Math.min(95, raw)),
+      score: Math.max(45, Math.min(88, raw)),
       keyword: TENGOD_KW[d.tenGod] ?? '평온',
     };
   }) : null;
