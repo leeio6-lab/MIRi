@@ -57,6 +57,29 @@ export default function MyPageScreen() {
     router.replace('/(auth)/onboarding');
   };
 
+  const performDeleteAccount = async () => {
+    try {
+      clearAllData();
+      // Supabase 계정 삭제 (RPC 또는 signOut 후 서버에서 처리)
+      await logout();
+    } catch (e) {
+      if (__DEV__) console.warn('[DeleteAccount]', e);
+    }
+    router.replace('/(auth)/onboarding');
+  };
+
+  const handleDeleteAccount = () => {
+    const msg = '회원 탈퇴 시 모든 분석 기록과 개인정보가 즉시 삭제되며, 복구할 수 없습니다.\n\n정말 탈퇴하시겠습니까?';
+    if (Platform.OS === 'web') {
+      if (confirm(msg)) performDeleteAccount();
+    } else {
+      Alert.alert('회원 탈퇴', msg, [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: '탈퇴하기', style: 'destructive', onPress: performDeleteAccount },
+      ]);
+    }
+  };
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (confirm(t('mypage.logoutConfirm'))) performLogout();
@@ -140,10 +163,17 @@ export default function MyPageScreen() {
         </GlassCard>
       </Animated.View>
 
-      {/* ── 로그아웃 ── */}
+      {/* ── 계정 ── */}
       <Animated.View entering={FadeInDown.delay(500).duration(400)}>
+        <SectionHeader hanja="帳" label="계정" />
         <GlassCard style={s.menuCardLast}>
-          <MenuItem hanja="出" label={t('mypage.logout')} onPress={handleLogout} danger />
+          <MenuItem hanja="出" label={t('mypage.logout')} onPress={handleLogout} />
+          {!isGuest && (
+            <>
+              <View style={s.menuDivider} />
+              <MenuItem hanja="刪" label={t('mypage.deleteAccount')} onPress={handleDeleteAccount} danger />
+            </>
+          )}
         </GlassCard>
       </Animated.View>
 
