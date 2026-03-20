@@ -198,19 +198,21 @@ export default function CompatibilityScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+    {/* 고정 헤더 */}
+    <View style={sty.fixedHeader}>
+      <BackButton />
+      <View style={sty.brandCenter}>
+        <Text style={sty.brandLogo}>명리</Text>
+        <Text style={sty.brandTag}>두 사람의 인연</Text>
+      </View>
+      <View style={{ width: 34 }} />
+    </View>
+
     <ScrollView
       style={sty.container}
       contentContainerStyle={sty.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={sty.navRow}>
-        <BackButton />
-        <View style={sty.brandCenter}>
-          <Text style={sty.brandLogo}>명리</Text>
-          <Text style={sty.brandTag}>두 사람의 인연</Text>
-        </View>
-        <View style={{ width: 34 }} />
-      </View>
 
       {/* My Info */}
       <GlassCard style={sty.personCard}>
@@ -956,7 +958,16 @@ function SecHead({ num, title }: { num: number; title: string }) {
 
 const sty = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { padding: theme.spacing.screenPadding, paddingTop: 48, paddingBottom: 120 },
+  content: { padding: theme.spacing.screenPadding, paddingTop: 12, paddingBottom: 120 },
+  fixedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.screenPadding,
+    paddingTop: 48,
+    paddingBottom: 8,
+    backgroundColor: theme.colors.bg.primary,
+    zIndex: 10,
+  },
   navRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
