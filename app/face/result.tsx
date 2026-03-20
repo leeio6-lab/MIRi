@@ -53,13 +53,9 @@ export default function FaceResultScreen() {
   const features = Array.isArray(faceResult.features) ? faceResult.features : [];
 
   return (
-    <ScrollView
-      style={s.container}
-      contentContainerStyle={s.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header (outside capture area) */}
-      <View style={s.nav}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.bg.primary }}>
+      {/* 고정 헤더 */}
+      <View style={s.fixedHeader}>
         <BackButton />
         <View style={s.brand}>
           <Text style={s.logo}>명리</Text>
@@ -67,6 +63,12 @@ export default function FaceResultScreen() {
         </View>
         <View style={{ width: 34 }} />
       </View>
+
+    <ScrollView
+      style={s.container}
+      contentContainerStyle={s.content}
+      showsVerticalScrollIndicator={false}
+    >
 
       {/* Capture area start */}
       <View ref={captureRef} style={s.captureArea} collapsable={false}>
@@ -192,20 +194,25 @@ export default function FaceResultScreen() {
 
       <Text style={s.disclaimer}>{t('common.disclaimer')}</Text>
     </ScrollView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg.primary },
-  content: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 52 : 44, paddingBottom: 100 },
+  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 100 },
   empty: { flex: 1, backgroundColor: theme.colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: theme.colors.text.tertiary, fontSize: 15, letterSpacing: 0.5 },
 
-  // Nav
-  nav: {
+  // Fixed Header
+  fixedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 52 : 44,
+    paddingBottom: 8,
+    backgroundColor: theme.colors.bg.primary,
+    zIndex: 10,
   },
   brand: {
     flex: 1,

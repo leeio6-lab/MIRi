@@ -246,14 +246,16 @@ export function FaceOverlay({
   const centerX = imageSize / 2;
   const centerY = imageSize / 2;
 
-  // 관상화용 기본 좌표 (AI 좌표 실패 시 폴백)
+  // 관상화용 기본 좌표 — 정면 수묵 초상화(1024x1024, 얼굴 60-65% 프레임) 기준
+  // 수묵화는 머리+어깨 구도로 얼굴이 상단 40-75% 영역에 위치
   const DEFAULT_POINTS: Record<string, { x: number; y: number }> = {
-    forehead: { x: 0.50, y: 0.18 },
-    eyes:     { x: 0.50, y: 0.36 },
-    nose:     { x: 0.50, y: 0.48 },
-    mouth:    { x: 0.50, y: 0.60 },
-    jawline:  { x: 0.50, y: 0.73 },
-    ears:     { x: 0.20, y: 0.36 },
+    forehead: { x: 0.50, y: 0.22 },  // 이마 중앙 (관록궁)
+    eyes:     { x: 0.38, y: 0.38 },  // 왼쪽 눈 근처 (감찰관) — 중앙 아닌 약간 좌측
+    nose:     { x: 0.50, y: 0.48 },  // 코 중앙 (재백궁)
+    mouth:    { x: 0.50, y: 0.58 },  // 입 중앙 (출납관)
+    jawline:  { x: 0.50, y: 0.68 },  // 턱 (지각)
+    ears:     { x: 0.22, y: 0.37 },  // 왼쪽 귀 (채청관)
+    chin:     { x: 0.50, y: 0.72 },  // 턱끝
   };
 
   const getPoint = useCallback(
