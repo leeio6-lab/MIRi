@@ -1,130 +1,11 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  Platform,
-  ViewToken,
+  TextInput,
 } from 'react-native';
 import { theme } from '../../constants/theme';
-
-const ITEM_H = 44;
-const VISIBLE = 5;
-const CENTER_IDX = Math.floor(VISIBLE / 2);
-
-// ── Wheel Column ──
-function WheelColumn({
-  items,
-  selectedIndex,
-  onSelect,
-  width,
-  label,
-}: {
-  items: (string | number)[];
-  selectedIndex: number;
-  onSelect: (index: number) => void;
-  width: number;
-  label: string;
-}) {
-  const flatRef = useRef<FlatList>(null);
-  const ready = useRef(false);
-  const scrolling = useRef(false);
-
-  // 패딩용 빈 항목
-  const padded = [
-    ...Array(CENTER_IDX).fill(''),
-    ...items,
-    ...Array(CENTER_IDX).fill(''),
-  ];
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      flatRef.current?.scrollToOffset({
-        offset: selectedIndex * ITEM_H,
-        animated: false,
-      });
-      ready.current = true;
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (ready.current && !scrolling.current) {
-      flatRef.current?.scrollToOffset({
-        offset: selectedIndex * ITEM_H,
-        animated: true,
-      });
-    }
-  }, [selectedIndex]);
-
-  const handleScrollEnd = useCallback((e: any) => {
-    scrolling.current = false;
-    const y = e.nativeEvent.contentOffset.y;
-    const idx = Math.round(y / ITEM_H);
-    const clamped = Math.max(0, Math.min(items.length - 1, idx));
-    if (clamped !== selectedIndex) {
-      onSelect(clamped);
-    }
-  }, [items.length, selectedIndex, onSelect]);
-
-  const handleScrollBegin = useCallback(() => {
-    scrolling.current = true;
-  }, []);
-
-  const getItemLayout = useCallback((_: any, index: number) => ({
-    length: ITEM_H,
-    offset: ITEM_H * index,
-    index,
-  }), []);
-
-  const renderItem = useCallback(({ item, index }: { item: string | number; index: number }) => {
-    const realIdx = index - CENTER_IDX;
-    const isEmpty = item === '';
-    const isSelected = realIdx === selectedIndex;
-    return (
-      <View style={s.item}>
-        {!isEmpty && (
-          <Text style={[s.itemText, isSelected && s.itemTextSelected]}>
-            {item}
-          </Text>
-        )}
-      </View>
-    );
-  }, [selectedIndex]);
-
-  return (
-    <View style={[s.col, { width }]}>
-      <Text style={s.label}>{label}</Text>
-      <View style={[s.wheelWrap, { height: ITEM_H * VISIBLE }]}>
-        {/* 선택 강조 바 */}
-        <View style={s.highlight} pointerEvents="none" />
-
-        <FlatList
-          ref={flatRef}
-          data={padded}
-          renderItem={renderItem}
-          getItemLayout={getItemLayout}
-          keyExtractor={(item, i) => `${item}-${i}`}
-          showsVerticalScrollIndicator={false}
-          snapToInterval={ITEM_H}
-          decelerationRate="fast"
-          onScrollBeginDrag={handleScrollBegin}
-          onMomentumScrollEnd={handleScrollEnd}
-          onScrollEndDrag={(e) => {
-            // 느린 스크롤은 momentum 없이 끝남
-            if (Platform.OS === 'web') handleScrollEnd(e);
-          }}
-          nestedScrollEnabled
-          initialScrollIndex={selectedIndex}
-          windowSize={7}
-        />
-      </View>
-    </View>
-  );
-}
-
-// ── DateInputRow ──
 
 interface DateInputRowProps {
   year: string;
@@ -133,16 +14,8 @@ interface DateInputRowProps {
   onChangeYear: (v: string) => void;
   onChangeMonth: (v: string) => void;
   onChangeDay: (v: string) => void;
+  /** Style variant: 'card' wraps in white card, 'inline' renders flat */
   variant?: 'card' | 'inline';
-}
-
-const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: currentYear - 1919 }, (_, i) => currentYear - i);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-
-function getDays(y: number, m: number) {
-  const max = new Date(y, m, 0).getDate();
-  return Array.from({ length: max }, (_, i) => i + 1);
 }
 
 export function DateInputRow({
@@ -150,105 +23,138 @@ export function DateInputRow({
   onChangeYear, onChangeMonth, onChangeDay,
   variant = 'card',
 }: DateInputRowProps) {
-  const yearNum = parseInt(year, 10) || 1990;
-  const monthNum = parseInt(month, 10) || 1;
-  const dayNum = parseInt(day, 10) || 1;
+  const monthRef = useRef<TextInput>(null);
+  const dayRef = useRef<TextInput>(null);
 
-  const days = getDays(yearNum, monthNum);
-  const yearIdx = YEARS.indexOf(yearNum);
-  const monthIdx = monthNum - 1;
-  const dayIdx = Math.min(dayNum - 1, days.length - 1);
+  const handleYearText = (v: string) => {
+    const num = v.replace(/[^0-9]/g, '');
+    onChangeYear(num);
+    if (num.length === 4) setTimeout(() => monthRef.current?.focus(), 50);
+  };
 
-  const handleYear = useCallback((idx: number) => {
-    onChangeYear(String(YEARS[idx]));
-  }, [onChangeYear]);
+  const handleMonthText = (v: string) => {
+    const num = v.replace(/[^0-9]/g, '');
+    onChangeMonth(num);
+    // 2~9 → single digit month, auto-advance immediately
+    if (num.length === 1 && parseInt(num) >= 2) {
+      setTimeout(() => dayRef.current?.focus(), 50);
+    } else if (num.length === 2) {
+      setTimeout(() => dayRef.current?.focus(), 50);
+    }
+  };
 
-  const handleMonth = useCallback((idx: number) => {
-    onChangeMonth(String(MONTHS[idx]));
-  }, [onChangeMonth]);
+  const handleDayText = (v: string) => {
+    const num = v.replace(/[^0-9]/g, '');
+    onChangeDay(num);
+  };
 
-  const handleDay = useCallback((idx: number) => {
-    onChangeDay(String(days[idx]));
-  }, [onChangeDay, days]);
+  const isInline = variant === 'inline';
+  const containerStyle = isInline ? styles.inlineContainer : styles.dateCard;
 
   return (
-    <View style={[s.container, variant === 'card' && s.card]}>
-      <WheelColumn
-        items={YEARS}
-        selectedIndex={yearIdx >= 0 ? yearIdx : 34}
-        onSelect={handleYear}
-        width={88}
-        label="년"
-      />
-      <WheelColumn
-        items={MONTHS}
-        selectedIndex={monthIdx}
-        onSelect={handleMonth}
-        width={56}
-        label="월"
-      />
-      <WheelColumn
-        items={days}
-        selectedIndex={dayIdx >= 0 ? dayIdx : 0}
-        onSelect={handleDay}
-        width={56}
-        label="일"
-      />
+    <View style={[styles.dateRow, containerStyle]}>
+      {/* Year */}
+      <View style={styles.inputGroupYear}>
+        <TextInput
+          style={[styles.input, isInline && styles.inputInline]}
+          value={year}
+          onChangeText={handleYearText}
+          placeholder="1990"
+          placeholderTextColor={theme.colors.text.tertiary}
+          keyboardType="number-pad"
+          maxLength={4}
+          returnKeyType="next"
+        />
+        <Text style={styles.hint}>년</Text>
+      </View>
+
+      <Text style={styles.sepText}>/</Text>
+
+      {/* Month */}
+      <View style={styles.inputGroup}>
+        <TextInput
+          ref={monthRef}
+          style={[styles.input, isInline && styles.inputInline]}
+          value={month}
+          onChangeText={handleMonthText}
+          placeholder="01"
+          placeholderTextColor={theme.colors.text.tertiary}
+          keyboardType="number-pad"
+          maxLength={2}
+          returnKeyType="next"
+        />
+        <Text style={styles.hint}>월</Text>
+      </View>
+
+      <Text style={styles.sepText}>/</Text>
+
+      {/* Day */}
+      <View style={styles.inputGroup}>
+        <TextInput
+          ref={dayRef}
+          style={[styles.input, isInline && styles.inputInline]}
+          value={day}
+          onChangeText={handleDayText}
+          placeholder="15"
+          placeholderTextColor={theme.colors.text.tertiary}
+          keyboardType="number-pad"
+          maxLength={2}
+          returnKeyType="done"
+        />
+        <Text style={styles.hint}>일</Text>
+      </View>
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  card: {
+const styles = StyleSheet.create({
+  dateCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.md,
-    padding: 12,
-    marginBottom: theme.spacing.md,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: theme.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  col: { alignItems: 'center' },
-  label: {
+  inlineContainer: {
+    backgroundColor: theme.colors.bg.primary,
+    borderRadius: theme.radius.sm,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputGroupYear: { flex: 2, alignItems: 'center' },
+  inputGroup: { flex: 1, alignItems: 'center' },
+  input: {
+    width: '100%',
+    paddingVertical: 12,
+    color: theme.colors.text.primary,
+    fontSize: 20,
+    fontWeight: '300',
+    textAlign: 'center',
+  },
+  inputInline: {
+    fontSize: 16,
+    fontWeight: '500',
+    paddingVertical: 10,
+  },
+  hint: {
     fontSize: 10,
     color: theme.colors.text.tertiary,
     letterSpacing: 1,
+    marginTop: 2,
     marginBottom: 4,
-    fontWeight: '500',
   },
-  wheelWrap: {
-    overflow: 'hidden',
-    borderRadius: 12,
-    backgroundColor: theme.colors.bg.secondary,
-  },
-  highlight: {
-    position: 'absolute',
-    top: CENTER_IDX * ITEM_H,
-    left: 4,
-    right: 4,
-    height: ITEM_H,
-    borderRadius: 8,
-    backgroundColor: theme.colors.gold.primary + '12',
-    borderWidth: 1,
-    borderColor: theme.colors.gold.primary + '25',
-    zIndex: 1,
-  },
-  item: {
-    height: ITEM_H,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  itemText: {
+  sepText: {
     fontSize: 16,
-    fontWeight: '400',
     color: theme.colors.text.tertiary,
-  },
-  itemTextSelected: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text.primary,
+    fontWeight: '300',
   },
 });
