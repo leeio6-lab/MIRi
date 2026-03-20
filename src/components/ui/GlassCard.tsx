@@ -175,7 +175,7 @@ export const GlassCard = React.memo(function GlassCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.lg,
     padding: theme.spacing.cardPadding,
     overflow: 'hidden',

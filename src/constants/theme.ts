@@ -1,18 +1,18 @@
 export const theme = {
   colors: {
     bg: {
-      primary: '#1C1B1B',           // 메인 배경 (다크)
-      secondary: '#242323',         // 카드 내부, 입력 필드
-      tertiary: '#2B2A29',          // 비활성 바, 구분선 배경
-      elevated: '#21201F',          // 카드 배경
+      primary: '#FFFFFF',
+      secondary: '#F5F1EA',
+      tertiary: '#EDE8DF',
+      elevated: '#FFFFFF',
     },
     gold: {
-      primary: '#E8B04A',           // 메인 골드. CTA
-      light: '#F6D98E',             // 밝은 골드 (강조 텍스트)
-      dark: '#C4912E',              // 어두운 골드 (눌림)
-      muted: '#9C8F60',             // 뮤트 골드 (그림자)
+      primary: '#E8B04A',      // 메인 골드. CTA
+      light: '#D4A84B',        // 테두리, 장식
+      dark: '#C4912E',         // 눌림 상태
+      muted: '#B8A070',        // 그림자 색
     },
-    // 다크 카드 내부 (이제 기본)
+    // 다크(gold) 카드 내부 텍스트 전용
     goldCard: {
       bg: '#1C1C1E',
       text: '#F2EDE3',
@@ -20,31 +20,31 @@ export const theme = {
       textTertiary: '#8A7E68',
     },
     elements: {
-      wood: '#6B9A5A',              // 밝은 초록 (다크 배경 대비)
-      fire: '#E07070',              // 밝은 레드
-      earth: '#C49A6C',             // 밝은 브라운
-      metal: '#8FA0B4',             // 밝은 실버
-      water: '#5A9AC4',             // 밝은 블루
+      wood: '#5B7A4A',         // 자연 초록
+      fire: '#B85450',         // 웜 레드
+      earth: '#8B6E4E',        // 웜 브라운
+      metal: '#6B7B8D',        // 쿨톤 실버
+      water: '#3D6B8E',        // 딥 블루
     },
     text: {
-      primary: '#FCF9F8',           // 메인 텍스트 (밝음)
-      secondary: '#B0A99E',         // 보조 텍스트
-      tertiary: '#6E6862',          // 3차 텍스트
-      inverse: '#1C1B1B',           // 역전 (밝은 배경 위)
+      primary: '#1A1A1A',      // #000 금지
+      secondary: '#555555',
+      tertiary: '#999999',
+      inverse: '#FFFFFF',
     },
     glass: {
-      bg: 'rgba(43, 42, 41, 0.6)',
-      border: 'rgba(255, 255, 255, 0.06)',
+      bg: 'rgba(255, 255, 255, 0.95)',
+      border: 'rgba(212, 168, 75, 0.12)',    // 골드 틴트 보더
     },
     border: {
-      subtle: 'rgba(255, 255, 255, 0.06)',
-      medium: 'rgba(232, 176, 74, 0.15)',
-      divider: 'rgba(255, 255, 255, 0.04)',
+      subtle: 'rgba(212, 168, 75, 0.12)',
+      medium: 'rgba(212, 168, 75, 0.25)',
+      divider: 'rgba(212, 168, 75, 0.08)',   // 구분선 전용
     },
-    success: '#4CAF7A',
-    warning: '#E8B04A',
-    error: '#E07070',
-    info: '#5A9AC4',
+    success: '#2D7A5F',
+    warning: '#C4943D',
+    error: '#B85450',
+    info: '#3D6B8E',
   },
   fonts: {
     display: 'System',
@@ -54,11 +54,11 @@ export const theme = {
     caption: 'System',
   },
   typo: {
-    screenTitle: { fontSize: 22, fontWeight: '700' as const, color: '#FCF9F8', letterSpacing: 2 },
-    sectionTitle: { fontSize: 16, fontWeight: '600' as const, color: '#FCF9F8', letterSpacing: 1.5 },
-    cardTitle: { fontSize: 14, fontWeight: '600' as const, color: '#FCF9F8', letterSpacing: 1 },
-    body: { fontSize: 13, fontWeight: '400' as const, color: '#B0A99E', lineHeight: 22 },
-    caption: { fontSize: 11, fontWeight: '400' as const, color: '#6E6862', letterSpacing: 0.5 },
+    screenTitle: { fontSize: 22, fontWeight: '700' as const, color: '#1A1A1A', letterSpacing: 2 },
+    sectionTitle: { fontSize: 16, fontWeight: '600' as const, color: '#1A1A1A', letterSpacing: 1.5 },
+    cardTitle: { fontSize: 14, fontWeight: '600' as const, color: '#1A1A1A', letterSpacing: 1 },
+    body: { fontSize: 13, fontWeight: '400' as const, color: '#555555', lineHeight: 22 },
+    caption: { fontSize: 11, fontWeight: '400' as const, color: '#999999', letterSpacing: 0.5 },
     bigScore: { fontSize: 42, fontWeight: '500' as const, color: '#E8B04A' },
     button: { fontSize: 16, fontWeight: '700' as const },
   },
@@ -83,11 +83,11 @@ export const theme = {
   },
   shadow: {
     card: {
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 6,
+      shadowColor: '#B8A070',       // 골드 틴트 그림자
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.06,
+      shadowRadius: 20,
+      elevation: 3,
     },
   },
 } as const;

@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   flash: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
   },
 
   // Instruction
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
 
   // Result
   resultCard: {
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 28,
     width: W - 48,

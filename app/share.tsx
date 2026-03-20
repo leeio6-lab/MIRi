@@ -117,11 +117,11 @@ export default function SharePage() {
 }
 
 const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1C1B1B' },
+  container: { flex: 1, backgroundColor: '#F5F0E8' },
   content: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 16, minHeight: '100%' },
   card: {
     width: CARD_W,
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 28,
     ...(Platform.OS === 'web'
@@ -140,7 +140,7 @@ const st = StyleSheet.create({
   score: { fontSize: 64, fontWeight: '800', color: theme.colors.gold.primary },
   scoreUnit: { fontSize: 20, color: theme.colors.text.tertiary, marginLeft: 4 },
   summary: { fontSize: 15, color: theme.colors.text.secondary, lineHeight: 24, textAlign: 'center', marginBottom: 20 },
-  itemsWrap: { backgroundColor: '#242323', borderRadius: 16, padding: 4, marginBottom: 8 },
+  itemsWrap: { backgroundColor: '#FAFAF5', borderRadius: 16, padding: 4, marginBottom: 8 },
   itemRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 12, paddingHorizontal: 14, gap: 10 },
   itemBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(181,149,48,0.12)' },
   itemLabel: { fontSize: 13, fontWeight: '700', color: theme.colors.gold.primary, width: 36 },

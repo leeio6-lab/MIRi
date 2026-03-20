@@ -349,7 +349,7 @@ export default function BirthInputScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
   },
   scroll: {
     padding: theme.spacing.screenPadding,
@@ -377,13 +377,13 @@ const s = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#1A1A1A',
   },
   dotSm: {
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#1A1A1A',
     opacity: 0.3,
   },
   title: {
@@ -416,7 +416,7 @@ const s = StyleSheet.create({
   /* ── Toggle (solar/lunar, gender) ── */
   toggleRow: {
     flexDirection: 'row',
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.sm,
     padding: 3,
     marginBottom: 20,
@@ -428,7 +428,7 @@ const s = StyleSheet.create({
     borderRadius: 6,
   },
   toggleActive: {
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#1A1A1A',
   },
   toggleText: {
     color: theme.colors.text.tertiary,
@@ -443,7 +443,7 @@ const s = StyleSheet.create({
 
   /* ── Input fields ── */
   inputCard: {
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.md,
     marginBottom: 20,
   },
@@ -458,7 +458,7 @@ const s = StyleSheet.create({
 
   /* ── City search ── */
   cityResults: {
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.md,
     marginTop: -12,
     marginBottom: 16,
@@ -535,12 +535,12 @@ const s = StyleSheet.create({
   hourBtn: {
     width: '31%',
     paddingVertical: 12,
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#F5F5F5',
     borderRadius: theme.radius.sm,
     alignItems: 'center',
   },
   hourBtnActive: {
-    backgroundColor: '#2B2A29',
+    backgroundColor: '#1A1A1A',
   },
   hourLabel: {
     color: theme.colors.text.primary,

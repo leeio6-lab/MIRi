@@ -1035,12 +1035,12 @@ const em = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: theme.colors.text.primary },
   subtitle: { fontSize: 13, color: theme.colors.text.tertiary, marginTop: 4, marginBottom: 4 },
   label: { fontSize: 12, fontWeight: '600', color: theme.colors.gold.primary, letterSpacing: 1, marginBottom: 6, marginTop: 16 },
-  input: { backgroundColor: '#2B2A29', borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14, fontSize: 16, color: theme.colors.text.primary },
+  input: { backgroundColor: '#F5F5F5', borderRadius: 8, paddingVertical: 12, paddingHorizontal: 14, fontSize: 16, color: theme.colors.text.primary },
 
   // 성별 / 역법 토글
   toggleGroup: { flexDirection: 'row', gap: 16 },
   toggleCol: { flex: 1 },
-  toggleRow: { flexDirection: 'row', backgroundColor: '#2B2A29', borderRadius: 8, padding: 3 },
+  toggleRow: { flexDirection: 'row', backgroundColor: '#F5F5F5', borderRadius: 8, padding: 3 },
   tog: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 6 },
   togOn: { backgroundColor: '#1C1C1E' },
   togT: { fontSize: 14, color: theme.colors.text.tertiary, fontWeight: '500' },
@@ -1058,7 +1058,7 @@ const em = StyleSheet.create({
   hoursGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 6 },
   hourBtn: {
     width: '24%', paddingVertical: 10, alignItems: 'center',
-    backgroundColor: '#2B2A29', borderRadius: 8,
+    backgroundColor: '#F5F5F5', borderRadius: 8,
   },
   hourBtnOn: { backgroundColor: '#1C1C1E' },
   hourLbl: { fontSize: 13, fontWeight: '500', color: theme.colors.text.primary },
@@ -1067,7 +1067,7 @@ const em = StyleSheet.create({
   hourSubOn: { color: theme.colors.gold.muted },
 
   // City
-  cityResults: { backgroundColor: '#2B2A29', borderRadius: 8, marginTop: 4, marginBottom: 4, overflow: 'hidden' },
+  cityResults: { backgroundColor: '#F5F5F5', borderRadius: 8, marginTop: 4, marginBottom: 4, overflow: 'hidden' },
   cityItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.06)' },
   cityName: { fontSize: 14, color: theme.colors.text.primary, fontWeight: '500' },
   cityCountry: { fontSize: 11, color: theme.colors.text.tertiary },
@@ -1100,7 +1100,7 @@ const styles = StyleSheet.create({
   /* ── 프로필 바 ── */
   profileBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: theme.colors.bg.elevated, borderRadius: theme.radius.md,
+    backgroundColor: '#FFFFFF', borderRadius: theme.radius.md,
     paddingVertical: 12, paddingHorizontal: 16,
     marginTop: 10,
     marginBottom: 10,
@@ -1640,7 +1640,7 @@ const styles = StyleSheet.create({
 
   /* ── 만세력 카드 ── */
   manseryeokCard: {
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
     borderRadius: theme.radius.lg,
     paddingVertical: 16,
     paddingHorizontal: 18,
@@ -1798,7 +1798,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   streakModalContent: {
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 28,
     width: 280,

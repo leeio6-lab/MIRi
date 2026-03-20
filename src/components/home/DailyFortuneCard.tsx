@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.bg.elevated,
+    backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: { boxShadow: '0 2px 12px rgba(0,0,0,0.06)' },
       default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
