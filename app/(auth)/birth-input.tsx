@@ -334,9 +334,10 @@ export default function BirthInputScreen() {
         {/* Start button */}
         <Animated.View entering={FadeInDown.delay(550).duration(600)}>
           <Button
-            title={t('birth.start')}
+            title={isSubmitting ? '잠시만...' : t('birth.start')}
             onPress={handleStart}
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
+            loading={isSubmitting}
             style={s.startBtn}
           />
         </Animated.View>

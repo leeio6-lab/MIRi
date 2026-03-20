@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -223,6 +223,14 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* 로딩 오버레이 */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.gold.primary} />
+          <Text style={styles.loadingText}>로그인 중...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -322,6 +330,20 @@ const styles = StyleSheet.create({
     color: theme.colors.text.tertiary,
     fontSize: 13,
     textDecorationLine: 'underline',
+    letterSpacing: 0.5,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
     letterSpacing: 0.5,
   },
 });
