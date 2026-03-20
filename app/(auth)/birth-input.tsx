@@ -8,6 +8,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -100,13 +101,32 @@ export default function BirthInputScreen() {
     setShowCityResults(false);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleStart = async () => {
+    if (isSubmitting) return;
     const yearNum = parseInt(year, 10);
     const monthNum = parseInt(month, 10);
     const dayNum = parseInt(day, 10);
     const hourNum = unknownTime ? 12 : (selectedHour ?? 12);
 
     if (!yearNum || !monthNum || !dayNum) return;
+
+    // 날짜 유효성 (2월30일 등 방어)
+    const maxDay = new Date(yearNum, monthNum, 0).getDate();
+    if (dayNum > maxDay) {
+      Alert.alert('날짜 오류', `${monthNum}월은 최대 ${maxDay}일까지입니다.`);
+      return;
+    }
+
+    // 14세 미만 age gate
+    const age = new Date().getFullYear() - yearNum;
+    if (age < 14) {
+      Alert.alert('이용 제한', '14세 미만은 법정대리인의 동의가 필요합니다.\n현재 버전에서는 14세 이상만 이용할 수 있습니다.');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     let userId = 'guest-' + Date.now();
     let email: string | undefined;
@@ -137,6 +157,7 @@ export default function BirthInputScreen() {
     });
     setOnboardingComplete();
     router.replace('/(tabs)/home');
+    setIsSubmitting(false);
   };
 
   const yearNum_ = parseInt(year, 10);
@@ -155,7 +176,8 @@ export default function BirthInputScreen() {
     day.length >= 1 &&
     !isNaN(dayNum_) &&
     dayNum_ >= 1 &&
-    dayNum_ <= 31;
+    dayNum_ <= (yearNum_ && monthNum_ ? new Date(yearNum_, monthNum_, 0).getDate() : 31) &&
+    (new Date().getFullYear() - yearNum_) >= 14;
 
   return (
     <KeyboardAvoidingView

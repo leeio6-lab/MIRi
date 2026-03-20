@@ -60,12 +60,17 @@ export const usePurchaseStore = create<PurchaseState>()(
       },
 
       restoreCredit: (type) => {
-        // 분석 실패 시 차감된 크레딧 복원
-        set((s) => ({
-          freeCredits: s.freeCredits + 1,
-          faceTickets: type === 'face' ? s.faceTickets + 1 : s.faceTickets,
-        }));
-        if (__DEV__) console.log('[PurchaseStore] Credit restored for failed', type);
+        // 분석 실패 시 — 분석권 복원
+        // 무료 크레딧으로 결제했던 경우에만 복원 (IAP는 스토어 환불)
+        // face 티켓은 성공 시에만 차감(useFaceTicket)되므로 여기서 복원 불필요
+        if (type === 'face') {
+          // face는 backgroundAnalysis에서 성공 시에만 useFaceTicket() 호출하므로 추가 복원 불필요
+          if (__DEV__) console.log('[PurchaseStore] Face analysis failed — ticket not consumed');
+          return;
+        }
+        // 사주/궁합: 무료 크레딧이 차감됐으면 복원
+        if (__DEV__) console.log('[PurchaseStore] Restoring credit for failed', type);
+        set((s) => ({ freeCredits: s.freeCredits + 1 }));
       },
 
       useFreeCredit: () => {
@@ -113,7 +118,7 @@ export const usePurchaseStore = create<PurchaseState>()(
             faceTickets: type === 'face' ? s.faceTickets + 1 : s.faceTickets,
           }));
         } else {
-          set({ isProcessing: false });
+          set({ isProcessing: false, error: '결제에 실패했습니다. 다시 시도해주세요.' });
         }
 
         return success;

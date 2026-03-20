@@ -137,8 +137,9 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // Always clear local state even if Supabase signOut fails
         }
-        // 이전 사용자 토큰/ID 캐시 제거 (다른 사용자 데이터 혼동 방지)
+        // 이전 사용자 토큰/ID 캐시 + 분석 데이터 전부 제거
         api.clearAuthCache();
+        useFortuneStore.getState().clearAllData();
         set({
           user: null,
           isAuthenticated: false,

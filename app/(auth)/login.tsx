@@ -168,7 +168,10 @@ export default function LoginScreen() {
     if (result.success) {
       router.replace('/(auth)/birth-input');
     } else {
-      router.replace('/(auth)/birth-input');
+      Alert.alert(
+        t('common.error'),
+        result.error || '게스트 로그인에 실패했습니다. 다시 시도해주세요.',
+      );
     }
   };
 
