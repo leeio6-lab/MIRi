@@ -113,9 +113,12 @@ export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams
 
   if (__DEV__) console.log('[BackgroundAnalysis] Face: compressing image...');
 
+  let _compressedBase64: string | null = null;
+
   compressImageToBase64(imageUri)
     .then((base64) => {
       if (gen !== faceGen) return Promise.reject(new Error('_cancelled'));
+      _compressedBase64 = base64;
       if (__DEV__) console.log(
         `[BackgroundAnalysis] Face: image ${(base64.length / 1024).toFixed(0)}KB, calling API...`,
       );
@@ -183,6 +186,8 @@ export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams
     })
     .finally(() => {
       _faceLock = false;
+      // 압축 base64 메모리 해제 (1~2MB 절약)
+      _compressedBase64 = null;
       if (gen !== faceGen) return;
       useFortuneStore.getState().setFacePending(false);
     });

@@ -155,8 +155,8 @@ export default function CompatibilityScreen() {
         { year: myEffectiveYear, month: myEffectiveMonth, day: myEffectiveDay, hour: myEffectiveHour, isLunar: myEffectiveIsLunar, gender: myEffectiveGender },
         { year: partnerYearNum, month: partnerMonthNum, day: partnerDayNum, hour: partnerHourNum, isLunar: partnerIsLunar, gender: partnerGender },
         user?.locale ?? 'ko', true,
-        formatPillarInfo(myPillars, myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveGender),
-        formatPillarInfo(partnerPillars, partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender),
+        formatPillarInfo(myPillars, myEffectiveYear, myEffectiveMonth, myEffectiveDay, myEffectiveGender, myUnknownTime),
+        formatPillarInfo(partnerPillars, partnerYearNum, partnerMonthNum, partnerDayNum, partnerGender, partnerUnknownTime),
         myDisplayName, ptName,
       );
       if (!mountedRef.current) return;

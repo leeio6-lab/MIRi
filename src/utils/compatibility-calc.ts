@@ -217,14 +217,34 @@ export function calculateLocalCompatibility(
   const clashes = countBranchClashes(myBranches, ptBranches);
   const combines = countBranchCombines(myBranches, ptBranches);
 
-  // 4. 점수 산출
-  let score = 65; // 기본
-  if (stemCombo) score += 10; // 천간합이면 +10
-  if (elRelation.includes('상생')) score += 5;
-  if (elRelation.includes('비화')) score += 2;
-  if (elRelation.includes('상극')) score -= 5;
-  score += combines.count * 5; // 지지합 하나당 +5
-  score -= clashes * 7; // 지지충 하나당 -7
+  // 4. 점수 산출 (분산 확대: 35~92 범위 전체 활용)
+  let score = 60; // 기본
+  if (stemCombo) score += 12; // 천간합이면 +12
+  if (elRelation.includes('상생')) score += 7;
+  if (elRelation.includes('비화')) score += 3;
+  if (elRelation.includes('상극')) score -= 8;
+  score += combines.count * 6; // 지지합 하나당 +6
+  score -= clashes * 8; // 지지충 하나당 -8
+
+  // 십신 관계 보너스: 상대가 나의 정재/정관이면 궁합↑
+  const goodTenGods = ['정재', '정관', '정인'];
+  const badTenGods = ['편관', '상관', '겁재'];
+  if (goodTenGods.includes(tenGodAtoB)) score += 5;
+  if (goodTenGods.includes(tenGodBtoA)) score += 5;
+  if (badTenGods.includes(tenGodAtoB)) score -= 4;
+  if (badTenGods.includes(tenGodBtoA)) score -= 4;
+
+  // 일간 음양 조화: 양-음 만남이면 +3, 같은 음양이면 -2
+  const myYinYang = myDm % 2; // 0=양, 1=음
+  const ptYinYang = ptDm % 2;
+  if (myYinYang !== ptYinYang) score += 3;
+  else score -= 2;
+
+  // 나이 차이 보정: 3~5살 차이가 좋고, 10살+ 차이는 감점
+  const ageDiff = Math.abs(myYear - partnerYear);
+  if (ageDiff >= 3 && ageDiff <= 5) score += 3;
+  else if (ageDiff >= 10) score -= 3;
+
   score = Math.max(35, Math.min(92, score));
 
   // 5. headline 생성 — 직관적 커플 타이틀
