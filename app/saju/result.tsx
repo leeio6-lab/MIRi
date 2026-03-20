@@ -61,7 +61,7 @@ const STEM_EL: Record<string, string> = {
 };
 
 // ── 일간별 커스텀 SVG 아이콘 (오행 하이라이트) ──
-function DayMasterIcon({ stem, size = 32 }: { stem: string; size?: number }) {
+const DayMasterIcon = React.memo(function DayMasterIcon({ stem, size = 32 }: { stem: string; size?: number }) {
   const c = theme.colors.gold.primary;
   const h = EL_COLORS[STEM_EL[stem] ?? 'earth']; // 하이라이트 색
   const s = size;
@@ -88,7 +88,7 @@ function DayMasterIcon({ stem, size = 32 }: { stem: string; size?: number }) {
     '계': <Svg width={s} height={s} viewBox="0 0 32 32"><Path d="M16 4C16 4 8 14 8 20a8 8 0 0016 0c0-6-8-16-8-16z" fill={h} fillOpacity={0.2} stroke={c} strokeWidth={1.5} /><Path d="M13 22a4 3 0 006 0" stroke={h} strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={0.5} /><SvgCircle cx={14} cy={19} r={1.2} fill={h} fillOpacity={0.45} /></Svg>,
   };
   return <>{icons[stem] ?? <Svg width={s} height={s} viewBox="0 0 32 32"><SvgCircle cx={16} cy={16} r={12} stroke={c} strokeWidth={1.5} fill={c} fillOpacity={0.1} /></Svg>}</>;
-}
+});
 
 const SCREEN_W = Dimensions.get('window').width;
 const isSmall = SCREEN_W < 380;

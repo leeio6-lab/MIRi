@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -67,6 +68,8 @@ const HOURS = [
 export default function CompatibilityScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { width: screenWidth } = useWindowDimensions();
+  const isTablet = screenWidth > 600;
   const getEl = (el: string) => t(`elements.${el}`);
   const { user } = useAuthStore();
   const { setCompatibilityResult, saveAndRecord } = useFortuneStore();
@@ -138,6 +141,7 @@ export default function CompatibilityScreen() {
   useEffect(() => { return () => { mountedRef.current = false; }; }, []);
 
   const handleAnalyze = async () => {
+    if (loading) return;
     if (__DEV__) console.log('[Compat] handleAnalyze called', { myEffectiveYear, myEffectiveMonth, myEffectiveDay, isPartnerValid });
     if (!isPartnerValid || !myEffectiveYear || !myEffectiveMonth || !myEffectiveDay) return;
     setLoading(true);
@@ -527,13 +531,13 @@ export default function CompatibilityScreen() {
                     <>
                       <Text style={st.dmType}>{(result.dayMasterRelation as CompatDayMaster).type}</Text>
                       <Text style={st.detailText}>{(result.dayMasterRelation as CompatDayMaster).analysis}</Text>
-                      <View style={st.dmPairRow}>
-                        <View style={st.dmPairCol}>
+                      <View style={[st.dmPairRow, isTablet && { flexDirection: 'row' }]}>
+                        <View style={[st.dmPairCol, isTablet && { flex: 1 }]}>
                           <Text style={st.dmPairLabel} numberOfLines={1}>{myDisplayName} → {ptName}</Text>
                           <Text style={st.dmPairText}>{(result.dayMasterRelation as CompatDayMaster).aToB}</Text>
                         </View>
-                        <View style={st.dmDiv} />
-                        <View style={st.dmPairCol}>
+                        <View style={isTablet ? { width: 1, backgroundColor: theme.colors.glass.border, alignSelf: 'stretch' } : st.dmDiv} />
+                        <View style={[st.dmPairCol, isTablet && { flex: 1 }]}>
                           <Text style={st.dmPairLabel} numberOfLines={1}>{ptName} → {myDisplayName}</Text>
                           <Text style={st.dmPairText}>{(result.dayMasterRelation as CompatDayMaster).bToA}</Text>
                         </View>
@@ -651,13 +655,13 @@ export default function CompatibilityScreen() {
               {result.secretMessage && (
                 <GlassCard style={st.detailCard}>
                   <Text style={st.detailLabel}>{t('compatibility.secretAdvice')}</Text>
-                  <View style={st.secretRow}>
-                    <View style={st.secretCol}>
+                  <View style={[st.secretRow, isTablet && { flexDirection: 'row' }]}>
+                    <View style={[st.secretCol, isTablet && { flex: 1 }]}>
                       <Text style={st.secretLabel}>{t('compatibility.toPersonFormat', { name: myDisplayName })}</Text>
                       <Text style={st.secretText}>{result.secretMessage.toA}</Text>
                     </View>
-                    <View style={st.secretDiv} />
-                    <View style={st.secretCol}>
+                    <View style={isTablet ? { width: 1, backgroundColor: theme.colors.glass.border, alignSelf: 'stretch' } : st.secretDiv} />
+                    <View style={[st.secretCol, isTablet && { flex: 1 }]}>
                       <Text style={st.secretLabel}>{t('compatibility.toPersonFormat', { name: ptName })}</Text>
                       <Text style={st.secretText}>{result.secretMessage.toB}</Text>
                     </View>

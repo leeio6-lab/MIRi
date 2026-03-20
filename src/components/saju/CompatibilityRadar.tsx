@@ -1,14 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Polygon, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../../constants/theme';
-
-const SCREEN_W = Dimensions.get('window').width;
-const SIZE = Math.min(SCREEN_W - 80, 280);
-const CX = SIZE / 2;
-const CY = SIZE / 2;
-const R = SIZE / 2 - 30;
 
 export interface CategoryScore {
   score: number;
@@ -28,11 +22,6 @@ interface CompatibilityRadarProps {
   };
 }
 
-function polar(angle: number, radius: number): [number, number] {
-  const rad = (angle - 90) * (Math.PI / 180);
-  return [CX + radius * Math.cos(rad), CY + radius * Math.sin(rad)];
-}
-
 function scoreColor(s: number) {
   if (s >= 75) return theme.colors.success;
   if (s >= 55) return theme.colors.gold.primary;
@@ -42,6 +31,17 @@ function scoreColor(s: number) {
 
 export const CompatibilityRadar = React.memo(function CompatibilityRadar({ categories }: CompatibilityRadarProps) {
   const { t } = useTranslation();
+  const { width: SCREEN_W } = useWindowDimensions();
+
+  const SIZE = Math.min(SCREEN_W - 80, 280);
+  const CX = SIZE / 2;
+  const CY = SIZE / 2;
+  const R = SIZE / 2 - 30;
+
+  function polar(angle: number, radius: number): [number, number] {
+    const rad = (angle - 90) * (Math.PI / 180);
+    return [CX + radius * Math.cos(rad), CY + radius * Math.sin(rad)];
+  }
 
   const LABELS = [
     { key: 'love', label: t('compatibility.categories.love'), emoji: '' },

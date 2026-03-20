@@ -16,6 +16,10 @@ import type { AnalysisMode } from '../stores/userStore';
 let sajuGen = 0;
 let faceGen = 0;
 
+// Concurrency locks — 동시 요청 방어
+let _sajuLock = false;
+let _faceLock = false;
+
 // ─── 사주 분석 ───────────────────────────────────────────────────────────────
 
 interface SajuParams {
@@ -34,6 +38,8 @@ interface SajuParams {
 }
 
 export function startSajuAnalysis({ user, pillars }: SajuParams) {
+  if (_sajuLock) return;
+  _sajuLock = true;
   const gen = ++sajuGen;
   const store = useFortuneStore.getState();
   store.setSajuPending(true);
@@ -79,6 +85,7 @@ export function startSajuAnalysis({ user, pillars }: SajuParams) {
       usePurchaseStore.getState().restoreCredit('saju');
     })
     .finally(() => {
+      _sajuLock = false;
       if (gen !== sajuGen) return;
       useFortuneStore.getState().setSajuPending(false);
     });
@@ -93,6 +100,8 @@ interface FaceParams {
 }
 
 export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams) {
+  if (_faceLock) return;
+  _faceLock = true;
   const gen = ++faceGen;
   const store = useFortuneStore.getState();
   store.setFacePending(true);
@@ -173,6 +182,7 @@ export function startFaceAnalysis({ imageUri, locale, analysisMode }: FaceParams
       usePurchaseStore.getState().restoreCredit('face');
     })
     .finally(() => {
+      _faceLock = false;
       if (gen !== faceGen) return;
       useFortuneStore.getState().setFacePending(false);
     });

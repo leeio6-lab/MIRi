@@ -78,7 +78,7 @@ export default function FaceResultScreen() {
       </View>
 
       {/* Portrait */}
-      {imageUri && (
+      {imageUri ? (
         <Animated.View entering={FadeInDown.delay(80).springify()}>
           <View style={s.portraitWrap}>
             <Image
@@ -87,6 +87,10 @@ export default function FaceResultScreen() {
             />
           </View>
         </Animated.View>
+      ) : (
+        <View style={s.portraitWrap}>
+          <Text style={s.noPortraitText}>이미지가 복원되지 않았습니다</Text>
+        </View>
       )}
 
       {/* Score */}
@@ -182,6 +186,7 @@ export default function FaceResultScreen() {
           score: faceResult.overallScore,
           tag: faceResult.shareTitle || '관상',
           hookLine: faceResult.hookLine ?? faceResult.summary ?? '',
+          portraitBase64: transformedImageBase64 ?? undefined,
         }} />
       </View>
 
@@ -229,6 +234,12 @@ const s = StyleSheet.create({
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.bg.secondary,
     ...theme.shadow.card,
+  },
+  noPortraitText: {
+    fontSize: 13,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    paddingVertical: 24,
   },
 
   // Score

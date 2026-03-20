@@ -148,6 +148,11 @@ export const usePurchaseStore = create<PurchaseState>()(
         purchasedItems: state.purchasedItems,
         faceTickets: state.faceTickets,
       }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<PurchaseState>),
+        isProcessing: false,
+      }),
     }
   )
 );
